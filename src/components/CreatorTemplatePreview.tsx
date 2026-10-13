@@ -105,18 +105,18 @@ export function CreatorTemplatePreview() {
   }, []);
 
   return (
-    <div className="w-full rounded-2xl glass-panel p-6 sm:p-8 relative">
+    <div className="w-full neo-card bg-[var(--bg-card)] p-6 sm:p-8 relative">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-zinc-800">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b-2 border-[var(--border-subtle)]">
         <div>
-          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 text-xs font-semibold mb-2">
-            <Palette className="w-3.5 h-3.5" />
-            70+ Curated Creator Presets
+          <div className="neo-pill bg-[#A3E635] text-[#142218] border border-[var(--border-main)] mb-2 inline-flex items-center gap-1.5">
+            <Palette className="w-3.5 h-3.5 stroke-[2.5]" />
+            <span>70+ Curated Creator Presets</span>
           </div>
-          <h3 className="text-xl sm:text-2xl font-bold text-white tracking-tight">
+          <h3 className="font-fraunces italic text-2xl sm:text-3xl font-extrabold text-[var(--text-main)] tracking-tight">
             Designed for Indian Short-Form Video
           </h3>
-          <p className="text-xs sm:text-sm text-zinc-400 mt-1 max-w-xl">
+          <p className="text-xs sm:text-sm text-[var(--text-muted)] mt-1 max-w-xl font-medium">
             Inspired by trending Reels & Shorts styles: "Behind You" depth layering, neon sticker boxes, dual-font editorial typography, and high-contrast colorways.
           </p>
         </div>
@@ -125,13 +125,13 @@ export function CreatorTemplatePreview() {
         <div className="flex items-center gap-2">
           <button
             onClick={() => setShowSafeZones((s) => !s)}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
+            className={`neo-btn-secondary px-3.5 py-2 text-xs font-bold gap-2 transition-all ${
               showSafeZones
-                ? "bg-amber-500/20 border-amber-500/40 text-amber-300"
-                : "bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-zinc-200"
+                ? "!bg-[#A3E635] !text-[#142218] !border-[var(--border-main)] shadow-[var(--shadow-brutal-sm)]"
+                : ""
             }`}
           >
-            <Layers className="w-3.5 h-3.5" />
+            <Layers className="w-3.5 h-3.5 stroke-[2.5]" />
             <span>{showSafeZones ? "Hide Safe Zones" : "Show Reels Safe Zones"}</span>
           </button>
         </div>
@@ -141,7 +141,7 @@ export function CreatorTemplatePreview() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 mt-6 items-center">
         {/* Template Selector Tabs (Left 5 Cols) */}
         <div className="lg:col-span-5 space-y-2.5">
-          <p className="text-xs font-semibold uppercase tracking-wider text-zinc-500 mb-3">
+          <p className="text-xs font-bold uppercase tracking-wider text-[var(--text-muted)] mb-3">
             Select Preset Style
           </p>
           {TEMPLATES.map((tmpl) => {
@@ -150,26 +150,40 @@ export function CreatorTemplatePreview() {
               <button
                 key={tmpl.id}
                 onClick={() => setSelectedTemplate(tmpl)}
-                className={`w-full text-left p-3.5 rounded-xl border transition-all flex items-center justify-between ${
+                className={`w-full text-left p-3.5 rounded-xl border-2 transition-all flex items-center justify-between cursor-pointer ${
                   isSelected
-                    ? "bg-zinc-900/90 border-amber-500/60 shadow-lg shadow-amber-500/5 text-white"
-                    : "bg-zinc-900/40 border-zinc-800/80 text-zinc-400 hover:border-zinc-700 hover:text-zinc-200"
+                    ? "bg-[var(--text-main)] text-[var(--bg-canvas)] border-[var(--border-main)] shadow-[var(--shadow-brutal-sm)] translate-x-1"
+                    : "bg-[var(--bg-card)] border-[var(--border-subtle)] text-[var(--text-main)] hover:border-[var(--border-main)] hover:bg-[var(--bg-card-elevated)]"
                 }`}
               >
                 <div className="space-y-0.5">
                   <div className="flex items-center gap-2">
-                    <span className="text-xs font-semibold">{tmpl.name}</span>
+                    <span className="text-xs font-bold">{tmpl.name}</span>
                     {tmpl.badge && (
-                      <span className="text-[10px] px-1.5 py-0.5 rounded font-bold uppercase bg-amber-500 text-zinc-950">
+                      <span
+                        className={`text-[10px] px-1.5 py-0.5 rounded font-black uppercase border ${
+                          isSelected
+                            ? "bg-[#A3E635] text-[#142218] border-[#A3E635]"
+                            : "bg-[var(--bg-card-elevated)] text-[var(--text-main)] border-[var(--border-subtle)]"
+                        }`}
+                      >
                         {tmpl.badge}
                       </span>
                     )}
                   </div>
-                  <span className="text-[11px] text-zinc-500">{tmpl.category} Vibe</span>
+                  <span
+                    className={`text-[11px] font-medium ${
+                      isSelected ? "text-[var(--bg-canvas)]/70" : "text-[var(--text-muted)]"
+                    }`}
+                  >
+                    {tmpl.category} Vibe
+                  </span>
                 </div>
                 <div
-                  className={`w-2 h-2 rounded-full ${
-                    isSelected ? "bg-amber-400 shadow-sm shadow-amber-400/50" : "bg-transparent"
+                  className={`w-2.5 h-2.5 rounded-full border ${
+                    isSelected
+                      ? "bg-[#A3E635] border-[#A3E635] shadow-sm"
+                      : "border-[var(--border-subtle)] bg-transparent"
                   }`}
                 />
               </button>
@@ -179,7 +193,7 @@ export function CreatorTemplatePreview() {
 
         {/* 9:16 Vertical Video Phone Mockup Preview (Right 7 Cols) */}
         <div className="lg:col-span-7 flex flex-col items-center">
-          <div className="relative w-[280px] sm:w-[320px] aspect-[9/16] rounded-3xl bg-zinc-950 border-[3px] border-zinc-800 shadow-2xl overflow-hidden flex flex-col justify-between p-4 select-none">
+          <div className="relative w-[280px] sm:w-[320px] aspect-[9/16] rounded-3xl bg-zinc-950 border-[3px] border-[var(--border-main)] shadow-[var(--shadow-brutal-lg)] overflow-hidden flex flex-col justify-between p-4 select-none">
             {/* Mock Creator Background with dark nighttime rooftop ambience */}
             <div className="absolute inset-0 bg-gradient-to-b from-zinc-900 via-zinc-950 to-black z-0">
               {/* String lights simulation */}
@@ -211,11 +225,11 @@ export function CreatorTemplatePreview() {
             {/* Top Reel Header */}
             <div className="relative z-10 flex items-center justify-between">
               {selectedTemplate.badge && (
-                <div className="px-2 py-0.5 rounded font-bold text-[10px] uppercase bg-amber-500 text-zinc-950 shadow-md">
+                <div className="px-2 py-0.5 rounded font-black text-[10px] uppercase bg-[#A3E635] text-[#142218] border border-[var(--border-main)] shadow-sm">
                   {selectedTemplate.badge}
                 </div>
               )}
-              <div className="text-[10px] px-2 py-0.5 rounded-full bg-black/60 text-zinc-400 border border-zinc-800 font-mono">
+              <div className="text-[10px] px-2.5 py-0.5 rounded-full bg-black/80 text-zinc-300 border border-zinc-700 font-mono font-bold">
                 9:16 Canvas
               </div>
             </div>
@@ -327,15 +341,15 @@ export function CreatorTemplatePreview() {
             <div className="relative z-10 w-full pt-2">
               <Link
                 href="/editor"
-                className="w-full py-2.5 px-3 rounded-xl bg-black/80 hover:bg-zinc-900 border border-zinc-700 text-white text-xs font-semibold flex items-center justify-center gap-1.5 transition-all shadow-lg hover:border-amber-500/50"
+                className="neo-btn w-full py-2.5 px-3 text-xs font-black shadow-[2px_2px_0px_#142218] flex items-center justify-center gap-1.5"
               >
                 <span>Use this template</span>
-                <ArrowUpRight className="w-3.5 h-3.5 text-amber-400" />
+                <ArrowUpRight className="w-3.5 h-3.5 stroke-[3]" />
               </Link>
             </div>
           </div>
 
-          <p className="text-xs text-zinc-500 mt-3 text-center">
+          <p className="text-xs text-[var(--text-muted)] mt-3 text-center font-medium">
             Live preview rendered with zero latency on client Canvas 2D engine.
           </p>
         </div>

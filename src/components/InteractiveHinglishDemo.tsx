@@ -45,21 +45,21 @@ export function InteractiveHinglishDemo() {
   };
 
   return (
-    <div className="w-full rounded-2xl glass-panel p-6 sm:p-8 relative overflow-hidden">
+    <div className="w-full neo-card bg-[var(--bg-card)] p-6 sm:p-8 relative overflow-hidden">
       {/* Background ambient glow */}
-      <div className="absolute top-0 right-0 -mr-20 -mt-20 w-80 h-80 rounded-full bg-amber-500/10 blur-3xl pointer-events-none" />
+      <div className="absolute top-0 right-0 -mr-20 -mt-20 w-80 h-80 rounded-full bg-[#A3E635]/10 blur-3xl pointer-events-none" />
 
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-zinc-800">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b-2 border-[var(--border-subtle)]">
         <div>
-          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 text-xs font-semibold mb-2">
-            <Sparkles className="w-3.5 h-3.5" />
-            Core AI Breakthrough
+          <div className="neo-pill bg-[#A3E635] text-[#142218] border border-[var(--border-main)] mb-2 inline-flex items-center gap-1.5">
+            <Sparkles className="w-3.5 h-3.5 stroke-[2.5]" />
+            <span>Core AI Breakthrough</span>
           </div>
-          <h3 className="text-xl sm:text-2xl font-bold text-white tracking-tight">
+          <h3 className="font-fraunces italic text-2xl sm:text-3xl font-extrabold text-[var(--text-main)] tracking-tight">
             Deterministic Hinglish Engine
           </h3>
-          <p className="text-xs sm:text-sm text-zinc-400 mt-1 max-w-xl">
+          <p className="text-xs sm:text-sm text-[var(--text-muted)] mt-1 max-w-xl font-medium">
             Whisper emits Hindi in Devanagari by default. BolSub's local transliterator outputs canonical, natural Roman Hinglish without mangling English code-mixes.
           </p>
         </div>
@@ -68,16 +68,25 @@ export function InteractiveHinglishDemo() {
         <div className="flex items-center gap-2">
           <button
             onClick={() => setScriptMode((m) => (m === "roman" ? "devanagari" : "roman"))}
-            className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-zinc-900 border border-zinc-700 hover:border-amber-500/50 text-xs font-medium text-zinc-200 transition-colors shadow-sm"
+            className="neo-btn-secondary px-3.5 py-2 text-xs font-bold gap-2 cursor-pointer"
           >
-            <Languages className="w-3.5 h-3.5 text-amber-400" />
-            <span>Script: <strong className="text-white">{scriptMode === "roman" ? "Roman Hinglish" : "Devanagari Hindi"}</strong></span>
+            <Languages className="w-3.5 h-3.5 text-[var(--text-main)] stroke-[2.5]" />
+            <span>
+              Script:{" "}
+              <strong className="font-black text-[var(--text-main)]">
+                {scriptMode === "roman" ? "Roman Hinglish" : "Devanagari Hindi"}
+              </strong>
+            </span>
           </button>
           <button
             onClick={togglePlayback}
-            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-zinc-950 text-xs font-semibold transition-all shadow-md active:scale-95"
+            className="neo-btn px-4 py-2 text-xs font-black gap-1.5 cursor-pointer"
           >
-            {isPlaying ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5 fill-current" />}
+            {isPlaying ? (
+              <Pause className="w-3.5 h-3.5 stroke-[2.5]" />
+            ) : (
+              <Play className="w-3.5 h-3.5 fill-current stroke-[2.5]" />
+            )}
             <span>{isPlaying ? "Simulating..." : "Play Audio"}</span>
           </button>
         </div>
@@ -86,46 +95,49 @@ export function InteractiveHinglishDemo() {
       {/* Comparison Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
         {/* Box 1: Raw Cloud / Standard Whisper */}
-        <div className="rounded-xl bg-zinc-950/70 border border-red-500/20 p-5 space-y-3">
+        <div className="rounded-2xl border-2 border-red-500/40 bg-[var(--bg-card-elevated)] p-5 sm:p-6 space-y-3.5 shadow-[var(--shadow-brutal-sm)]">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase tracking-wider text-red-400 flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-red-500" /> Standard Whisper (Raw)
+            <span className="text-xs font-black uppercase tracking-wider text-red-600 dark:text-red-400 flex items-center gap-1.5">
+              <span className="w-2.5 h-2.5 rounded-full bg-red-500" /> Standard Whisper (Raw)
             </span>
-            <span className="text-[11px] text-zinc-500">Unprocessed</span>
+            <span className="text-[11px] px-2 py-0.5 rounded-full font-bold bg-red-100 text-red-700 dark:bg-red-950/60 dark:text-red-300 border border-red-300 dark:border-red-800">
+              Unprocessed
+            </span>
           </div>
-          <div className="p-3.5 rounded-lg bg-zinc-900/50 border border-zinc-800 text-zinc-400 text-sm leading-relaxed font-hindi">
+          <div className="p-4 rounded-xl bg-[var(--bg-card)] border-2 border-[var(--border-subtle)] text-[var(--text-main)] text-sm sm:text-base leading-relaxed font-hindi shadow-sm">
             मैंने बस वीडियो अपलोड किया, एक चूज़ किया टेम्पलेट, मिनट में कैप्शन्स रेडी!
           </div>
-          <p className="text-xs text-zinc-500">
-            ❌ Awkward phonetic Hindi script for English slang ("टेम्पलेट", "चूज़", "कैप्शन्स"). Unnatural for Indian Gen-Z reels.
+          <p className="text-xs text-[var(--text-muted)] font-medium leading-relaxed flex items-start gap-1.5">
+            <span className="text-red-500 font-black shrink-0">✕</span>
+            <span>Awkward phonetic Hindi script for English slang ("टेम्पलेट", "चूज़", "कैप्शन्स"). Unnatural for Indian Gen-Z reels.</span>
           </p>
         </div>
 
         {/* Box 2: BolSub Local Engine */}
-        <div className="rounded-xl bg-zinc-950/70 border border-emerald-500/30 p-5 space-y-3 relative overflow-hidden">
+        <div className="rounded-2xl border-2 border-[var(--border-main)] bg-[var(--bg-card-elevated)] p-5 sm:p-6 space-y-3.5 shadow-[var(--shadow-brutal)] relative overflow-hidden">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase tracking-wider text-emerald-400 flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" /> BolSub Studio (On-Device)
+            <span className="text-xs font-black uppercase tracking-wider text-[var(--text-main)] flex items-center gap-1.5">
+              <span className="w-2.5 h-2.5 rounded-full bg-[#A3E635] border border-[var(--border-main)] animate-pulse" /> BolSub Studio (On-Device)
             </span>
-            <span className="text-[11px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-300 font-mono">
+            <span className="text-[11px] px-2.5 py-0.5 rounded-full bg-[#A3E635] text-[#142218] border border-[var(--border-main)] font-black">
               100% Deterministic
             </span>
           </div>
 
           {/* Interactive Word Spans */}
-          <div className="p-3.5 rounded-lg bg-zinc-900/80 border border-emerald-500/20 text-zinc-100 text-sm leading-relaxed flex flex-wrap gap-1.5 min-h-[56px] items-center">
+          <div className="p-4 rounded-xl bg-[var(--bg-card)] border-2 border-[var(--border-main)] text-[var(--text-main)] text-sm sm:text-base leading-relaxed flex flex-wrap gap-2 min-h-[64px] items-center shadow-sm">
             {sampleWords.map((word, idx) => {
               const text = scriptMode === "roman" ? word.roman : word.devanagari;
               const isActive = isPlaying && activeWordIdx === idx;
               return (
                 <span
                   key={idx}
-                  className={`px-1.5 py-0.5 rounded transition-all duration-150 ${
+                  className={`px-2 py-0.5 rounded-md transition-all duration-150 ${
                     isActive
-                      ? "bg-amber-400 text-zinc-950 font-bold scale-110 shadow-lg shadow-amber-400/20"
+                      ? "bg-[#A3E635] text-[#142218] border-2 border-[var(--border-main)] font-black scale-105 shadow-[2px_2px_0px_var(--border-main)]"
                       : word.type === "english"
-                      ? "text-cyan-300 font-semibold"
-                      : "text-zinc-200"
+                      ? "text-[var(--text-main)] font-extrabold bg-[#A3E635]/20 border border-[#A3E635]/40"
+                      : "text-[var(--text-main)] font-semibold"
                   }`}
                   title={`${(word.conf * 100).toFixed(0)}% confidence • ${word.type}`}
                 >
@@ -135,29 +147,29 @@ export function InteractiveHinglishDemo() {
             })}
           </div>
 
-          <p className="text-xs text-emerald-300/90 flex items-center gap-1.5">
-            <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-            Preserves English loanwords in Latin script; seamlessly transliterates Hindi verbs ("kiya", "mein") with schwa deletion.
+          <p className="text-xs text-[var(--text-main)] font-semibold flex items-start gap-1.5">
+            <Check className="w-4 h-4 text-[#A3E635] stroke-[3] shrink-0 mt-0.5" />
+            <span>Preserves English loanwords in Latin script; seamlessly transliterates Hindi verbs ("kiya", "mein") with schwa deletion.</span>
           </p>
         </div>
       </div>
 
       {/* Feature Pills */}
-      <div className="flex flex-wrap items-center gap-3 mt-6 pt-5 border-t border-zinc-800 text-xs text-zinc-400">
-        <span className="flex items-center gap-1 text-zinc-300">
-          <Check className="w-3.5 h-3.5 text-amber-400" /> 5,000+ Hinglish Lexicon
+      <div className="flex flex-wrap items-center gap-3 sm:gap-4 mt-6 pt-5 border-t-2 border-[var(--border-subtle)] text-xs font-bold text-[var(--text-main)]">
+        <span className="inline-flex items-center gap-1.5">
+          <Check className="w-4 h-4 text-[#A3E635] stroke-[3]" /> 5,000+ Hinglish Lexicon
         </span>
-        <span className="text-zinc-700">•</span>
-        <span className="flex items-center gap-1 text-zinc-300">
-          <Check className="w-3.5 h-3.5 text-amber-400" /> Contextual Schwa Deletion
+        <span className="text-[var(--border-subtle)] font-black">•</span>
+        <span className="inline-flex items-center gap-1.5">
+          <Check className="w-4 h-4 text-[#A3E635] stroke-[3]" /> Contextual Schwa Deletion
         </span>
-        <span className="text-zinc-700">•</span>
-        <span className="flex items-center gap-1 text-zinc-300">
-          <Check className="w-3.5 h-3.5 text-amber-400" /> Persistent User Dictionary
+        <span className="text-[var(--border-subtle)] font-black">•</span>
+        <span className="inline-flex items-center gap-1.5">
+          <Check className="w-4 h-4 text-[#A3E635] stroke-[3]" /> Persistent User Dictionary
         </span>
-        <span className="text-zinc-700">•</span>
-        <span className="flex items-center gap-1 text-zinc-300">
-          <Check className="w-3.5 h-3.5 text-amber-400" /> Instant Script Toggling
+        <span className="text-[var(--border-subtle)] font-black">•</span>
+        <span className="inline-flex items-center gap-1.5">
+          <Check className="w-4 h-4 text-[#A3E635] stroke-[3]" /> Instant Script Toggling
         </span>
       </div>
     </div>
