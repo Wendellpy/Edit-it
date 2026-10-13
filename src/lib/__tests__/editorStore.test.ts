@@ -65,14 +65,45 @@ describe("editorStore - Zustand Command Pattern & Token Editing", () => {
     expect(updated[1].end).toBe(1.1);
   });
 
-  it("should export and re-import project JSON", () => {
+  it("should export and re-import project JSON including exportSettings", () => {
     const store = useEditorStore.getState();
+    store.setExportSettings({
+      aspectRatio: "16:9",
+      resolution: "4k",
+      fitMode: "fit_blur",
+      fps: 60,
+      quality: "high",
+    });
+
     const jsonStr = store.exportProjectJson();
 
     expect(typeof jsonStr).toBe("string");
     expect(jsonStr).toContain("BolSub Studio");
+    expect(jsonStr).toContain("16:9");
+    expect(jsonStr).toContain("4k");
 
+    // Reset settings to default
+    store.setExportSettings({ aspectRatio: "9:16", resolution: "1080p" });
+    expect(useEditorStore.getState().exportSettings.aspectRatio).toBe("9:16");
+
+    // Re-import and verify restoration
     const success = store.importProjectJson(jsonStr);
     expect(success).toBe(true);
+    expect(useEditorStore.getState().exportSettings.aspectRatio).toBe("16:9");
+    expect(useEditorStore.getState().exportSettings.resolution).toBe("4k");
+    expect(useEditorStore.getState().exportSettings.fitMode).toBe("fit_blur");
+    expect(useEditorStore.getState().exportSettings.fps).toBe(60);
+    expect(useEditorStore.getState().exportSettings.quality).toBe("high");
+  });
+
+  it("should update and persist individual export settings", () => {
+    const store = useEditorStore.getState();
+    store.setExportSettings({ aspectRatio: "1:1" });
+    expect(useEditorStore.getState().exportSettings.aspectRatio).toBe("1:1");
+
+    store.setExportSettings({ resolution: "720p", quality: "fast" });
+    expect(useEditorStore.getState().exportSettings.resolution).toBe("720p");
+    expect(useEditorStore.getState().exportSettings.quality).toBe("fast");
+    expect(useEditorStore.getState().exportSettings.aspectRatio).toBe("1:1"); // preserved
   });
 });

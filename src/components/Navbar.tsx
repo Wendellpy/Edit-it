@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { CapabilityBadge } from "./CapabilityBadge";
+import { ThemeToggle } from "./ThemeToggle";
 import { ModelManagerModal } from "./ModelManagerModal";
 import { MODEL_TIERS, type ModelTierId } from "@/lib/modelManager";
 import { Sparkles, Cpu, Film, FolderKanban, Settings, ArrowRight } from "lucide-react";
@@ -13,59 +14,72 @@ export function Navbar() {
 
   return (
     <>
-      <header className="sticky top-0 z-40 w-full border-b border-zinc-800/80 bg-zinc-950/80 backdrop-blur-xl">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
-          {/* Brand Logo */}
-          <Link href="/" className="flex items-center gap-2.5 group">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-amber-600 via-amber-500 to-yellow-400 flex items-center justify-center shadow-lg shadow-amber-500/20 group-hover:scale-105 transition-transform">
-              <Sparkles className="w-5 h-5 text-zinc-950 fill-zinc-950" />
+      <header className="sticky top-0 z-40 w-full border-b-2 border-[var(--border-main)] bg-[var(--bg-panel)]/95 backdrop-blur-xl transition-colors duration-150">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-15 flex items-center justify-between gap-4">
+          {/* Brand Logo with Fraunces Italic Typography */}
+          <Link href="/" className="flex items-center gap-2.5 group select-none">
+            <div className="w-8 h-8 rounded-full bg-[#A3E635] border-2 border-[var(--border-main)] flex items-center justify-center text-[#142218] font-black font-fraunces text-base shadow-[2px_2px_0px_var(--border-main)] group-hover:-translate-x-0.5 group-hover:-translate-y-0.5 group-hover:shadow-[3px_3px_0px_var(--border-main)] transition-all">
+              B
             </div>
-            <div className="flex flex-col">
-              <div className="flex items-center tracking-tight">
-                <span className="text-lg font-black text-white">Bol</span>
-                <span className="text-lg font-black text-amber-400">Sub</span>
-                <span className="ml-1.5 px-1.5 py-0.5 rounded text-[10px] font-bold bg-zinc-800 text-zinc-300 border border-zinc-700/60 uppercase tracking-widest">
-                  Studio
-                </span>
-              </div>
-              <span className="text-[10px] text-zinc-400 -mt-0.5 font-medium">100% Local AI Captions</span>
+            <div className="flex items-center tracking-tight">
+              <span className="font-fraunces italic font-extrabold text-xl text-[var(--text-main)]">
+                BolSub
+              </span>
+              <span className="font-fraunces italic font-bold text-xl text-[#A3E635] ml-0.5">
+                .Studio
+              </span>
+              <span className="ml-2 px-2 py-0.5 rounded-full text-[9px] font-extrabold bg-[#A3E635] text-[#142218] border-1.5 border-[var(--border-main)] uppercase tracking-wider shadow-[1.5px_1.5px_0px_var(--border-main)]">
+                Rustic Neo
+              </span>
             </div>
           </Link>
 
-          {/* Navigation Links */}
-          <nav className="hidden md:flex items-center gap-6 text-sm font-medium text-zinc-400">
-            <Link href="/editor" className="hover:text-white transition-colors flex items-center gap-1.5">
-              <Film className="w-4 h-4 text-amber-400/80" /> Editor
+          {/* Navigation Links with Neobrutal Pills */}
+          <nav className="hidden md:flex items-center gap-2 text-xs font-bold">
+            <Link
+              href="/editor"
+              className="px-3 py-1.5 rounded-full text-[var(--text-main)] hover:bg-[var(--accent-lime)]/20 border-2 border-transparent hover:border-[var(--border-main)] hover:shadow-[2px_2px_0px_var(--border-main)] transition-all flex items-center gap-1.5"
+            >
+              <Film className="w-3.5 h-3.5 text-[#A3E635]" /> Editor
             </Link>
-            <Link href="/projects" className="hover:text-white transition-colors flex items-center gap-1.5">
-              <FolderKanban className="w-4 h-4" /> Projects
+            <Link
+              href="/projects"
+              className="px-3 py-1.5 rounded-full text-[var(--text-main)] hover:bg-[var(--accent-lime)]/20 border-2 border-transparent hover:border-[var(--border-main)] hover:shadow-[2px_2px_0px_var(--border-main)] transition-all flex items-center gap-1.5"
+            >
+              <FolderKanban className="w-3.5 h-3.5" /> Projects
             </Link>
-            <Link href="/settings" className="hover:text-white transition-colors flex items-center gap-1.5">
-              <Settings className="w-4 h-4" /> Settings
+            <Link
+              href="/settings"
+              className="px-3 py-1.5 rounded-full text-[var(--text-main)] hover:bg-[var(--accent-lime)]/20 border-2 border-transparent hover:border-[var(--border-main)] hover:shadow-[2px_2px_0px_var(--border-main)] transition-all flex items-center gap-1.5"
+            >
+              <Settings className="w-3.5 h-3.5" /> Settings
             </Link>
           </nav>
 
           {/* Right Action Stack */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2.5">
             <CapabilityBadge />
+
+            {/* Theme Toggle (Light Rustic / Dark Forest) */}
+            <ThemeToggle />
 
             {/* Model Manager Quick Selector */}
             <button
               onClick={() => setIsModelModalOpen(true)}
-              className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-zinc-900 border border-zinc-800 hover:border-amber-500/40 text-xs text-zinc-300 transition-colors shadow-sm"
+              className="hidden lg:flex items-center gap-1.5 px-3 py-1 rounded-full bg-[var(--bg-card)] border-2 border-[var(--border-main)] shadow-[2px_2px_0px_var(--border-main)] hover:-translate-x-0.5 hover:-translate-y-0.5 text-xs text-[var(--text-main)] font-bold transition-all cursor-pointer"
               title="Change active Whisper model tier and check storage"
             >
-              <Cpu className="w-3.5 h-3.5 text-amber-400" />
+              <Cpu className="w-3.5 h-3.5 text-[#A3E635]" />
               <span>{MODEL_TIERS[selectedTier].name}</span>
             </button>
 
-            {/* Launch Editor CTA */}
+            {/* Launch Editor CTA - Signature Neobrutalist Pill */}
             <Link
               href="/editor"
-              className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 hover:to-amber-300 text-zinc-950 font-semibold text-xs sm:text-sm transition-all shadow-md shadow-amber-500/10 active:scale-95"
+              className="neo-btn px-4 py-1.5 text-xs flex items-center gap-1.5"
             >
               <span>Launch Studio</span>
-              <ArrowRight className="w-4 h-4" />
+              <ArrowRight className="w-3.5 h-3.5 text-[#142218] stroke-[2.5]" />
             </Link>
           </div>
         </div>

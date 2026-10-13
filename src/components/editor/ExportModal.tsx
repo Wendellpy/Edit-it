@@ -8,19 +8,35 @@ import {
   Sparkles,
   Download,
   CheckCircle2,
-  AlertCircle,
   Cpu,
   Layers,
   Copy,
   Check,
+  Volume2,
+  VolumeX,
+  Crop,
+  Maximize2,
+  Tv,
+  Smartphone,
+  Square,
+  Ratio,
+  Clapperboard,
+  Sliders,
+  CheckCheck,
 } from "lucide-react";
 import confetti from "canvas-confetti";
 import { useEditorStore } from "@/lib/editorStore";
 import {
   exportVideoWithWebCodecs,
+  calculateExportDimensions,
   ExportConfig,
   ExportProgress,
   ExportResolution,
+  ExportAspectRatio,
+  ExportFitMode,
+  ExportQuality,
+  ExportFps,
+  ExportFormat,
 } from "@/lib/export/webcodecsExport";
 import {
   generateSrt,
@@ -38,14 +54,42 @@ interface ExportModalProps {
 }
 
 export function ExportModal({ isOpen, onClose, videoElement }: ExportModalProps) {
-  const { tokens, templateId, duration, syncOffset } = useEditorStore();
+  const {
+    videoUrl,
+    videoFile,
+    tokens,
+    templateId,
+    duration,
+    syncOffset,
+    exportSettings,
+    setExportSettings,
+  } = useEditorStore();
   const template = getTemplateById(templateId);
 
+  // Tabs
   const [activeTab, setActiveTab] = useState<"video" | "subtitles">("video");
-  const [resolution, setResolution] = useState<ExportResolution>("1080p");
-  const [fps, setFps] = useState<30 | 60>(30);
-  const [videoFormat, setVideoFormat] = useState<"mp4" | "webm_alpha">("mp4");
 
+  // Read export settings directly from persisted store
+  const videoFormat = exportSettings.format;
+  const aspectRatio = exportSettings.aspectRatio;
+  const fitMode = exportSettings.fitMode;
+  const resolution = exportSettings.resolution;
+  const fps = exportSettings.fps;
+  const quality = exportSettings.quality;
+  const includeAudio = exportSettings.includeAudio;
+
+  const setVideoFormat = (format: ExportFormat) => setExportSettings({ format });
+  const setAspectRatio = (aspectRatio: ExportAspectRatio) => setExportSettings({ aspectRatio });
+  const setFitMode = (fitMode: ExportFitMode) => setExportSettings({ fitMode });
+  const setResolution = (resolution: ExportResolution) => setExportSettings({ resolution });
+  const setFps = (fps: ExportFps) => setExportSettings({ fps });
+  const setQuality = (quality: ExportQuality) => setExportSettings({ quality });
+  const setIncludeAudio = (includeAudio: boolean) => setExportSettings({ includeAudio });
+
+  // Detected Source Specs
+  const [sourceDimensions, setSourceDimensions] = useState<{ width: number; height: number } | null>(null);
+
+  // Hardware Status & Progress
   const [capabilities, setCapabilities] = useState<SystemCapabilities | null>(null);
   const [isExporting, setIsExporting] = useState(false);
   const [progress, setProgress] = useState<ExportProgress | null>(null);
@@ -53,22 +97,58 @@ export function ExportModal({ isOpen, onClose, videoElement }: ExportModalProps)
   const [lastSavedFilename, setLastSavedFilename] = useState("");
   const [copiedFormat, setCopiedFormat] = useState<string | null>(null);
 
+  // Live Canvas Preview Ref during hardware encoding
+  const livePreviewCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const frameCountRef = useRef<number>(0);
   const abortControllerRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
     detectSystemCapabilities().then(setCapabilities);
   }, []);
 
+  // Inspect source video dimensions when video changes (without clobbering user choice)
+  useEffect(() => {
+    if (videoUrl) {
+      const v = document.createElement("video");
+      v.src = videoUrl;
+      v.preload = "metadata";
+      v.onloadedmetadata = () => {
+        if (v.videoWidth && v.videoHeight) {
+          setSourceDimensions({ width: v.videoWidth, height: v.videoHeight });
+        }
+      };
+    }
+  }, [videoUrl]);
+
   if (!isOpen) return null;
+
+  // Calculate live output dimension pill
+  const computedDims = calculateExportDimensions(
+    aspectRatio,
+    resolution,
+    sourceDimensions?.width,
+    sourceDimensions?.height,
+    quality
+  );
+
+  const isAspectRatioDifferentFromSource =
+    sourceDimensions &&
+    (() => {
+      const srcRatio = sourceDimensions.width / sourceDimensions.height;
+      const targetRatio = computedDims.width / computedDims.height;
+      return Math.abs(srcRatio - targetRatio) > 0.05;
+    })();
 
   const handleStartExport = async () => {
     setIsExporting(true);
     setExportComplete(false);
+
+    const totalFrames = Math.max(1, Math.round((duration || 5) * fps));
     setProgress({
       phase: "preparing",
       percent: 0,
       currentFrame: 0,
-      totalFrames: Math.round((duration || 5) * fps),
+      totalFrames,
       fps: 0,
       timeRemainingSec: 0,
     });
@@ -78,32 +158,50 @@ export function ExportModal({ isOpen, onClose, videoElement }: ExportModalProps)
 
     const config: ExportConfig = {
       resolution,
+      aspectRatio,
+      fitMode,
       fps,
       format: videoFormat,
+      quality,
+      includeAudio,
       syncOffsetSeconds: syncOffset || 0,
     };
 
     try {
-      // Find video element from DOM if not passed directly
-      const videoEl =
-        videoElement ||
-        (document.querySelector("video") as HTMLVideoElement) ||
-        document.createElement("video");
-
       const exportedBlob = await exportVideoWithWebCodecs({
-        videoElement: videoEl,
+        videoElement: videoElement || undefined,
+        videoUrl: videoUrl || undefined,
+        videoFile: videoFile || undefined,
         words: tokens,
         template,
         config,
         duration: duration || 5,
         onProgress: (p) => setProgress(p),
+        onFrameRendered: (canvasSource) => {
+          frameCountRef.current++;
+          if (frameCountRef.current % 4 !== 0) return;
+          if (livePreviewCanvasRef.current) {
+            const previewCtx = livePreviewCanvasRef.current.getContext("2d");
+            if (previewCtx) {
+              previewCtx.clearRect(0, 0, livePreviewCanvasRef.current.width, livePreviewCanvasRef.current.height);
+              previewCtx.drawImage(
+                canvasSource as CanvasImageSource,
+                0,
+                0,
+                livePreviewCanvasRef.current.width,
+                livePreviewCanvasRef.current.height
+              );
+            }
+          }
+        },
         signal: abortController.signal,
       });
 
+      const aspectTag = aspectRatio.replace(":", "x");
       const filename =
         videoFormat === "webm_alpha"
-          ? `bolsub-captions-alpha-${resolution}-${Date.now()}.webm`
-          : `bolsub-reel-${resolution}-${Date.now()}.mp4`;
+          ? `bolsub-overlay-${aspectTag}-${resolution}-${Date.now()}.webm`
+          : `bolsub-video-${aspectTag}-${resolution}-${Date.now()}.mp4`;
 
       const mime = videoFormat === "webm_alpha" ? "video/webm" : "video/mp4";
       const ext = videoFormat === "webm_alpha" ? "webm" : "mp4";
@@ -112,7 +210,7 @@ export function ExportModal({ isOpen, onClose, videoElement }: ExportModalProps)
         suggestedName: filename,
         mimeType: mime,
         extension: ext,
-        description: videoFormat === "webm_alpha" ? "Transparent WebM Overlay" : "MP4 Reel Video",
+        description: videoFormat === "webm_alpha" ? "Transparent Alpha WebM" : "Full Composite MP4 Video",
       });
 
       setLastSavedFilename(filename);
@@ -121,10 +219,10 @@ export function ExportModal({ isOpen, onClose, videoElement }: ExportModalProps)
 
       // Trigger celebratory local confetti
       confetti({
-        particleCount: 80,
-        spread: 70,
+        particleCount: 90,
+        spread: 75,
         origin: { y: 0.6 },
-        colors: ["#39FF14", "#FFE600", "#FF007F", "#00F0FF"],
+        colors: ["#A3E635", "#39FF14", "#FFE600", "#FF007F", "#00F0FF"],
       });
     } catch (err: unknown) {
       if (err instanceof Error && err.message.includes("cancelled")) {
@@ -135,7 +233,7 @@ export function ExportModal({ isOpen, onClose, videoElement }: ExportModalProps)
       console.error("Export failed:", err);
       setProgress((prev) =>
         prev
-          ? { ...prev, phase: "error", error: err instanceof Error ? err.message : "Unknown error" }
+          ? { ...prev, phase: "error", error: err instanceof Error ? err.message : "Export pipeline error" }
           : null
       );
       setIsExporting(false);
@@ -167,7 +265,7 @@ export function ExportModal({ isOpen, onClose, videoElement }: ExportModalProps)
       mime = "text/vtt";
       desc = "WebVTT Subtitle File";
     } else if (type === "ass") {
-      content = generateAss(tokens, template, 1080, 1920);
+      content = generateAss(tokens, template, computedDims.width, computedDims.height);
       ext = "ass";
       mime = "text/x-ssa";
       desc = "Advanced SubStation Alpha Subtitle File";
@@ -188,7 +286,7 @@ export function ExportModal({ isOpen, onClose, videoElement }: ExportModalProps)
     let text = "";
     if (type === "srt") text = generateSrt(tokens);
     else if (type === "vtt") text = generateVtt(tokens, template);
-    else if (type === "ass") text = generateAss(tokens, template);
+    else if (type === "ass") text = generateAss(tokens, template, computedDims.width, computedDims.height);
 
     navigator.clipboard.writeText(text);
     setCopiedFormat(type);
@@ -196,30 +294,31 @@ export function ExportModal({ isOpen, onClose, videoElement }: ExportModalProps)
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
-      <div className="relative w-full max-w-2xl bg-zinc-950 border border-zinc-800 rounded-2xl shadow-2xl overflow-hidden flex flex-col">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/65 backdrop-blur-md animate-in fade-in duration-150 overflow-y-auto">
+      <div className="relative w-full max-w-2xl bg-[var(--bg-card)] border-2 border-[var(--border-main)] rounded-2xl shadow-[6px_6px_0px_var(--border-main)] overflow-hidden flex flex-col text-[var(--text-main)] my-auto max-h-[92vh]">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-800/80 bg-zinc-900/60">
-          <div className="flex items-center gap-2.5">
-            <div className="p-2 rounded-xl bg-gradient-to-br from-amber-500/20 to-orange-500/20 text-amber-400 border border-amber-500/30">
-              <Sparkles className="w-5 h-5" />
+        <div className="flex items-center justify-between px-6 py-4 border-b-2 border-[var(--border-main)] bg-[var(--bg-panel)] shrink-0">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-full bg-[var(--accent-lime)] text-[#142218] border-2 border-[var(--border-main)] shadow-[2px_2px_0px_var(--border-main)]">
+              <Sparkles className="w-5 h-5 text-[#142218]" />
             </div>
             <div>
-              <h2 className="text-base font-bold text-white flex items-center gap-2">
+              <h2 className="font-fraunces italic text-lg sm:text-xl font-extrabold text-[var(--text-main)] flex items-center gap-2">
                 Export Studio Captions
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                  100% Local Hardware
+                <span className="neo-pill bg-[var(--accent-lime)]/20 text-[var(--text-main)] text-[9px] py-0.5 px-2">
+                  100% On-Device
                 </span>
               </h2>
-              <p className="text-xs text-zinc-400">
-                Render and save directly on your machine with zero server latency or token costs
+              <p className="text-xs text-[var(--text-muted)] font-medium">
+                Hardware-accelerated rendering with custom aspect ratios & synchronized sound
               </p>
             </div>
           </div>
           {!isExporting && (
             <button
               onClick={onClose}
-              className="p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors"
+              className="neo-btn-secondary p-1.5 rounded-full cursor-pointer"
+              title="Close modal"
             >
               <X className="w-5 h-5" />
             </button>
@@ -228,13 +327,13 @@ export function ExportModal({ isOpen, onClose, videoElement }: ExportModalProps)
 
         {/* Tab Navigation */}
         {!isExporting && !exportComplete && (
-          <div className="flex border-b border-zinc-800/80 bg-zinc-900/30 px-6 pt-2">
+          <div className="flex border-b-2 border-[var(--border-main)]/30 bg-[var(--bg-panel)] px-6 pt-2 gap-4 shrink-0">
             <button
               onClick={() => setActiveTab("video")}
-              className={`flex items-center gap-2 pb-2.5 px-3 text-xs font-semibold border-b-2 transition-colors ${
+              className={`flex items-center gap-2 pb-2.5 px-3 text-xs font-black border-b-2 transition-all cursor-pointer ${
                 activeTab === "video"
-                  ? "border-amber-500 text-amber-400"
-                  : "border-transparent text-zinc-400 hover:text-zinc-200"
+                  ? "border-[var(--accent-lime)] text-[var(--text-main)]"
+                  : "border-transparent text-[var(--text-muted)] hover:text-[var(--text-main)]"
               }`}
             >
               <Video className="w-4 h-4" />
@@ -242,78 +341,102 @@ export function ExportModal({ isOpen, onClose, videoElement }: ExportModalProps)
             </button>
             <button
               onClick={() => setActiveTab("subtitles")}
-              className={`flex items-center gap-2 pb-2.5 px-3 text-xs font-semibold border-b-2 transition-colors ${
+              className={`flex items-center gap-2 pb-2.5 px-3 text-xs font-black border-b-2 transition-all cursor-pointer ${
                 activeTab === "subtitles"
-                  ? "border-amber-500 text-amber-400"
-                  : "border-transparent text-zinc-400 hover:text-zinc-200"
+                  ? "border-[var(--accent-lime)] text-[var(--text-main)]"
+                  : "border-transparent text-[var(--text-muted)] hover:text-[var(--text-main)]"
               }`}
             >
               <FileText className="w-4 h-4" />
-              <span>Subtitle Documents (SRT, VTT, ASS)</span>
+              <span>Subtitle Files (SRT, VTT, ASS)</span>
             </button>
           </div>
         )}
 
         {/* Body Content */}
-        <div className="p-6">
+        <div className="p-5 sm:p-6 overflow-y-auto space-y-5 flex-1">
           {/* STATE 1: Live Hardware Exporting Progress */}
           {isExporting && progress && (
-            <div className="space-y-6 py-4">
+            <div className="space-y-5 py-2">
               <div className="text-center space-y-2">
-                <div className="inline-flex p-3 rounded-2xl bg-amber-500/10 text-amber-400 border border-amber-500/20 animate-pulse">
+                <div className="inline-flex p-3 rounded-2xl bg-[var(--accent-lime)]/20 text-[var(--accent-forest)] dark:text-[var(--accent-lime)] border-2 border-[var(--border-main)] shadow-[3px_3px_0px_var(--border-main)] animate-pulse">
                   <Cpu className="w-8 h-8" />
                 </div>
-                <h3 className="text-lg font-bold text-white capitalize">
-                  {progress.phase === "preparing" && "Preparing WebCodecs Pipeline..."}
-                  {progress.phase === "rendering" && "Rendering Hardware Frames..."}
+                <h3 className="font-fraunces italic text-lg sm:text-xl font-bold text-[var(--text-main)] capitalize">
+                  {progress.phase === "preparing" && "Preparing Hardware Encoder & Audio..."}
+                  {progress.phase === "rendering" && "Rendering Frames with Captions..."}
                   {progress.phase === "muxing" && "Muxing MP4 Fast Container..."}
+                  {progress.phase === "error" && "Export Encountered an Error"}
                 </h3>
-                <p className="text-xs text-zinc-400">
-                  Compositing 9:16 vertical canvas at {resolution.toUpperCase()} ({fps}fps)
+                <p className="text-xs text-[var(--text-muted)] font-mono">
+                  {aspectRatio} · {computedDims.width}×{computedDims.height} · {fps}fps · {includeAudio ? "Audio Track Included" : "Muted"}
                 </p>
               </div>
 
-              {/* Progress Bar */}
-              <div className="space-y-2">
-                <div className="flex justify-between text-xs text-zinc-400 font-mono">
-                  <span>Progress</span>
-                  <span className="text-amber-400 font-bold">{progress.percent}%</span>
+              {/* Realtime Live Preview Canvas */}
+              <div className="flex justify-center">
+                <div className="relative rounded-xl border-2 border-[var(--border-main)] overflow-hidden bg-black shadow-[4px_4px_0px_var(--border-main)] max-h-48 flex items-center justify-center">
+                  <canvas
+                    ref={livePreviewCanvasRef}
+                    width={320}
+                    height={Math.round((320 * computedDims.height) / computedDims.width)}
+                    className="max-h-44 object-contain"
+                  />
+                  <div className="absolute top-2 left-2 px-2 py-0.5 rounded-full bg-black/75 text-[var(--accent-lime)] text-[9px] font-mono font-bold border border-white/20">
+                    LIVE ENCODER PREVIEW
+                  </div>
                 </div>
-                <div className="h-3 w-full bg-zinc-900 rounded-full overflow-hidden border border-zinc-800">
+              </div>
+
+              {/* Progress Bar */}
+              <div className="space-y-1.5">
+                <div className="flex justify-between text-xs text-[var(--text-muted)] font-mono">
+                  <span className="font-bold text-[var(--text-main)]">Rendering Progress</span>
+                  <span className="font-black text-[var(--accent-forest)] dark:text-[var(--accent-lime)]">
+                    {progress.percent}%
+                  </span>
+                </div>
+                <div className="h-3.5 w-full bg-[var(--bg-panel)] rounded-full overflow-hidden border-2 border-[var(--border-main)]">
                   <div
-                    className="h-full bg-gradient-to-r from-amber-500 via-orange-500 to-emerald-400 transition-all duration-150"
+                    className="h-full bg-[var(--accent-lime)] transition-all duration-150"
                     style={{ width: `${progress.percent}%` }}
                   />
                 </div>
               </div>
 
-              {/* Realtime Stats */}
-              <div className="grid grid-cols-3 gap-3 p-3 rounded-xl bg-zinc-900/60 border border-zinc-800 text-center text-xs">
+              {/* Realtime Stats Grid */}
+              <div className="grid grid-cols-3 gap-2.5 p-3 rounded-xl bg-[var(--bg-panel)] border-2 border-[var(--border-main)] shadow-[2px_2px_0px_var(--border-main)] text-center text-xs">
                 <div>
-                  <span className="text-zinc-500 block text-[10px] uppercase font-semibold">Frames</span>
-                  <span className="font-mono text-zinc-200">
+                  <span className="text-[var(--text-muted)] block text-[10px] uppercase font-bold">Frames</span>
+                  <span className="font-mono font-bold text-[var(--text-main)]">
                     {progress.currentFrame} / {progress.totalFrames}
                   </span>
                 </div>
                 <div>
-                  <span className="text-zinc-500 block text-[10px] uppercase font-semibold">Speed</span>
-                  <span className="font-mono text-amber-400 font-medium">
+                  <span className="text-[var(--text-muted)] block text-[10px] uppercase font-bold">Encoding Speed</span>
+                  <span className="font-mono font-bold text-[var(--accent-forest)] dark:text-[var(--accent-lime)]">
                     {progress.fps > 0 ? `${progress.fps} FPS` : "Calibrating..."}
                   </span>
                 </div>
                 <div>
-                  <span className="text-zinc-500 block text-[10px] uppercase font-semibold">Est. Remaining</span>
-                  <span className="font-mono text-emerald-400 font-medium">
+                  <span className="text-[var(--text-muted)] block text-[10px] uppercase font-bold">Est. Remaining</span>
+                  <span className="font-mono font-bold text-[var(--text-main)]">
                     {progress.timeRemainingSec > 0 ? `${progress.timeRemainingSec}s` : "Wrapping up..."}
                   </span>
                 </div>
               </div>
 
+              {progress.error && (
+                <div className="p-3 rounded-xl bg-red-500/10 border-2 border-red-500 text-red-500 text-xs font-medium">
+                  {progress.error}
+                </div>
+              )}
+
               {/* Cancel Button */}
               <div className="flex justify-center pt-2">
                 <button
                   onClick={handleCancelExport}
-                  className="px-4 py-2 rounded-xl bg-zinc-900 hover:bg-red-500/20 text-zinc-400 hover:text-red-400 border border-zinc-800 hover:border-red-500/30 text-xs font-medium transition-colors"
+                  className="neo-btn-secondary px-4 py-2 text-xs font-bold text-red-500 hover:text-red-600 cursor-pointer"
                 >
                   Cancel Export
                 </button>
@@ -324,29 +447,31 @@ export function ExportModal({ isOpen, onClose, videoElement }: ExportModalProps)
           {/* STATE 2: Export Complete Screen */}
           {!isExporting && exportComplete && (
             <div className="text-center space-y-4 py-6">
-              <div className="inline-flex p-3 rounded-2xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
-                <CheckCircle2 className="w-10 h-10" />
+              <div className="inline-flex p-3 rounded-2xl bg-[var(--accent-lime)] text-[#142218] border-2 border-[var(--border-main)] shadow-[4px_4px_0px_var(--border-main)]">
+                <CheckCircle2 className="w-10 h-10 stroke-[2.5]" />
               </div>
               <div>
-                <h3 className="text-lg font-bold text-white">Export Successfully Saved!</h3>
-                <p className="text-xs text-zinc-400 mt-1">
-                  Saved directly to your local drive via File System Access API
+                <h3 className="font-fraunces italic text-xl font-bold text-[var(--text-main)]">
+                  Video Saved Successfully!
+                </h3>
+                <p className="text-xs text-[var(--text-muted)] mt-1 font-medium">
+                  Directly saved to your local disk with frame-accurate sync and sound
                 </p>
-                <div className="mt-2 inline-block font-mono text-xs text-amber-300 bg-zinc-900 px-3 py-1 rounded-lg border border-zinc-800">
+                <div className="mt-3 inline-block font-mono text-xs text-[var(--text-main)] bg-[var(--bg-panel)] px-3 py-1.5 rounded-lg border-2 border-[var(--border-main)] shadow-[2px_2px_0px_var(--border-main)]">
                   {lastSavedFilename}
                 </div>
               </div>
 
-              <div className="flex justify-center gap-3 pt-4">
+              <div className="flex justify-center gap-3 pt-3">
                 <button
                   onClick={() => setExportComplete(false)}
-                  className="px-4 py-2.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-300 text-xs font-semibold transition-colors"
+                  className="neo-btn-secondary px-4 py-2.5 text-xs font-bold cursor-pointer"
                 >
                   Export Another Format
                 </button>
                 <button
                   onClick={onClose}
-                  className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-black text-xs font-bold shadow-lg shadow-amber-500/20 transition-all hover:scale-[1.02]"
+                  className="neo-btn px-6 py-2.5 text-xs font-black cursor-pointer"
                 >
                   Done
                 </button>
@@ -356,129 +481,269 @@ export function ExportModal({ isOpen, onClose, videoElement }: ExportModalProps)
 
           {/* STATE 3: Tab 1 - Video Export Configuration */}
           {!isExporting && !exportComplete && activeTab === "video" && (
-            <div className="space-y-5">
+            <div className="space-y-4">
               {/* Export Mode */}
-              <div className="space-y-2">
-                <label className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold uppercase tracking-wider text-[var(--text-muted)]">
                   Export Mode
                 </label>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 gap-2.5">
                   <button
                     onClick={() => setVideoFormat("mp4")}
-                    className={`p-3 rounded-xl border text-left transition-all ${
+                    className={`p-3 rounded-xl border-2 text-left transition-all cursor-pointer ${
                       videoFormat === "mp4"
-                        ? "bg-amber-500/10 border-amber-500 text-white"
-                        : "bg-zinc-900/60 border-zinc-800 text-zinc-400 hover:text-zinc-200"
+                        ? "bg-[var(--accent-lime)]/15 border-[var(--border-main)] shadow-[3px_3px_0px_var(--border-main)] text-[var(--text-main)]"
+                        : "bg-[var(--bg-panel)] border-[var(--border-main)]/30 text-[var(--text-muted)] hover:border-[var(--border-main)]"
                     }`}
                   >
                     <div className="flex items-center gap-2">
-                      <Video className="w-4 h-4 text-amber-400" />
-                      <span className="text-xs font-bold">Burn-In MP4 Video</span>
+                      <Video className="w-4 h-4 text-[var(--accent-forest)] dark:text-[var(--accent-lime)]" />
+                      <span className="text-xs font-black text-[var(--text-main)]">Burn-In MP4 Video</span>
                     </div>
-                    <p className="text-[11px] text-zinc-400 mt-1">
-                      Full composite video with styled captions for Instagram & YouTube
+                    <p className="text-[11px] text-[var(--text-muted)] mt-1 leading-snug">
+                      Full composite video with styled captions, depth & synchronized sound
                     </p>
                   </button>
 
                   <button
                     onClick={() => setVideoFormat("webm_alpha")}
-                    className={`p-3 rounded-xl border text-left transition-all ${
+                    className={`p-3 rounded-xl border-2 text-left transition-all cursor-pointer ${
                       videoFormat === "webm_alpha"
-                        ? "bg-amber-500/10 border-amber-500 text-white"
-                        : "bg-zinc-900/60 border-zinc-800 text-zinc-400 hover:text-zinc-200"
+                        ? "bg-[var(--accent-lime)]/15 border-[var(--border-main)] shadow-[3px_3px_0px_var(--border-main)] text-[var(--text-main)]"
+                        : "bg-[var(--bg-panel)] border-[var(--border-main)]/30 text-[var(--text-muted)] hover:border-[var(--border-main)]"
                     }`}
                   >
                     <div className="flex items-center gap-2">
-                      <Layers className="w-4 h-4 text-cyan-400" />
-                      <span className="text-xs font-bold">Transparent Overlay (WebM)</span>
+                      <Layers className="w-4 h-4 text-[var(--accent-forest)] dark:text-[var(--accent-lime)]" />
+                      <span className="text-xs font-black text-[var(--text-main)]">Transparent Overlay (WebM)</span>
                     </div>
-                    <p className="text-[11px] text-zinc-400 mt-1">
-                      Alpha channel video for Premiere Pro, DaVinci Resolve & Final Cut
+                    <p className="text-[11px] text-[var(--text-muted)] mt-1 leading-snug">
+                      Alpha-channel track for Premiere Pro, DaVinci Resolve & Final Cut
                     </p>
                   </button>
                 </div>
               </div>
 
-              {/* Resolution Selection */}
-              <div className="space-y-2">
-                <label className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
-                  Target Resolution (9:16 Vertical)
-                </label>
+              {/* 1. Aspect Ratio Selection (CORE USER REQUIREMENT) */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold uppercase tracking-wider text-[var(--text-muted)] flex items-center gap-1.5">
+                    <Ratio className="w-3.5 h-3.5" />
+                    Target Aspect Ratio
+                  </label>
+                  {sourceDimensions && (
+                    <span className="text-[10px] font-mono text-[var(--text-muted)]">
+                      Source: {sourceDimensions.width}×{sourceDimensions.height}
+                    </span>
+                  )}
+                </div>
+                <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+                  {(
+                    [
+                      { id: "original", label: "Original", icon: Clapperboard, sub: "Source" },
+                      { id: "9:16", label: "9:16", icon: Smartphone, sub: "Reels / TikTok" },
+                      { id: "16:9", label: "16:9", icon: Tv, sub: "YouTube / Widescreen" },
+                      { id: "1:1", label: "1:1", icon: Square, sub: "Instagram Square" },
+                      { id: "4:5", label: "4:5", icon: Smartphone, sub: "Feed Portrait" },
+                      { id: "21:9", label: "21:9", icon: Maximize2, sub: "Ultrawide" },
+                    ] as const
+                  ).map((item) => {
+                    const Icon = item.icon;
+                    return (
+                      <button
+                        key={item.id}
+                        onClick={() => setAspectRatio(item.id)}
+                        className={`p-2 rounded-xl border-2 text-center transition-all cursor-pointer ${
+                          aspectRatio === item.id
+                            ? "bg-[var(--accent-lime)] text-[#142218] border-[var(--border-main)] font-black shadow-[3px_3px_0px_var(--border-main)]"
+                            : "bg-[var(--bg-panel)] border-[var(--border-main)]/30 text-[var(--text-muted)] hover:border-[var(--border-main)]"
+                        }`}
+                      >
+                        <Icon className="w-3.5 h-3.5 mx-auto mb-1" />
+                        <span className="block text-xs font-black">{item.label}</span>
+                        <span className="block text-[9px] opacity-80 truncate">{item.sub}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* 2. Framing & Crop Mode (When aspect ratio changes) */}
+              <div className="space-y-1.5 p-3 rounded-xl bg-[var(--bg-panel)] border-2 border-[var(--border-main)]/40">
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-muted)] flex items-center gap-1.5">
+                    <Crop className="w-3.5 h-3.5" />
+                    Framing & Crop Mode
+                  </label>
+                  {isAspectRatioDifferentFromSource && (
+                    <span className="neo-pill bg-[var(--accent-lime)]/20 text-[var(--text-main)] text-[9px] py-0 px-2">
+                      Aspect Ratio Conversion
+                    </span>
+                  )}
+                </div>
                 <div className="grid grid-cols-4 gap-2">
                   {(
                     [
-                      { id: "720p", label: "720p HD", sub: "Fastest" },
-                      { id: "1080p", label: "1080p FHD", sub: "Recommended" },
-                      { id: "1440p", label: "1440p 2K", sub: "Crisp QHD" },
-                      { id: "4k", label: "4K UHD", sub: "Pro Ultra" },
+                      { id: "cover", label: "Cover (Crop)", desc: "Fill frame, crop edges" },
+                      { id: "fit", label: "Fit (Letterbox)", desc: "Clean dark bars" },
+                      { id: "fit_blur", label: "Fit + Blur", desc: "Ambient blurred backdrop" },
+                      { id: "stretch", label: "Stretch", desc: "Stretch to fill" },
                     ] as const
-                  ).map((item) => (
+                  ).map((f) => (
                     <button
-                      key={item.id}
-                      onClick={() => setResolution(item.id)}
-                      className={`p-2.5 rounded-xl border text-center transition-all ${
-                        resolution === item.id
-                          ? "bg-zinc-900 border-amber-500 text-amber-400 font-bold"
-                          : "bg-zinc-900/40 border-zinc-800 text-zinc-400 hover:text-zinc-200"
+                      key={f.id}
+                      onClick={() => setFitMode(f.id)}
+                      className={`p-2 rounded-lg border-2 text-center transition-all cursor-pointer ${
+                        fitMode === f.id
+                          ? "bg-[var(--accent-lime)] text-[#142218] border-[var(--border-main)] font-black shadow-[2px_2px_0px_var(--border-main)]"
+                          : "bg-[var(--bg-card)] border-[var(--border-main)]/30 text-[var(--text-muted)] hover:border-[var(--border-main)]"
                       }`}
                     >
-                      <span className="block text-xs font-semibold">{item.label}</span>
-                      <span className="block text-[10px] text-zinc-500 mt-0.5">{item.sub}</span>
+                      <span className="block text-[11px] font-bold">{f.label}</span>
+                      <span className="block text-[9px] opacity-80 mt-0.5 truncate">{f.desc}</span>
                     </button>
                   ))}
                 </div>
               </div>
 
-              {/* Framerate Selection */}
-              <div className="space-y-2">
-                <label className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
-                  Frame Rate
-                </label>
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                    onClick={() => setFps(30)}
-                    className={`p-2 rounded-xl border text-center text-xs font-semibold transition-all ${
-                      fps === 30
-                        ? "bg-zinc-900 border-amber-500 text-amber-400"
-                        : "bg-zinc-900/40 border-zinc-800 text-zinc-400 hover:text-zinc-200"
-                    }`}
-                  >
-                    30 FPS (Standard Reels / Shorts)
-                  </button>
-                  <button
-                    onClick={() => setFps(60)}
-                    className={`p-2 rounded-xl border text-center text-xs font-semibold transition-all ${
-                      fps === 60
-                        ? "bg-zinc-900 border-amber-500 text-amber-400"
-                        : "bg-zinc-900/40 border-zinc-800 text-zinc-400 hover:text-zinc-200"
-                    }`}
-                  >
-                    60 FPS (Ultra Smooth Motion)
-                  </button>
+              {/* 3. Resolution Selection */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold uppercase tracking-wider text-[var(--text-muted)]">
+                    Resolution Quality Tier
+                  </label>
+                  <span className="text-[11px] font-mono font-bold text-[var(--accent-forest)] dark:text-[var(--accent-lime)]">
+                    Output: {computedDims.width} × {computedDims.height} px
+                  </span>
+                </div>
+                <div className="grid grid-cols-5 gap-2">
+                  {(
+                    [
+                      { id: "720p", label: "720p HD", sub: "Fastest" },
+                      { id: "1080p", label: "1080p FHD", sub: "Recommended" },
+                      { id: "1440p", label: "1440p 2K", sub: "Crisp QHD" },
+                      { id: "4k", label: "4K UHD", sub: "Ultra Crisp" },
+                      { id: "source", label: "Source Match", sub: "Exact Pixels" },
+                    ] as const
+                  ).map((item) => (
+                    <button
+                      key={item.id}
+                      onClick={() => setResolution(item.id)}
+                      className={`p-2 rounded-xl border-2 text-center transition-all cursor-pointer ${
+                        resolution === item.id
+                          ? "bg-[var(--accent-lime)] text-[#142218] border-[var(--border-main)] font-black shadow-[2px_2px_0px_var(--border-main)]"
+                          : "bg-[var(--bg-panel)] border-[var(--border-main)]/30 text-[var(--text-muted)] hover:border-[var(--border-main)]"
+                      }`}
+                    >
+                      <span className="block text-xs font-bold">{item.label}</span>
+                      <span className="block text-[9px] opacity-80 mt-0.5 truncate">{item.sub}</span>
+                    </button>
+                  ))}
                 </div>
               </div>
 
+              {/* 4. Frame Rate & Quality Bitrate */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold uppercase tracking-wider text-[var(--text-muted)]">
+                    Frame Rate
+                  </label>
+                  <div className="grid grid-cols-3 gap-1.5">
+                    {([24, 30, 60] as const).map((rate) => (
+                      <button
+                        key={rate}
+                        onClick={() => setFps(rate)}
+                        className={`p-2 rounded-lg border-2 text-center text-xs font-bold transition-all cursor-pointer ${
+                          fps === rate
+                            ? "bg-[var(--accent-lime)] text-[#142218] border-[var(--border-main)] shadow-[2px_2px_0px_var(--border-main)]"
+                            : "bg-[var(--bg-panel)] border-[var(--border-main)]/30 text-[var(--text-muted)] hover:border-[var(--border-main)]"
+                        }`}
+                      >
+                        {rate} FPS
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold uppercase tracking-wider text-[var(--text-muted)]">
+                    Quality Preset
+                  </label>
+                  <div className="grid grid-cols-3 gap-1.5">
+                    {(
+                      [
+                        { id: "fast", label: "Compact" },
+                        { id: "standard", label: "Balanced" },
+                        { id: "high", label: "High Q" },
+                      ] as const
+                    ).map((q) => (
+                      <button
+                        key={q.id}
+                        onClick={() => setQuality(q.id)}
+                        className={`p-2 rounded-lg border-2 text-center text-xs font-bold transition-all cursor-pointer ${
+                          quality === q.id
+                            ? "bg-[var(--accent-lime)] text-[#142218] border-[var(--border-main)] shadow-[2px_2px_0px_var(--border-main)]"
+                            : "bg-[var(--bg-panel)] border-[var(--border-main)]/30 text-[var(--text-muted)] hover:border-[var(--border-main)]"
+                        }`}
+                      >
+                        {q.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* 5. Audio Inclusion Toggle */}
+              <div className="flex items-center justify-between p-3 rounded-xl bg-[var(--bg-panel)] border-2 border-[var(--border-main)]/40 text-xs">
+                <div className="flex items-center gap-2.5">
+                  <div className={`p-1.5 rounded-lg border border-[var(--border-main)] ${includeAudio ? "bg-[var(--accent-lime)] text-[#142218]" : "bg-zinc-800 text-zinc-400"}`}>
+                    {includeAudio ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
+                  </div>
+                  <div>
+                    <span className="font-bold text-[var(--text-main)] block">
+                      Include Original Audio Track
+                    </span>
+                    <span className="text-[10px] text-[var(--text-muted)]">
+                      Synchronized stereo AAC encoding directly into the container
+                    </span>
+                  </div>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={includeAudio}
+                    onChange={(e) => setIncludeAudio(e.target.checked)}
+                    className="sr-only peer"
+                  />
+                  <div className="w-10 h-5 bg-zinc-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-zinc-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[var(--accent-lime)]" />
+                </label>
+              </div>
+
               {/* Hardware Acceleration Status Banner */}
-              <div className="flex items-center justify-between p-3 rounded-xl bg-zinc-900/40 border border-zinc-800 text-xs">
-                <div className="flex items-center gap-2 text-zinc-300">
-                  <Cpu className="w-4 h-4 text-emerald-400" />
+              <div className="flex items-center justify-between p-2.5 rounded-xl bg-[var(--bg-panel)] border-2 border-[var(--border-main)]/30 text-xs">
+                <div className="flex items-center gap-2 text-[var(--text-muted)]">
+                  <Cpu className="w-4 h-4 text-[var(--accent-forest)] dark:text-[var(--accent-lime)]" />
                   <span>
                     Hardware Accelerator:{" "}
-                    <strong className="text-white">
+                    <strong className="text-[var(--text-main)]">
                       {capabilities?.webCodecsH264 ? "WebCodecs H.264 (Active)" : "Universal MediaEngine"}
                     </strong>
                   </span>
                 </div>
-                <span className="text-[11px] text-emerald-400 font-mono">0ms Upload</span>
+                <span className="text-[10px] font-mono font-bold text-[var(--accent-forest)] dark:text-[var(--accent-lime)]">
+                  0 Cloud Tokens · Local
+                </span>
               </div>
 
               {/* Export Action Button */}
               <button
                 onClick={handleStartExport}
-                className="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 text-black font-extrabold text-sm shadow-xl shadow-amber-500/20 hover:scale-[1.01] active:scale-[0.99] transition-all flex items-center justify-center gap-2 cursor-pointer"
+                className="neo-btn w-full py-3.5 px-4 text-[#142218] font-black text-sm gap-2 cursor-pointer shadow-[4px_4px_0px_var(--border-main)]"
               >
-                <Download className="w-4 h-4" />
-                <span>Render & Save {videoFormat === "webm_alpha" ? "Transparent WebM" : "Reel Video"}</span>
+                <Download className="w-4 h-4 text-[#142218] stroke-[2.5]" />
+                <span>
+                  Render & Save {videoFormat === "webm_alpha" ? "Transparent WebM" : "Composite Video"} ({computedDims.width}×{computedDims.height} · {fps}fps)
+                </span>
               </button>
             </div>
           )}
@@ -486,91 +751,91 @@ export function ExportModal({ isOpen, onClose, videoElement }: ExportModalProps)
           {/* STATE 4: Tab 2 - Subtitle Documents (SRT, VTT, ASS) */}
           {!isExporting && !exportComplete && activeTab === "subtitles" && (
             <div className="space-y-4">
-              <p className="text-xs text-zinc-400">
-                Download formatted subtitle documents for YouTube Studio, VLC, CapCut or video editing suites.
+              <p className="text-xs text-[var(--text-muted)] font-medium">
+                Download formatted subtitle documents for YouTube Studio, VLC, Premiere Pro, or CapCut.
               </p>
 
               <div className="space-y-3">
                 {/* SRT */}
-                <div className="flex items-center justify-between p-3.5 rounded-xl bg-zinc-900/60 border border-zinc-800">
+                <div className="flex items-center justify-between p-3.5 rounded-xl bg-[var(--bg-panel)] border-2 border-[var(--border-main)] shadow-[2px_2px_0px_var(--border-main)]">
                   <div>
-                    <h4 className="text-xs font-bold text-white flex items-center gap-1.5">
+                    <h4 className="text-xs font-black text-[var(--text-main)] flex items-center gap-1.5">
                       SubRip Subtitle (.srt)
                     </h4>
-                    <p className="text-[11px] text-zinc-400 mt-0.5">
-                      Industry standard format compatible with all players & platforms
+                    <p className="text-[11px] text-[var(--text-muted)] mt-0.5">
+                      Universal subtitle format compatible with every video editor & player
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
                     <button
                       onClick={() => handleCopySubtitles("srt")}
-                      className="p-2 rounded-lg bg-zinc-800/80 hover:bg-zinc-800 text-zinc-300 hover:text-white transition-colors"
-                      title="Copy to clipboard"
+                      className="neo-btn-secondary p-2 rounded-lg cursor-pointer"
+                      title="Copy SRT to clipboard"
                     >
-                      {copiedFormat === "srt" ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
+                      {copiedFormat === "srt" ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
                     </button>
                     <button
                       onClick={() => handleExportSubtitleFile("srt")}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-400 text-xs font-semibold transition-colors"
+                      className="neo-btn py-1.5 px-3 text-xs font-black gap-1 cursor-pointer"
                     >
                       <Download className="w-3.5 h-3.5" />
-                      <span>Download .srt</span>
+                      <span>.srt</span>
                     </button>
                   </div>
                 </div>
 
                 {/* VTT */}
-                <div className="flex items-center justify-between p-3.5 rounded-xl bg-zinc-900/60 border border-zinc-800">
+                <div className="flex items-center justify-between p-3.5 rounded-xl bg-[var(--bg-panel)] border-2 border-[var(--border-main)] shadow-[2px_2px_0px_var(--border-main)]">
                   <div>
-                    <h4 className="text-xs font-bold text-white flex items-center gap-1.5">
+                    <h4 className="text-xs font-black text-[var(--text-main)] flex items-center gap-1.5">
                       WebVTT Subtitle (.vtt)
                     </h4>
-                    <p className="text-[11px] text-zinc-400 mt-0.5">
-                      Web standard format including font colors and positioning styles
+                    <p className="text-[11px] text-[var(--text-muted)] mt-0.5">
+                      HTML5 web standard format with font colors and layout cues
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
                     <button
                       onClick={() => handleCopySubtitles("vtt")}
-                      className="p-2 rounded-lg bg-zinc-800/80 hover:bg-zinc-800 text-zinc-300 hover:text-white transition-colors"
-                      title="Copy to clipboard"
+                      className="neo-btn-secondary p-2 rounded-lg cursor-pointer"
+                      title="Copy VTT to clipboard"
                     >
-                      {copiedFormat === "vtt" ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
+                      {copiedFormat === "vtt" ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
                     </button>
                     <button
                       onClick={() => handleExportSubtitleFile("vtt")}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/30 text-cyan-400 text-xs font-semibold transition-colors"
+                      className="neo-btn py-1.5 px-3 text-xs font-black gap-1 cursor-pointer"
                     >
                       <Download className="w-3.5 h-3.5" />
-                      <span>Download .vtt</span>
+                      <span>.vtt</span>
                     </button>
                   </div>
                 </div>
 
                 {/* ASS */}
-                <div className="flex items-center justify-between p-3.5 rounded-xl bg-zinc-900/60 border border-zinc-800">
+                <div className="flex items-center justify-between p-3.5 rounded-xl bg-[var(--bg-panel)] border-2 border-[var(--border-main)] shadow-[2px_2px_0px_var(--border-main)]">
                   <div>
-                    <h4 className="text-xs font-bold text-white flex items-center gap-1.5">
+                    <h4 className="text-xs font-black text-[var(--text-main)] flex items-center gap-1.5">
                       Advanced SubStation Alpha (.ass)
                     </h4>
-                    <p className="text-[11px] text-zinc-400 mt-0.5">
-                      Rich styling, template colors, borders, and per-word karaoke tags (\k)
+                    <p className="text-[11px] text-[var(--text-muted)] mt-0.5">
+                      Rich styling, template font colors, borders, and per-word karaoke tags (\k)
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
                     <button
                       onClick={() => handleCopySubtitles("ass")}
-                      className="p-2 rounded-lg bg-zinc-800/80 hover:bg-zinc-800 text-zinc-300 hover:text-white transition-colors"
-                      title="Copy to clipboard"
+                      className="neo-btn-secondary p-2 rounded-lg cursor-pointer"
+                      title="Copy ASS to clipboard"
                     >
-                      {copiedFormat === "ass" ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
+                      {copiedFormat === "ass" ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
                     </button>
                     <button
                       onClick={() => handleExportSubtitleFile("ass")}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/30 text-purple-400 text-xs font-semibold transition-colors"
+                      className="neo-btn py-1.5 px-3 text-xs font-black gap-1 cursor-pointer"
                     >
                       <Download className="w-3.5 h-3.5" />
-                      <span>Download .ass</span>
+                      <span>.ass</span>
                     </button>
                   </div>
                 </div>

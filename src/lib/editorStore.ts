@@ -1,10 +1,49 @@
 import { create } from "zustand";
 import type { HinglishWordToken, CaptionScriptMode } from "./hinglish/postProcessor";
 import { normalizeTokenToHinglish, toggleTranscriptScript } from "./hinglish/postProcessor";
+import { migrateProjectPayload, TEMPLATE_SCHEMA_VERSION } from "./templates/migration";
 
 interface EditorHistorySnapshot {
   tokens: HinglishWordToken[];
   templateId: string;
+}
+
+export type ExportAspectRatio = "original" | "9:16" | "16:9" | "1:1" | "4:5" | "21:9";
+export type ExportFitMode = "cover" | "fit" | "fit_blur" | "stretch";
+export type ExportResolution = "720p" | "1080p" | "1440p" | "4k" | "source";
+export type ExportFps = 24 | 30 | 60;
+export type ExportQuality = "fast" | "standard" | "high";
+export type ExportFormat = "mp4" | "webm_alpha";
+
+export interface ExportSettings {
+  format: ExportFormat;
+  aspectRatio: ExportAspectRatio;
+  fitMode: ExportFitMode;
+  resolution: ExportResolution;
+  fps: ExportFps;
+  quality: ExportQuality;
+  includeAudio: boolean;
+}
+
+export const DEFAULT_EXPORT_SETTINGS: ExportSettings = {
+  format: "mp4",
+  aspectRatio: "16:9",
+  fitMode: "cover",
+  resolution: "1080p",
+  fps: 30,
+  quality: "standard",
+  includeAudio: true,
+};
+
+export function hydrateExportSettings() {
+  if (typeof window === "undefined") return;
+  try {
+    const saved = localStorage.getItem("bolsub-export-settings");
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      useEditorStore.getState().setExportSettings(parsed);
+    }
+  } catch {}
 }
 
 export interface EditorState {
@@ -75,6 +114,24 @@ export interface EditorState {
 
   exportProjectJson: () => string;
   importProjectJson: (jsonStr: string) => boolean;
+
+  // Layer & Mask Controls (Phase 4)
+  layerOrder: "behind" | "front" | "sandwich";
+  setLayerOrder: (order: "behind" | "front" | "sandwich") => void;
+  maskQualityTier: "fast" | "balanced" | "ultra";
+  setMaskQualityTier: (tier: "fast" | "balanced" | "ultra") => void;
+  maskFeather: number;
+  setMaskFeather: (radius: number) => void;
+  maskExpandContract: number;
+  setMaskExpandContract: (delta: number) => void;
+  showMaskOverlay: boolean;
+  toggleMaskOverlay: () => void;
+  hasDismissedMaskNotice: boolean;
+  dismissMaskNotice: () => void;
+
+  // Export Settings (Persisted & Synchronized)
+  exportSettings: ExportSettings;
+  setExportSettings: (partial: Partial<ExportSettings>) => void;
 }
 
 export const useEditorStore = create<EditorState>((set, get) => ({
@@ -97,6 +154,32 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   waveformPeaks: null,
   showSafeZones: false,
   syncOffset: 0,
+
+  layerOrder: "behind",
+  setLayerOrder: (layerOrder) => set({ layerOrder }),
+  maskQualityTier: "balanced",
+  setMaskQualityTier: (maskQualityTier) => set({ maskQualityTier }),
+  maskFeather: 4,
+  setMaskFeather: (maskFeather) => set({ maskFeather }),
+  maskExpandContract: 0,
+  setMaskExpandContract: (maskExpandContract) => set({ maskExpandContract }),
+  showMaskOverlay: false,
+  toggleMaskOverlay: () => set((s) => ({ showMaskOverlay: !s.showMaskOverlay })),
+  hasDismissedMaskNotice: false,
+  dismissMaskNotice: () => set({ hasDismissedMaskNotice: true }),
+
+  exportSettings: { ...DEFAULT_EXPORT_SETTINGS },
+  setExportSettings: (partial) => {
+    set((state) => {
+      const updated = { ...state.exportSettings, ...partial };
+      if (typeof window !== "undefined") {
+        try {
+          localStorage.setItem("bolsub-export-settings", JSON.stringify(updated));
+        } catch {}
+      }
+      return { exportSettings: updated };
+    });
+  },
 
   history: [{ tokens: [], templateId: "behind_you_white" }],
   historyIndex: 0,
@@ -347,24 +430,27 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   exportProjectJson: () => {
     const state = get();
     const exportData = {
-      version: "1.0",
+      version: TEMPLATE_SCHEMA_VERSION,
       product: "BolSub Studio",
       exportedAt: Date.now(),
       templateId: state.templateId,
       scriptMode: state.scriptMode,
       duration: state.duration,
       tokens: state.tokens,
+      exportSettings: state.exportSettings,
     };
     return JSON.stringify(exportData, null, 2);
   },
 
   importProjectJson: (jsonStr: string) => {
     try {
-      const data = JSON.parse(jsonStr);
-      if (Array.isArray(data.tokens)) {
-        get().setTokens(data.tokens);
-        if (data.templateId) set({ templateId: data.templateId });
-        if (data.scriptMode) set({ scriptMode: data.scriptMode });
+      const rawData = JSON.parse(jsonStr);
+      if (Array.isArray(rawData.tokens)) {
+        const migrated = migrateProjectPayload(rawData);
+        get().setTokens(migrated.tokens);
+        if (migrated.templateId) set({ templateId: migrated.templateId });
+        if (migrated.scriptMode) set({ scriptMode: migrated.scriptMode });
+        if (rawData.exportSettings) get().setExportSettings(rawData.exportSettings);
         return true;
       }
       return false;

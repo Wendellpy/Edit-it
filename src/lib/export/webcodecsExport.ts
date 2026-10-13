@@ -10,16 +10,27 @@ import { Muxer, ArrayBufferTarget } from 'mp4-muxer';
 import type { WordToken } from '@/lib/timestampRefiner';
 import type { CaptionTemplate } from '@/lib/templates/schema';
 import { renderCaptionsToCanvas } from '@/lib/renderer/captionRenderer';
+import { segmentationPipeline } from '@/lib/segmentation/segmentationPipeline';
 
-export type ExportResolution = '720p' | '1080p' | '1440p' | '4k';
+export type ExportResolution = '720p' | '1080p' | '1440p' | '4k' | 'source';
+export type ExportAspectRatio = 'original' | '9:16' | '16:9' | '1:1' | '4:5' | '21:9';
+export type ExportFitMode = 'cover' | 'fit' | 'fit_blur' | 'stretch';
+export type ExportQuality = 'high' | 'standard' | 'fast';
+export type ExportFps = 24 | 30 | 60;
 export type ExportFormat = 'mp4' | 'webm_alpha';
 
 export interface ExportConfig {
   resolution: ExportResolution;
-  fps: 30 | 60;
+  aspectRatio?: ExportAspectRatio;
+  fitMode?: ExportFitMode;
+  fps: ExportFps;
   format: ExportFormat;
+  quality?: ExportQuality;
   bitrate?: number;
+  includeAudio?: boolean;
   syncOffsetSeconds?: number;
+  customWidth?: number;
+  customHeight?: number;
 }
 
 export interface ExportProgress {
@@ -30,14 +41,109 @@ export interface ExportProgress {
   fps: number;
   timeRemainingSec: number;
   error?: string;
+  previewCanvasUrl?: string;
 }
 
-export const RESOLUTION_DIMENSIONS: Record<ExportResolution, { width: number; height: number; defaultBitrate: number }> = {
+/**
+ * Standard 9:16 vertical resolution dimensions (maintained for backwards compatibility)
+ */
+export const RESOLUTION_DIMENSIONS: Record<string, { width: number; height: number; defaultBitrate: number }> = {
   '720p': { width: 720, height: 1280, defaultBitrate: 4_500_000 },
   '1080p': { width: 1080, height: 1920, defaultBitrate: 8_500_000 },
   '1440p': { width: 1440, height: 2560, defaultBitrate: 15_000_000 },
   '4k': { width: 2160, height: 3840, defaultBitrate: 28_000_000 },
 };
+
+/**
+ * Computes exact width, height, and bitrate for ANY aspect ratio, resolution tier, and quality setting.
+ * Guarantees all dimensions are even integers (divisible by 2) for H.264 / VP9 hardware codecs.
+ */
+export function calculateExportDimensions(
+  aspectRatio: ExportAspectRatio = '9:16',
+  resolution: ExportResolution = '1080p',
+  sourceWidth?: number,
+  sourceHeight?: number,
+  quality: ExportQuality = 'standard'
+): { width: number; height: number; bitrate: number } {
+  let width = 1080;
+  let height = 1920;
+  let baseBitrate = 8_500_000;
+
+  switch (aspectRatio) {
+    case '9:16':
+      if (resolution === '720p') { width = 720; height = 1280; baseBitrate = 4_500_000; }
+      else if (resolution === '1440p') { width = 1440; height = 2560; baseBitrate = 15_000_000; }
+      else if (resolution === '4k') { width = 2160; height = 3840; baseBitrate = 28_000_000; }
+      else { width = 1080; height = 1920; baseBitrate = 8_500_000; }
+      break;
+
+    case '16:9':
+      if (resolution === '720p') { width = 1280; height = 720; baseBitrate = 4_500_000; }
+      else if (resolution === '1440p') { width = 2560; height = 1440; baseBitrate = 15_000_000; }
+      else if (resolution === '4k') { width = 3840; height = 2160; baseBitrate = 28_000_000; }
+      else { width = 1920; height = 1080; baseBitrate = 8_500_000; }
+      break;
+
+    case '1:1':
+      if (resolution === '720p') { width = 720; height = 720; baseBitrate = 4_000_000; }
+      else if (resolution === '1440p') { width = 1440; height = 1440; baseBitrate = 12_000_000; }
+      else if (resolution === '4k') { width = 2160; height = 2160; baseBitrate = 24_000_000; }
+      else { width = 1080; height = 1080; baseBitrate = 7_500_000; }
+      break;
+
+    case '4:5':
+      if (resolution === '720p') { width = 720; height = 900; baseBitrate = 4_200_000; }
+      else if (resolution === '1440p') { width = 1440; height = 1800; baseBitrate = 13_500_000; }
+      else if (resolution === '4k') { width = 2160; height = 2700; baseBitrate = 26_000_000; }
+      else { width = 1080; height = 1350; baseBitrate = 8_000_000; }
+      break;
+
+    case '21:9':
+      if (resolution === '720p') { width = 1680; height = 720; baseBitrate = 5_000_000; }
+      else if (resolution === '1440p') { width = 3440; height = 1440; baseBitrate = 18_000_000; }
+      else if (resolution === '4k') { width = 5120; height = 2160; baseBitrate = 32_000_000; }
+      else { width = 2560; height = 1080; baseBitrate = 10_000_000; }
+      break;
+
+    case 'original':
+    default:
+      if (sourceWidth && sourceHeight && sourceWidth > 0 && sourceHeight > 0) {
+        if (resolution === 'source') {
+          width = sourceWidth;
+          height = sourceHeight;
+          baseBitrate = 8_500_000;
+        } else {
+          const ratio = sourceWidth / sourceHeight;
+          let targetShortEdge = 1080;
+          if (resolution === '720p') { targetShortEdge = 720; baseBitrate = 4_500_000; }
+          else if (resolution === '1440p') { targetShortEdge = 1440; baseBitrate = 15_000_000; }
+          else if (resolution === '4k') { targetShortEdge = 2160; baseBitrate = 28_000_000; }
+
+          if (ratio >= 1) {
+            height = targetShortEdge;
+            width = Math.round(targetShortEdge * ratio);
+          } else {
+            width = targetShortEdge;
+            height = Math.round(targetShortEdge / ratio);
+          }
+        }
+      } else {
+        width = 1080;
+        height = 1920;
+        baseBitrate = 8_500_000;
+      }
+      break;
+  }
+
+  const multiplier = quality === 'high' ? 1.5 : quality === 'fast' ? 0.6 : 1.0;
+  const bitrate = Math.round(baseBitrate * multiplier);
+
+  // Guarantee even dimensions
+  width = Math.round(width / 2) * 2;
+  height = Math.round(height / 2) * 2;
+
+  return { width, height, bitrate };
+}
 
 /**
  * Preflights codec configuration with WebCodecs VideoEncoder
@@ -83,22 +189,33 @@ export async function testEncoderSupport(
 }
 
 /**
- * Extracts and decodes audio samples from an HTMLVideoElement or AudioBuffer
+ * Decodes audio from an HTMLVideoElement, File, Blob, or URL into an AudioBuffer using Web Audio API
  */
-export async function extractAudioFromMedia(
-  videoElement: HTMLVideoElement,
+export async function extractAudioFromSource(
+  source: HTMLVideoElement | File | Blob | string | null | undefined,
   targetSampleRate: number = 44100
 ): Promise<AudioBuffer | null> {
+  if (!source) return null;
   try {
-    const src = videoElement.src;
-    if (!src) return null;
+    let arrayBuffer: ArrayBuffer;
+    if (source instanceof File || source instanceof Blob) {
+      arrayBuffer = await source.arrayBuffer();
+    } else if (typeof source === 'string') {
+      const res = await fetch(source);
+      arrayBuffer = await res.arrayBuffer();
+    } else if (source instanceof HTMLVideoElement && source.src) {
+      const res = await fetch(source.src);
+      arrayBuffer = await res.arrayBuffer();
+    } else {
+      return null;
+    }
 
-    const res = await fetch(src);
-    const arrayBuffer = await res.arrayBuffer();
+    const AudioContextClass =
+      window.AudioContext ||
+      (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+    if (!AudioContextClass) return null;
 
-    const audioCtx = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)({
-      sampleRate: targetSampleRate,
-    });
+    const audioCtx = new AudioContextClass({ sampleRate: targetSampleRate });
     const decoded = await audioCtx.decodeAudioData(arrayBuffer);
     await audioCtx.close();
     return decoded;
@@ -108,13 +225,195 @@ export async function extractAudioFromMedia(
   }
 }
 
+/**
+ * Backwards compatible audio extractor for HTMLVideoElement
+ */
+export async function extractAudioFromMedia(
+  videoElement: HTMLVideoElement,
+  targetSampleRate: number = 44100
+): Promise<AudioBuffer | null> {
+  return extractAudioFromSource(videoElement, targetSampleRate);
+}
+
+/**
+ * Encodes audio using WebCodecs AudioEncoder and muxes chunks into mp4-muxer
+ */
+export async function encodeAndMuxAudioWithWebCodecs(
+  audioBuffer: AudioBuffer,
+  muxer: Muxer<ArrayBufferTarget>,
+  durationSeconds: number,
+  signal?: AbortSignal
+): Promise<boolean> {
+  if (
+    typeof window === 'undefined' ||
+    typeof (window as unknown as { AudioEncoder?: unknown }).AudioEncoder === 'undefined' ||
+    typeof (window as unknown as { AudioData?: unknown }).AudioData === 'undefined'
+  ) {
+    return false;
+  }
+
+  const AudioEncoderClass = (window as unknown as { AudioEncoder: typeof AudioEncoder }).AudioEncoder;
+  const AudioDataClass = (window as unknown as { AudioData: typeof AudioData }).AudioData;
+
+  const sampleRate = audioBuffer.sampleRate;
+  const numberOfChannels = Math.min(2, audioBuffer.numberOfChannels);
+
+  // Check supported audio codec for MP4 container
+  let supportedCodec: string | null = null;
+  for (const candidate of ['mp4a.40.2', 'opus']) {
+    try {
+      const isSupp = await AudioEncoderClass.isConfigSupported({
+        codec: candidate,
+        sampleRate,
+        numberOfChannels,
+        bitrate: 128_000,
+      });
+      if (isSupp && isSupp.supported) {
+        supportedCodec = candidate;
+        break;
+      }
+    } catch {}
+  }
+
+  if (!supportedCodec) {
+    console.warn('AudioEncoder does not support mp4a.40.2 or opus in this browser');
+    return false;
+  }
+
+  let encoderError: Error | null = null;
+  const encoder = new AudioEncoderClass({
+    output: (chunk, meta) => {
+      try {
+        muxer.addAudioChunk(chunk, meta);
+      } catch (err) {
+        console.error('Error adding audio chunk to muxer:', err);
+      }
+    },
+    error: (e) => {
+      console.error('AudioEncoder error:', e);
+      encoderError = e instanceof Error ? e : new Error(String(e));
+    },
+  });
+
+  encoder.configure({
+    codec: supportedCodec,
+    sampleRate,
+    numberOfChannels,
+    bitrate: 128_000,
+  });
+
+  const chunkSize = 1024;
+  const totalFrames = Math.min(audioBuffer.length, Math.round(durationSeconds * sampleRate));
+
+  for (let offset = 0; offset < totalFrames; offset += chunkSize) {
+    if (signal?.aborted) {
+      encoder.close();
+      return false;
+    }
+    if (encoderError) {
+      console.warn('Audio encoding error encountered:', encoderError);
+      return false;
+    }
+
+    const framesInChunk = Math.min(chunkSize, totalFrames - offset);
+    const planeData = new Float32Array(framesInChunk * numberOfChannels);
+
+    for (let ch = 0; ch < numberOfChannels; ch++) {
+      const channelData = audioBuffer.getChannelData(ch);
+      const sub = channelData.subarray(offset, offset + framesInChunk);
+      planeData.set(sub, ch * framesInChunk);
+    }
+
+    const timestampUs = Math.round((offset / sampleRate) * 1_000_000);
+
+    const audioData = new AudioDataClass({
+      format: 'f32-planar',
+      sampleRate,
+      numberOfFrames: framesInChunk,
+      numberOfChannels,
+      timestamp: timestampUs,
+      data: planeData,
+    });
+
+    encoder.encode(audioData);
+    audioData.close();
+  }
+
+  await encoder.flush();
+  encoder.close();
+  return true;
+}
+
+/**
+ * Draws a video frame to canvas with the chosen framing / fit mode
+ */
+export function drawVideoFrameToCanvas(
+  ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D,
+  video: HTMLVideoElement,
+  canvasWidth: number,
+  canvasHeight: number,
+  fitMode: ExportFitMode = 'cover'
+): void {
+  const vw = video.videoWidth || canvasWidth;
+  const vh = video.videoHeight || canvasHeight;
+
+  if (!video.videoWidth || !video.videoHeight) {
+    ctx.fillStyle = '#09100C';
+    ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+    return;
+  }
+
+  if (fitMode === 'cover') {
+    const scale = Math.max(canvasWidth / vw, canvasHeight / vh);
+    const drawW = Math.round(vw * scale);
+    const drawH = Math.round(vh * scale);
+    const dx = Math.round((canvasWidth - drawW) / 2);
+    const dy = Math.round((canvasHeight - drawH) / 2);
+    ctx.drawImage(video, dx, dy, drawW, drawH);
+  } else if (fitMode === 'fit_blur') {
+    // 1. Blurred background overscan
+    ctx.save();
+    try {
+      (ctx as unknown as { filter: string }).filter = 'blur(22px) brightness(0.6)';
+    } catch {}
+    const bgScale = Math.max(canvasWidth / vw, canvasHeight / vh);
+    const bgW = Math.round(vw * bgScale * 1.06);
+    const bgH = Math.round(vh * bgScale * 1.06);
+    ctx.drawImage(video, Math.round((canvasWidth - bgW) / 2), Math.round((canvasHeight - bgH) / 2), bgW, bgH);
+    ctx.restore();
+
+    // 2. Crisp centered video
+    const scale = Math.min(canvasWidth / vw, canvasHeight / vh);
+    const drawW = Math.round(vw * scale);
+    const drawH = Math.round(vh * scale);
+    const dx = Math.round((canvasWidth - drawW) / 2);
+    const dy = Math.round((canvasHeight - drawH) / 2);
+    ctx.drawImage(video, dx, dy, drawW, drawH);
+  } else if (fitMode === 'stretch') {
+    ctx.drawImage(video, 0, 0, canvasWidth, canvasHeight);
+  } else {
+    // Default: 'fit' letterbox / pillarbox
+    ctx.fillStyle = '#000000';
+    ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+    const scale = Math.min(canvasWidth / vw, canvasHeight / vh);
+    const drawW = Math.round(vw * scale);
+    const drawH = Math.round(vh * scale);
+    const dx = Math.round((canvasWidth - drawW) / 2);
+    const dy = Math.round((canvasHeight - drawH) / 2);
+    ctx.drawImage(video, dx, dy, drawW, drawH);
+  }
+}
+
 export interface ExportJobOptions {
-  videoElement: HTMLVideoElement;
+  videoElement?: HTMLVideoElement;
+  videoUrl?: string | null;
+  videoFile?: File | Blob | null;
   words: WordToken[];
   template: CaptionTemplate;
   config: ExportConfig;
   duration?: number;
   onProgress?: (progress: ExportProgress) => void;
+  onFrameRendered?: (canvas: HTMLCanvasElement | OffscreenCanvas) => void;
   signal?: AbortSignal;
 }
 
@@ -122,11 +421,72 @@ export interface ExportJobOptions {
  * Main WebCodecs Hardware Export Execution
  */
 export async function exportVideoWithWebCodecs(options: ExportJobOptions): Promise<Blob> {
-  const { videoElement, words, template, config, onProgress, signal } = options;
-  const { width, height, defaultBitrate } = RESOLUTION_DIMENSIONS[config.resolution];
-  const fps = config.fps;
-  const bitrate = config.bitrate || defaultBitrate;
-  const duration = options.duration || videoElement.duration || 5;
+  const { words, template, config, onProgress, onFrameRendered, signal } = options;
+
+  // 1. Resolve video source element
+  let videoEl: HTMLVideoElement;
+  let ownsVideoElement = false;
+
+  if (options.videoUrl) {
+    videoEl = document.createElement('video');
+    videoEl.src = options.videoUrl;
+    videoEl.muted = true;
+    videoEl.playsInline = true;
+    videoEl.preload = 'auto';
+    ownsVideoElement = true;
+    // Attach to DOM in offscreen container to grant full Chromium GPU decoding priority
+    if (typeof document !== 'undefined' && document.body) {
+      videoEl.style.position = 'fixed';
+      videoEl.style.top = '-9999px';
+      videoEl.style.left = '-9999px';
+      videoEl.style.width = '4px';
+      videoEl.style.height = '4px';
+      videoEl.style.opacity = '0.01';
+      videoEl.style.pointerEvents = 'none';
+      document.body.appendChild(videoEl);
+    }
+  } else if (options.videoElement) {
+    videoEl = options.videoElement;
+  } else if (typeof document !== 'undefined') {
+    videoEl = (document.querySelector('video') as HTMLVideoElement) || document.createElement('video');
+  } else {
+    throw new Error('No video element or URL available for export');
+  }
+
+  // Wait for metadata if dedicated element was created
+  if (ownsVideoElement && videoEl.readyState < 1) {
+    await new Promise<void>((resolve) => {
+      const onLoaded = () => {
+        videoEl.removeEventListener('loadedmetadata', onLoaded);
+        videoEl.removeEventListener('error', onError);
+        resolve();
+      };
+      const onError = () => {
+        videoEl.removeEventListener('loadedmetadata', onLoaded);
+        videoEl.removeEventListener('error', onError);
+        resolve();
+      };
+      videoEl.addEventListener('loadedmetadata', onLoaded, { once: true });
+      videoEl.addEventListener('error', onError, { once: true });
+      setTimeout(resolve, 800);
+    });
+  }
+
+  // 2. Compute dynamic dimensions & bitrate
+  const dims = calculateExportDimensions(
+    config.aspectRatio || '9:16',
+    config.resolution,
+    videoEl.videoWidth || undefined,
+    videoEl.videoHeight || undefined,
+    config.quality || 'standard'
+  );
+
+  const width = config.customWidth || dims.width;
+  const height = config.customHeight || dims.height;
+  const bitrate = config.bitrate || dims.bitrate;
+  const fps = config.fps || 30;
+  const fitMode = config.fitMode || 'cover';
+  const duration = options.duration || videoEl.duration || 5;
   const totalFrames = Math.max(1, Math.round(duration * fps));
 
   if (signal?.aborted) {
@@ -142,9 +502,10 @@ export async function exportVideoWithWebCodecs(options: ExportJobOptions): Promi
     timeRemainingSec: 0,
   });
 
-  // Handle Transparent Caption Overlay (WebM with VP9 alpha or Canvas stream)
+  // Handle Transparent Caption Overlay (WebM with VP9 alpha)
   if (config.format === 'webm_alpha') {
     return exportTransparentCaptionWebM({
+      videoElement: videoEl,
       words,
       template,
       width,
@@ -167,13 +528,17 @@ export async function exportVideoWithWebCodecs(options: ExportJobOptions): Promi
   if (!isWebCodecsAvailable) {
     console.warn('WebCodecs not supported in this browser, falling back to MediaRecorder.');
     return exportWithMediaRecorderFallback({
-      videoElement,
+      videoElement: videoEl,
+      videoFile: options.videoFile,
+      videoUrl: options.videoUrl,
       words,
       template,
       width,
       height,
       fps,
+      fitMode,
       duration,
+      includeAudio: config.includeAudio ?? true,
       onProgress,
       signal,
       syncOffsetSeconds: config.syncOffsetSeconds,
@@ -184,17 +549,51 @@ export async function exportVideoWithWebCodecs(options: ExportJobOptions): Promi
   if (!supported) {
     console.warn('WebCodecs H.264 config unsupported, falling back to MediaRecorder.');
     return exportWithMediaRecorderFallback({
-      videoElement,
+      videoElement: videoEl,
+      videoFile: options.videoFile,
+      videoUrl: options.videoUrl,
       words,
       template,
       width,
       height,
       fps,
+      fitMode,
       duration,
+      includeAudio: config.includeAudio ?? true,
       onProgress,
       signal,
     });
   }
+
+  // 3. Audio Extraction & Muxer Preparation
+  let audioBuffer: AudioBuffer | null = null;
+  if (config.includeAudio !== false) {
+    onProgress?.({
+      phase: 'preparing',
+      percent: 2,
+      currentFrame: 0,
+      totalFrames,
+      fps: 0,
+      timeRemainingSec: 0,
+    });
+    audioBuffer = await extractAudioFromSource(
+      options.videoFile || options.videoUrl || videoEl
+    );
+  }
+
+  const canMuxAudio =
+    audioBuffer !== null &&
+    (config.includeAudio ?? true) &&
+    typeof window !== 'undefined' &&
+    typeof (window as unknown as { AudioEncoder?: unknown }).AudioEncoder !== 'undefined';
+
+  const muxerAudioConfig = canMuxAudio
+    ? {
+        codec: 'aac' as const,
+        numberOfChannels: Math.min(2, audioBuffer!.numberOfChannels),
+        sampleRate: audioBuffer!.sampleRate,
+      }
+    : undefined;
 
   // Setup MP4 Muxer with ArrayBufferTarget
   const target = new ArrayBufferTarget();
@@ -205,8 +604,19 @@ export async function exportVideoWithWebCodecs(options: ExportJobOptions): Promi
       width,
       height,
     },
+    audio: muxerAudioConfig,
     fastStart: 'in-memory',
+    firstTimestampBehavior: 'offset',
   });
+
+  // Hardware Audio Encoding Pass
+  if (canMuxAudio && audioBuffer) {
+    try {
+      await encodeAndMuxAudioWithWebCodecs(audioBuffer, muxer, duration, signal);
+    } catch (err) {
+      console.warn('Audio hardware muxing skipped due to encoding error:', err);
+    }
+  }
 
   // Prepare VideoEncoder
   let encoderError: Error | null = null;
@@ -234,145 +644,226 @@ export async function exportVideoWithWebCodecs(options: ExportJobOptions): Promi
     avc: { format: 'avc' },
   });
 
-  // Setup OffscreenCanvas (or hidden DOM canvas) for hardware compositing
+  // Setup OffscreenCanvas for hardware compositing with desynchronized opaque backing store
   const canvas =
     typeof OffscreenCanvas !== 'undefined'
       ? new OffscreenCanvas(width, height)
       : Object.assign(document.createElement('canvas'), { width, height });
 
-  const ctx = canvas.getContext('2d') as OffscreenCanvasRenderingContext2D | CanvasRenderingContext2D;
+  const ctx = canvas.getContext('2d', {
+    alpha: false,
+    desynchronized: true,
+    willReadFrequently: false,
+  }) as OffscreenCanvasRenderingContext2D | CanvasRenderingContext2D;
   if (!ctx) {
     throw new Error('Unable to create 2D canvas context for export');
   }
+
+  // Pre-cached mask frame lookup and consistent video hash
+  const videoKey =
+    (options.videoFile instanceof File ? options.videoFile.name : options.videoUrl) ||
+    videoEl.src ||
+    'export_video';
+  const exportMaskCache = new Map<number, any>();
 
   // Frame Rendering Loop
   const startTime = performance.now();
   const frameDurationUs = Math.round(1_000_000 / fps);
 
-  videoElement.pause();
+  videoEl.pause();
 
-  for (let frameIndex = 0; frameIndex < totalFrames; frameIndex++) {
-    if (signal?.aborted) {
-      encoder.close();
-      throw new Error('Export cancelled');
+  try {
+    for (let frameIndex = 0; frameIndex < totalFrames; frameIndex++) {
+      if (signal?.aborted) {
+        encoder.close();
+        throw new Error('Export cancelled');
+      }
+
+      if (encoderError) {
+        throw encoderError;
+      }
+
+      const currentTime = frameIndex / fps;
+
+      // Seek video element to target timestamp safely using turbo seek
+      await seekVideoToTimestamp(videoEl, currentTime);
+
+      // Composite: 1. Video background with framing mode
+      ctx.clearRect(0, 0, width, height);
+      drawVideoFrameToCanvas(ctx, videoEl, width, height, fitMode);
+
+      // Composite: 2. Behind-Subject Segmentation Compositing (with temporal quantizing)
+      let behindCompositing = undefined;
+      if (template.layout.behindSubjectDepth) {
+        try {
+          // Quantize timestamp to 20fps for segmentation mask (masks stay stable across 50ms)
+          const quantizedTs = Math.round(currentTime * 20) / 20;
+          let maskFrame = exportMaskCache.get(quantizedTs);
+          if (!maskFrame) {
+            maskFrame = await segmentationPipeline.getOrProcessFrameMask(
+              videoKey,
+              currentTime,
+              videoEl,
+              width,
+              height
+            );
+            exportMaskCache.set(quantizedTs, maskFrame);
+          }
+          behindCompositing = {
+            videoSource: videoEl,
+            segmentationMask: maskFrame.maskData,
+            maskWidth: maskFrame.width,
+            maskHeight: maskFrame.height,
+            subjectMetrics: maskFrame.metrics,
+            showMaskOverlay: false,
+            fitMode: fitMode === 'cover' ? ('cover' as const) : ('fit' as const),
+          };
+        } catch (err) {
+          console.warn('Segmentation mask export fallback:', err);
+        }
+      }
+
+      // Composite: 3. Shared Golden-Frame Caption Engine
+      renderCaptionsToCanvas(
+        ctx,
+        words,
+        template,
+        currentTime,
+        width,
+        height,
+        config.syncOffsetSeconds || 0,
+        behindCompositing
+      );
+
+      // Live frame rendered hook
+      onFrameRendered?.(canvas);
+
+      // Create WebCodecs VideoFrame
+      const timestampUs = frameIndex * frameDurationUs;
+      const videoFrame = new VideoFrame(canvas as CanvasImageSource, {
+        timestamp: timestampUs,
+        duration: frameDurationUs,
+      });
+
+      const isKeyframe = frameIndex % (fps * 2) === 0;
+      encoder.encode(videoFrame, { keyFrame: isKeyframe });
+      videoFrame.close();
+
+      // Backpressure: only pause if hardware encoder buffer is actually saturated
+      while (encoder.encodeQueueSize > 24) {
+        await new Promise((r) => setTimeout(r, 1));
+      }
+
+      // Progress updates
+      const elapsedSec = (performance.now() - startTime) / 1000;
+      const currentEncodingFps = frameIndex > 0 ? Math.round((frameIndex / elapsedSec) * 10) / 10 : 0;
+      const remainingFrames = totalFrames - frameIndex;
+      const timeRemainingSec = currentEncodingFps > 0 ? Math.round(remainingFrames / currentEncodingFps) : 0;
+      const percent = Math.min(96, Math.round(((frameIndex + 1) / totalFrames) * 94));
+
+      onProgress?.({
+        phase: 'rendering',
+        percent,
+        currentFrame: frameIndex + 1,
+        totalFrames,
+        fps: currentEncodingFps,
+        timeRemainingSec,
+      });
     }
 
-    if (encoderError) {
-      throw encoderError;
-    }
-
-    const currentTime = frameIndex / fps;
-
-    // Seek video element to target timestamp
-    await seekVideoToTimestamp(videoElement, currentTime);
-
-    // Composite: 1. Video background
-    ctx.clearRect(0, 0, width, height);
-    try {
-      ctx.drawImage(videoElement, 0, 0, width, height);
-    } catch {
-      // If video frame draw fails, fill with neutral dark backdrop
-      ctx.fillStyle = '#0f172a';
-      ctx.fillRect(0, 0, width, height);
-    }
-
-    // Composite: 2. Shared Golden-Frame Caption Engine
-    renderCaptionsToCanvas(ctx, words, template, currentTime, width, height, config.syncOffsetSeconds || 0);
-
-    // Create WebCodecs VideoFrame
-    const timestampUs = frameIndex * frameDurationUs;
-    const videoFrame = new VideoFrame(canvas as CanvasImageSource, {
-      timestamp: timestampUs,
-      duration: frameDurationUs,
+    // Finalize VideoEncoder
+    onProgress?.({
+      phase: 'muxing',
+      percent: 97,
+      currentFrame: totalFrames,
+      totalFrames,
+      fps: 0,
+      timeRemainingSec: 1,
     });
 
-    const isKeyframe = frameIndex % (fps * 2) === 0;
-    encoder.encode(videoFrame, { keyFrame: isKeyframe });
-    videoFrame.close();
+    await encoder.flush();
+    encoder.close();
 
-    // Backpressure: prevent queue bloat to maintain low memory consumption
-    while (encoder.encodeQueueSize > 5) {
-      await new Promise((r) => setTimeout(r, 8));
-    }
-
-    // Progress updates
-    const elapsedSec = (performance.now() - startTime) / 1000;
-    const currentEncodingFps = frameIndex > 0 ? Math.round((frameIndex / elapsedSec) * 10) / 10 : 0;
-    const remainingFrames = totalFrames - frameIndex;
-    const timeRemainingSec = currentEncodingFps > 0 ? Math.round(remainingFrames / currentEncodingFps) : 0;
-    const percent = Math.min(99, Math.round(((frameIndex + 1) / totalFrames) * 95));
+    // Finalize MP4 Muxer
+    muxer.finalize();
+    const buffer = target.buffer;
+    const mp4Blob = new Blob([buffer], { type: 'video/mp4' });
 
     onProgress?.({
-      phase: 'rendering',
-      percent,
-      currentFrame: frameIndex + 1,
+      phase: 'complete',
+      percent: 100,
+      currentFrame: totalFrames,
       totalFrames,
-      fps: currentEncodingFps,
-      timeRemainingSec,
+      fps: 0,
+      timeRemainingSec: 0,
     });
+
+    return mp4Blob;
+  } finally {
+    if (ownsVideoElement) {
+      if (videoEl.parentNode) {
+        videoEl.parentNode.removeChild(videoEl);
+      }
+      videoEl.src = '';
+    }
   }
-
-  // Finalize VideoEncoder
-  onProgress?.({
-    phase: 'muxing',
-    percent: 96,
-    currentFrame: totalFrames,
-    totalFrames,
-    fps: 0,
-    timeRemainingSec: 1,
-  });
-
-  await encoder.flush();
-  encoder.close();
-
-  // Finalize MP4 Muxer
-  muxer.finalize();
-  const buffer = target.buffer;
-  const mp4Blob = new Blob([buffer], { type: 'video/mp4' });
-
-  onProgress?.({
-    phase: 'complete',
-    percent: 100,
-    currentFrame: totalFrames,
-    totalFrames,
-    fps: 0,
-    timeRemainingSec: 0,
-  });
-
-  return mp4Blob;
 }
 
 /**
- * Seeks HTMLVideoElement to exact time and waits for seeked event
+ * Seeks HTMLVideoElement to exact time safely and awaits seeked event
  */
 function seekVideoToTimestamp(video: HTMLVideoElement, time: number): Promise<void> {
   return new Promise((resolve) => {
-    if (Math.abs(video.currentTime - time) < 0.01) {
+    const maxDur = isFinite(video.duration) && video.duration > 0 ? video.duration : 10000;
+    const targetTime = Math.min(Math.max(0, time), Math.max(0, maxDur - 0.02));
+
+    if (Math.abs(video.currentTime - targetTime) < 0.008) {
       resolve();
       return;
     }
 
-    const onSeeked = () => {
+    let isDone = false;
+    let rVfcId: number | null = null;
+    let timeoutId: any = null;
+
+    const cleanup = () => {
+      if (isDone) return;
+      isDone = true;
       video.removeEventListener('seeked', onSeeked);
+      if (timeoutId) clearTimeout(timeoutId);
+      if (rVfcId !== null && 'cancelVideoFrameCallback' in video) {
+        (video as unknown as { cancelVideoFrameCallback: (id: number) => void }).cancelVideoFrameCallback(rVfcId);
+      }
       resolve();
     };
 
-    video.addEventListener('seeked', onSeeked, { once: true });
-    video.currentTime = Math.min(time, Math.max(0, video.duration - 0.05));
+    const onSeeked = () => cleanup();
 
-    // Fallback safety timeout if seeked doesn't fire
-    setTimeout(() => {
-      video.removeEventListener('seeked', onSeeked);
-      resolve();
-    }, 150);
+    // Use Chromium's requestVideoFrameCallback when supported (fastest, composited hardware frame ready)
+    if ('requestVideoFrameCallback' in video) {
+      rVfcId = (video as unknown as { requestVideoFrameCallback: (cb: () => void) => number }).requestVideoFrameCallback(() => {
+        cleanup();
+      });
+    }
+
+    video.addEventListener('seeked', onSeeked, { once: true });
+    try {
+      video.currentTime = targetTime;
+    } catch {
+      cleanup();
+      return;
+    }
+
+    // Safety timeout to prevent pipeline stall
+    timeoutId = setTimeout(cleanup, 50);
   });
 }
 
 /**
  * Exports pure transparent caption overlay (WebM VP9 with alpha)
- * Ideal for Premiere Pro, DaVinci Resolve, Final Cut Pro editors.
  */
 async function exportTransparentCaptionWebM(options: {
+  videoElement?: HTMLVideoElement;
   words: WordToken[];
   template: CaptionTemplate;
   width: number;
@@ -385,6 +876,7 @@ async function exportTransparentCaptionWebM(options: {
   syncOffsetSeconds?: number;
 }): Promise<Blob> {
   const {
+    videoElement,
     words,
     template,
     width,
@@ -402,7 +894,6 @@ async function exportTransparentCaptionWebM(options: {
   const ctx = canvas.getContext('2d');
   if (!ctx) throw new Error('Unable to create canvas for transparent export');
 
-  // Use MediaRecorder on canvas stream
   const stream = canvas.captureStream(fps);
   const mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp9')
     ? 'video/webm;codecs=vp9'
@@ -419,6 +910,8 @@ async function exportTransparentCaptionWebM(options: {
 
   const startTime = performance.now();
   const frameIntervalMs = 1000 / fps;
+  const videoKey = videoElement?.src || 'export_video';
+  const exportMaskCache = new Map<number, any>();
 
   for (let frameIndex = 0; frameIndex < totalFrames; frameIndex++) {
     if (signal?.aborted) {
@@ -430,7 +923,45 @@ async function exportTransparentCaptionWebM(options: {
 
     // Clear with 100% transparent alpha channel
     ctx.clearRect(0, 0, width, height);
-    renderCaptionsToCanvas(ctx, words, template, currentTime, width, height, syncOffsetSeconds);
+
+    let behindCompositing = undefined;
+    if (template.layout.behindSubjectDepth && videoElement) {
+      try {
+        const quantizedTs = Math.round(currentTime * 20) / 20;
+        let maskFrame = exportMaskCache.get(quantizedTs);
+        if (!maskFrame) {
+          maskFrame = await segmentationPipeline.getOrProcessFrameMask(
+            videoKey,
+            currentTime,
+            videoElement,
+            width,
+            height
+          );
+          exportMaskCache.set(quantizedTs, maskFrame);
+        }
+        behindCompositing = {
+          videoSource: videoElement,
+          segmentationMask: maskFrame.maskData,
+          maskWidth: maskFrame.width,
+          maskHeight: maskFrame.height,
+          subjectMetrics: maskFrame.metrics,
+          showMaskOverlay: false,
+        };
+      } catch (err) {
+        console.warn('Segmentation mask export fallback:', err);
+      }
+    }
+
+    renderCaptionsToCanvas(
+      ctx,
+      words,
+      template,
+      currentTime,
+      width,
+      height,
+      syncOffsetSeconds,
+      behindCompositing
+    );
 
     const elapsedSec = (performance.now() - startTime) / 1000;
     const currentFps = frameIndex > 0 ? Math.round((frameIndex / elapsedSec) * 10) / 10 : 0;
@@ -470,24 +1001,32 @@ async function exportTransparentCaptionWebM(options: {
  */
 async function exportWithMediaRecorderFallback(options: {
   videoElement: HTMLVideoElement;
+  videoFile?: File | Blob | null;
+  videoUrl?: string | null;
   words: WordToken[];
   template: CaptionTemplate;
   width: number;
   height: number;
   fps: number;
+  fitMode: ExportFitMode;
   duration: number;
+  includeAudio: boolean;
   onProgress?: (progress: ExportProgress) => void;
   signal?: AbortSignal;
   syncOffsetSeconds?: number;
 }): Promise<Blob> {
   const {
     videoElement,
+    videoFile,
+    videoUrl,
     words,
     template,
     width,
     height,
     fps,
+    fitMode,
     duration,
+    includeAudio,
     onProgress,
     signal,
     syncOffsetSeconds = 0,
@@ -500,6 +1039,26 @@ async function exportWithMediaRecorderFallback(options: {
   if (!ctx) throw new Error('Canvas context unavailable');
 
   const stream = canvas.captureStream(fps);
+
+  // Audio track attachment for MediaRecorder
+  let audioBuffer: AudioBuffer | null = null;
+  if (includeAudio) {
+    audioBuffer = await extractAudioFromSource(videoFile || videoUrl || videoElement);
+    if (audioBuffer) {
+      try {
+        const audioCtx = new AudioContext();
+        const bufferSource = audioCtx.createBufferSource();
+        bufferSource.buffer = audioBuffer;
+        const dest = audioCtx.createMediaStreamDestination();
+        bufferSource.connect(dest);
+        dest.stream.getAudioTracks().forEach((track) => stream.addTrack(track));
+        bufferSource.start();
+      } catch (err) {
+        console.warn('Could not attach audio track to MediaRecorder stream:', err);
+      }
+    }
+  }
+
   const preferredMime = MediaRecorder.isTypeSupported('video/mp4')
     ? 'video/mp4'
     : MediaRecorder.isTypeSupported('video/webm;codecs=h264')
@@ -517,6 +1076,8 @@ async function exportWithMediaRecorderFallback(options: {
 
   const totalFrames = Math.max(1, Math.round(duration * fps));
   const startTime = performance.now();
+  const videoKey = (options.videoFile ? (options.videoFile as File).name : options.videoUrl) || videoElement.src || 'export_video';
+  const exportMaskCache = new Map<number, any>();
 
   for (let frameIndex = 0; frameIndex < totalFrames; frameIndex++) {
     if (signal?.aborted) {
@@ -528,14 +1089,47 @@ async function exportWithMediaRecorderFallback(options: {
     await seekVideoToTimestamp(videoElement, currentTime);
 
     ctx.clearRect(0, 0, width, height);
-    try {
-      ctx.drawImage(videoElement, 0, 0, width, height);
-    } catch {
-      ctx.fillStyle = '#0f172a';
-      ctx.fillRect(0, 0, width, height);
+    drawVideoFrameToCanvas(ctx, videoElement, width, height, fitMode);
+
+    let behindCompositing = undefined;
+    if (template.layout.behindSubjectDepth) {
+      try {
+        const quantizedTs = Math.round(currentTime * 20) / 20;
+        let maskFrame = exportMaskCache.get(quantizedTs);
+        if (!maskFrame) {
+          maskFrame = await segmentationPipeline.getOrProcessFrameMask(
+            videoKey,
+            currentTime,
+            videoElement,
+            width,
+            height
+          );
+          exportMaskCache.set(quantizedTs, maskFrame);
+        }
+        behindCompositing = {
+          videoSource: videoElement,
+          segmentationMask: maskFrame.maskData,
+          maskWidth: maskFrame.width,
+          maskHeight: maskFrame.height,
+          subjectMetrics: maskFrame.metrics,
+          showMaskOverlay: false,
+          fitMode: fitMode === 'cover' ? ('cover' as const) : ('fit' as const),
+        };
+      } catch (err) {
+        console.warn('Segmentation mask export fallback:', err);
+      }
     }
 
-    renderCaptionsToCanvas(ctx, words, template, currentTime, width, height, syncOffsetSeconds);
+    renderCaptionsToCanvas(
+      ctx,
+      words,
+      template,
+      currentTime,
+      width,
+      height,
+      syncOffsetSeconds,
+      behindCompositing
+    );
 
     const elapsed = (performance.now() - startTime) / 1000;
     const curFps = frameIndex > 0 ? Math.round((frameIndex / elapsed) * 10) / 10 : 0;

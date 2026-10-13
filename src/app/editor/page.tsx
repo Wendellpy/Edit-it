@@ -10,7 +10,8 @@ import { ReviewModeDrawer } from "@/components/ReviewModeDrawer";
 import { KeyboardShortcutsModal } from "@/components/editor/KeyboardShortcutsModal";
 import { ExportModal } from "@/components/editor/ExportModal";
 import { TranscribeModal } from "@/components/editor/TranscribeModal";
-import { useEditorStore } from "@/lib/editorStore";
+import { ThemeToggle } from "@/components/ThemeToggle";
+import { useEditorStore, hydrateExportSettings } from "@/lib/editorStore";
 import {
   Undo2,
   Redo2,
@@ -58,6 +59,11 @@ export default function EditorStudioPage() {
   const [isTranscribeModalOpen, setIsTranscribeModalOpen] = useState(false);
   const [autoStartTranscribe, setAutoStartTranscribe] = useState(false);
   const masterFileInputRef = useRef<HTMLInputElement>(null);
+
+  // Hydrate persisted export settings safely after client mount
+  useEffect(() => {
+    hydrateExportSettings();
+  }, []);
 
   // Global Keyboard Shortcuts
   useEffect(() => {
@@ -129,9 +135,9 @@ export default function EditorStudioPage() {
   const selectedWordIndex = tokens.findIndex((t) => t.id === selectedWordId);
 
   return (
-    <div className="min-h-screen h-screen flex flex-col bg-[#0b0c0e] text-zinc-100 overflow-hidden select-none">
-      {/* 1. Master Application Menu & Status Bar (Premiere / DaVinci Chrome) */}
-      <header className="h-11 border-b border-[#24262c] bg-[#141519] px-3 sm:px-4 flex items-center justify-between text-xs shrink-0 z-40">
+    <div className="min-h-screen h-screen flex flex-col bg-[var(--bg-canvas)] text-[var(--text-main)] overflow-hidden select-none transition-colors duration-150">
+      {/* 1. Master Application Menu & Status Bar (Retro Rustic Neobrutalism) */}
+      <header className="h-13 border-b-2 border-[var(--border-main)] bg-[var(--bg-panel)] px-3 sm:px-4 flex items-center justify-between text-xs shrink-0 z-40 shadow-sm">
         {/* Left: Branding & Project Meta */}
         <div className="flex items-center gap-3">
           {/* Logo & App Home */}
@@ -140,52 +146,52 @@ export default function EditorStudioPage() {
             className="flex items-center gap-2 group hover:opacity-90 transition-opacity"
             title="Return to BolSub Studio Home"
           >
-            <div className="w-6 h-6 rounded-lg bg-gradient-to-tr from-amber-500 via-orange-500 to-amber-400 flex items-center justify-center text-black font-black text-xs shadow-md shadow-amber-500/20">
+            <div className="w-7 h-7 rounded-full border-2 border-[var(--border-main)] bg-[var(--accent-lime)] flex items-center justify-center text-[#142218] font-black text-xs shadow-[2px_2px_0px_var(--border-main)] group-hover:scale-105 transition-transform">
               B
             </div>
-            <span className="font-extrabold tracking-tight text-white hidden sm:inline">
-              BolSub<span className="text-amber-400">.Studio</span>
+            <span className="font-fraunces italic font-bold tracking-tight text-[var(--text-main)] hidden sm:inline text-base">
+              BolSub<span className="text-[var(--accent-lime)] font-black">.Studio</span>
             </span>
           </Link>
 
-          <div className="h-4 w-px bg-zinc-700/80" />
+          <div className="h-5 w-px bg-[var(--border-main)] opacity-30" />
 
           {/* Project Title Input */}
-          <div className="flex items-center gap-1.5 font-mono text-[11px] bg-[#0e0f12] px-2.5 py-1 rounded-lg border border-zinc-800 text-zinc-300">
-            <span className="text-zinc-500 font-bold">PROJECT:</span>
+          <div className="flex items-center gap-1.5 font-mono text-[11px] bg-[var(--bg-card)] px-3 py-1 rounded-full border-2 border-[var(--border-main)] text-[var(--text-main)] shadow-[2px_2px_0px_var(--border-main)]">
+            <span className="text-[var(--text-muted)] font-bold text-[10px]">PROJECT:</span>
             <input
               type="text"
               value={projectTitle}
               onChange={(e) => setProjectTitle(e.target.value)}
-              className="bg-transparent text-amber-300 font-semibold focus:outline-none focus:text-white max-w-[140px] sm:max-w-[200px]"
+              className="bg-transparent text-[var(--text-main)] font-bold focus:outline-none max-w-[130px] sm:max-w-[180px] transition-colors"
             />
           </div>
 
           {/* Local Sandbox Badge */}
-          <div className="hidden md:inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 text-[10px] font-mono font-semibold border border-emerald-500/20">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+          <div className="hidden md:inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[var(--accent-lime)]/20 text-[var(--text-main)] text-[10px] font-mono font-bold border-2 border-[var(--border-main)] shrink-0 whitespace-nowrap shadow-[2px_2px_0px_var(--border-main)]">
+            <span className="w-2 h-2 rounded-full bg-[var(--accent-lime)] border border-[var(--border-main)] animate-pulse" />
             100% On-Device OPFS
           </div>
         </div>
 
         {/* Center: Workspaces Mode Switcher */}
-        <div className="hidden lg:flex items-center bg-[#0e0f12] p-0.5 rounded-lg border border-zinc-800 text-[11px] font-semibold">
+        <div className="hidden lg:flex items-center bg-[var(--bg-card)] p-1 rounded-full border-2 border-[var(--border-main)] text-[11px] font-bold shadow-[2px_2px_0px_var(--border-main)]">
           <button
             onClick={() => setActiveWorkspace("edit")}
-            className={`px-3 py-1 rounded-md transition-colors ${
+            className={`px-3 py-1 rounded-full transition-all cursor-pointer ${
               activeWorkspace === "edit"
-                ? "bg-zinc-800 text-amber-400 font-bold shadow-sm"
-                : "text-zinc-400 hover:text-zinc-200"
+                ? "bg-[var(--accent-lime)] text-[#142218] border border-[var(--border-main)] shadow-sm font-extrabold"
+                : "text-[var(--text-muted)] hover:text-[var(--text-main)]"
             }`}
           >
             Studio Layout
           </button>
           <button
             onClick={() => setActiveWorkspace("widescreen")}
-            className={`px-3 py-1 rounded-md transition-colors ${
+            className={`px-3 py-1 rounded-full transition-all cursor-pointer ${
               activeWorkspace === "widescreen"
-                ? "bg-zinc-800 text-amber-400 font-bold shadow-sm"
-                : "text-zinc-400 hover:text-zinc-200"
+                ? "bg-[var(--accent-lime)] text-[#142218] border border-[var(--border-main)] shadow-sm font-extrabold"
+                : "text-[var(--text-muted)] hover:text-[var(--text-main)]"
             }`}
             title="Focus on 16:9 widescreen video playback"
           >
@@ -193,10 +199,10 @@ export default function EditorStudioPage() {
           </button>
           <button
             onClick={() => setActiveWorkspace("captions")}
-            className={`px-3 py-1 rounded-md transition-colors ${
+            className={`px-3 py-1 rounded-full transition-all cursor-pointer ${
               activeWorkspace === "captions"
-                ? "bg-zinc-800 text-amber-400 font-bold shadow-sm"
-                : "text-zinc-400 hover:text-zinc-200"
+                ? "bg-[var(--accent-lime)] text-[#142218] border border-[var(--border-main)] shadow-sm font-extrabold"
+                : "text-[var(--text-muted)] hover:text-[var(--text-main)]"
             }`}
             title="Expanded script editor for captions"
           >
@@ -204,15 +210,15 @@ export default function EditorStudioPage() {
           </button>
         </div>
 
-        {/* Right: Actions, Shortcuts & Export */}
+        {/* Right: Actions, Shortcuts, Theme & Export */}
         <div className="flex items-center gap-2">
           {/* Import Video Clip */}
           <button
             onClick={() => masterFileInputRef.current?.click()}
-            className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#101114] hover:bg-zinc-800 border border-zinc-800 hover:border-zinc-700 text-zinc-300 hover:text-white text-[11px] font-semibold transition-colors"
+            className="neo-btn-secondary px-3 py-1 text-[11px] gap-1.5"
             title="Import video clip from device"
           >
-            <Upload className="w-3.5 h-3.5 text-amber-400" />
+            <Upload className="w-3.5 h-3.5 text-[var(--text-main)]" />
             <span className="hidden sm:inline">Import Video</span>
           </button>
           <input
@@ -236,29 +242,29 @@ export default function EditorStudioPage() {
               setAutoStartTranscribe(false);
               setIsTranscribeModalOpen(true);
             }}
-            className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-gradient-to-r from-amber-500/20 via-orange-500/20 to-amber-500/20 hover:from-amber-500/30 hover:to-orange-500/30 border border-amber-500/40 text-amber-300 text-[11px] font-bold transition-all shadow-sm cursor-pointer"
+            className="neo-btn px-3.5 py-1 text-[11px] gap-1.5 text-[#142218]"
             title="Open AI Speech-to-Text Transcription Hub"
           >
-            <Mic className="w-3.5 h-3.5 text-amber-400 fill-amber-400/20" />
+            <Mic className="w-3.5 h-3.5" />
             <span>Transcribe AI</span>
           </button>
 
           {/* Projects Dashboard Link */}
           <Link
             href="/projects"
-            className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#101114] hover:bg-zinc-800 border border-zinc-800 text-zinc-300 text-[11px] font-semibold transition-colors"
+            className="neo-btn-secondary px-3 py-1 text-[11px] gap-1.5"
             title="Open Projects Dashboard"
           >
-            <FolderKanban className="w-3.5 h-3.5 text-zinc-400" />
+            <FolderKanban className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">Projects</span>
           </Link>
 
           {/* Undo / Redo */}
-          <div className="flex items-center bg-[#101114] rounded-lg border border-zinc-800 p-0.5">
+          <div className="flex items-center bg-[var(--bg-card)] rounded-full border-2 border-[var(--border-main)] p-0.5 shadow-[2px_2px_0px_var(--border-main)]">
             <button
               onClick={undo}
               disabled={!canUndo()}
-              className="p-1 rounded hover:bg-zinc-800 hover:text-white disabled:opacity-30 disabled:hover:bg-transparent text-zinc-400 transition-colors"
+              className="p-1 rounded-full hover:bg-[var(--accent-lime)]/30 hover:text-[var(--text-main)] disabled:opacity-30 disabled:hover:bg-transparent text-[var(--text-muted)] transition-colors cursor-pointer"
               title="Undo (Ctrl+Z)"
             >
               <Undo2 className="w-3.5 h-3.5" />
@@ -266,7 +272,7 @@ export default function EditorStudioPage() {
             <button
               onClick={redo}
               disabled={!canRedo()}
-              className="p-1 rounded hover:bg-zinc-800 hover:text-white disabled:opacity-30 disabled:hover:bg-transparent text-zinc-400 transition-colors"
+              className="p-1 rounded-full hover:bg-[var(--accent-lime)]/30 hover:text-[var(--text-main)] disabled:opacity-30 disabled:hover:bg-transparent text-[var(--text-muted)] transition-colors cursor-pointer"
               title="Redo (Ctrl+Shift+Z)"
             >
               <Redo2 className="w-3.5 h-3.5" />
@@ -276,16 +282,19 @@ export default function EditorStudioPage() {
           {/* Shortcuts Modal Trigger */}
           <button
             onClick={() => setIsShortcutsModalOpen(true)}
-            className="p-1.5 rounded-lg bg-[#101114] hover:bg-zinc-800 border border-zinc-800 text-zinc-400 hover:text-amber-300 transition-colors"
+            className="neo-btn-secondary p-1.5 rounded-full"
             title="Keyboard Shortcuts (?)"
           >
-            <Keyboard className="w-3.5 h-3.5 text-amber-400" />
+            <Keyboard className="w-3.5 h-3.5" />
           </button>
 
-          {/* Master Glowing Export Button */}
+          {/* Live Theme Toggle */}
+          <ThemeToggle compact />
+
+          {/* Master Neobrutalist Export Button */}
           <button
             onClick={() => setIsExportModalOpen(true)}
-            className="flex items-center gap-1.5 px-3.5 py-1 rounded-lg bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 hover:from-amber-400 hover:to-orange-400 text-black font-extrabold shadow-lg shadow-amber-500/20 transition-all hover:scale-[1.02] text-xs cursor-pointer ml-1"
+            className="neo-btn px-4 py-1.5 text-xs text-[#142218] gap-1.5 font-black"
           >
             <Download className="w-3.5 h-3.5 stroke-[2.5]" />
             <span>Export</span>

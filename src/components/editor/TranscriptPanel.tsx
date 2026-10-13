@@ -151,43 +151,43 @@ export function TranscriptPanel() {
   };
 
   return (
-    <div className="w-72 lg:w-80 flex flex-col bg-[#121316] rounded-xl border border-[#24262c] shrink-0 h-full min-h-0 overflow-hidden select-none">
+    <div className="w-80 lg:w-[340px] flex flex-col bg-[var(--bg-panel)] rounded-2xl border-2 border-[var(--border-main)] shrink-0 h-full min-h-0 overflow-hidden select-none shadow-[3px_3px_0px_var(--border-main)] transition-colors">
       {/* 1. Panel Header & Clean Navigation */}
-      <div className="h-10 px-3 bg-[#18191e] border-b border-[#24262c] flex items-center justify-between text-xs">
-        <div className="flex items-center bg-[#101114] p-0.5 rounded-lg border border-zinc-800">
+      <div className="h-12 px-3 bg-[var(--bg-card)] border-b-2 border-[var(--border-main)] flex items-center justify-between text-xs">
+        <div className="flex items-center bg-[var(--bg-panel)] p-1 rounded-full border-2 border-[var(--border-main)] shadow-[2px_2px_0px_var(--border-main)]">
           <button
             onClick={() => setActiveTab("cues")}
-            className={`px-2.5 py-1 rounded-md text-[11px] font-bold transition-colors ${
+            className={`px-2.5 py-1 rounded-full text-[11px] font-extrabold transition-all cursor-pointer ${
               activeTab === "cues"
-                ? "bg-zinc-800 text-amber-400 shadow-sm"
-                : "text-zinc-400 hover:text-zinc-200"
+                ? "bg-[var(--accent-lime)] text-[#142218] shadow-sm border border-[var(--border-main)]"
+                : "text-[var(--text-muted)] hover:text-[var(--text-main)]"
             }`}
           >
             Captions ({cues.length})
           </button>
           <button
             onClick={() => setActiveTab("smart")}
-            className={`px-2.5 py-1 rounded-md text-[11px] font-bold transition-colors ${
+            className={`px-2.5 py-1 rounded-full text-[11px] font-extrabold transition-all cursor-pointer ${
               activeTab === "smart"
-                ? "bg-zinc-800 text-amber-400 shadow-sm"
-                : "text-zinc-400 hover:text-zinc-200"
+                ? "bg-[var(--accent-lime)] text-[#142218] shadow-sm border border-[var(--border-main)]"
+                : "text-[var(--text-muted)] hover:text-[var(--text-main)]"
             }`}
           >
             AI Tools
           </button>
           <button
             onClick={() => setActiveTab("replace")}
-            className={`px-2.5 py-1 rounded-md text-[11px] font-bold transition-colors ${
+            className={`px-2.5 py-1 rounded-full text-[11px] font-extrabold transition-all cursor-pointer ${
               activeTab === "replace"
-                ? "bg-zinc-800 text-amber-400 shadow-sm"
-                : "text-zinc-400 hover:text-zinc-200"
+                ? "bg-[var(--accent-lime)] text-[#142218] shadow-sm border border-[var(--border-main)]"
+                : "text-[var(--text-muted)] hover:text-[var(--text-main)]"
             }`}
           >
             Find
           </button>
         </div>
 
-        <span className="text-[10px] font-mono text-zinc-500 font-semibold">
+        <span className="text-[10px] font-mono text-[var(--text-muted)] font-bold px-2.5 py-0.5 rounded-full bg-[var(--bg-panel)] border-2 border-[var(--border-main)] shadow-[1px_1px_0px_var(--border-main)]">
           {tokens.length} words
         </span>
       </div>
@@ -196,41 +196,42 @@ export function TranscriptPanel() {
       {activeTab === "cues" && (
         <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
           {/* Quick Filter & Script Switch Bar */}
-          <div className="p-2 bg-[#14151a] border-b border-[#24262c] flex items-center gap-1.5">
+          <div className="p-2.5 bg-[var(--bg-card)] border-b-2 border-[var(--border-main)] flex items-center gap-2">
             <div className="relative flex-1">
-              <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-zinc-500" />
+              <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
               <input
                 type="text"
-                placeholder="Search captions..."
+                placeholder="Search captions (Ctrl+F)..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-8 pr-2 py-1 rounded-lg bg-[#101114] border border-zinc-800 text-[11px] text-white placeholder-zinc-500 focus:outline-none focus:border-amber-500"
+                className="w-full pl-9 pr-3 py-1 rounded-full bg-[var(--bg-panel)] border-2 border-[var(--border-main)] text-[11px] text-[var(--text-main)] placeholder-[var(--text-muted)] focus:outline-none focus:ring-1 focus:ring-[var(--accent-lime)] transition-colors shadow-[2px_2px_0px_var(--border-main)]"
               />
             </div>
 
             <button
               onClick={() => setScriptMode(scriptMode === "roman" ? "devanagari" : "roman")}
-              className="px-2 py-1 rounded-lg bg-[#101114] border border-zinc-800 text-zinc-300 hover:text-white text-[10px] font-semibold"
+              className="neo-btn-secondary px-2.5 py-1 text-[10px] gap-1 shrink-0"
               title="Toggle Roman Hinglish / Hindi Devanagari"
             >
-              <Languages className="w-3.5 h-3.5 text-amber-400" />
+              <Languages className="w-3.5 h-3.5 text-[var(--text-main)]" />
+              <span className="text-[9px] font-mono">{scriptMode === "roman" ? "EN" : "HI"}</span>
             </button>
           </div>
 
           {/* Subtitle Dialogue Lines */}
-          <div className="flex-1 overflow-y-auto p-2.5 space-y-2">
+          <div className="flex-1 overflow-y-auto p-2.5 space-y-2.5">
             {tokens.length === 0 ? (
-              <div className="h-full min-h-[220px] flex flex-col items-center justify-center p-6 text-center text-zinc-500 text-xs">
-                <div className="w-12 h-12 rounded-2xl bg-zinc-900 border border-zinc-800/80 flex items-center justify-center text-zinc-400 mb-3 shadow-inner">
-                  <FileText className="w-6 h-6 text-amber-400/80" />
+              <div className="h-full min-h-[220px] flex flex-col items-center justify-center p-6 text-center text-[var(--text-muted)] text-xs">
+                <div className="w-12 h-12 rounded-2xl bg-[var(--bg-card)] border-2 border-[var(--border-main)] shadow-[2px_2px_0px_var(--border-main)] flex items-center justify-center text-[var(--text-muted)] mb-3">
+                  <FileText className="w-6 h-6 text-[var(--accent-lime)]" />
                 </div>
-                <p className="font-bold text-zinc-200 text-xs">No Captions Yet</p>
-                <p className="text-[11px] text-zinc-400 mt-1 max-w-[200px] leading-relaxed">
+                <p className="font-bold text-[var(--text-main)] text-xs">No Captions Yet</p>
+                <p className="text-[11px] text-[var(--text-muted)] mt-1 max-w-[200px] leading-relaxed">
                   Import any video clip to transcribe speech into word-level Hinglish captions.
                 </p>
               </div>
             ) : filteredCues.length === 0 ? (
-              <div className="p-8 text-center text-zinc-500 text-xs">
+              <div className="p-8 text-center text-[var(--text-muted)] text-xs">
                 No captions matching "{searchQuery}"
               </div>
             ) : (
@@ -240,28 +241,28 @@ export function TranscriptPanel() {
                 return (
                   <div
                     key={cue.id}
-                    className={`p-2.5 rounded-xl border transition-all ${
+                    className={`p-2.5 rounded-xl border-2 transition-all ${
                       isLineActive
-                        ? "bg-amber-500/10 border-amber-500/50 shadow-md shadow-amber-500/5 ring-1 ring-amber-500/30"
-                        : "bg-[#141519] border-zinc-800/80 hover:border-zinc-700"
+                        ? "bg-[var(--accent-lime)]/20 border-[var(--border-main)] shadow-[3px_3px_0px_var(--border-main)] ring-2 ring-[var(--accent-lime)]"
+                        : "bg-[var(--bg-card)] border-[var(--border-main)] shadow-[2px_2px_0px_var(--border-main)] hover:shadow-[3px_3px_0px_var(--border-main)]"
                     }`}
                   >
                     {/* Line Header: Play, Timecode & Word Count */}
-                    <div className="flex items-center justify-between text-[10px] font-mono text-zinc-400 pb-1.5 border-b border-zinc-800/40">
+                    <div className="flex items-center justify-between text-[10px] font-mono text-[var(--text-muted)] pb-1.5 border-b border-[var(--border-main)]/30">
                       <div className="flex items-center gap-1.5">
                         <button
                           onClick={() => setCurrentTime(cue.start)}
-                          className="w-5 h-5 rounded-md bg-[#1c1d24] hover:bg-amber-500 hover:text-black flex items-center justify-center text-amber-400 transition-colors"
+                          className="w-5 h-5 rounded-full border border-[var(--border-main)] bg-[var(--accent-lime)] hover:bg-[var(--accent-lime-hover)] text-[#142218] flex items-center justify-center transition-colors cursor-pointer shadow-[1px_1px_0px_var(--border-main)]"
                           title="Play this line"
                         >
                           <Play className="w-2.5 h-2.5 fill-current" />
                         </button>
-                        <span className="text-zinc-500 font-bold">#{index + 1}</span>
-                        <span className="text-zinc-300">
+                        <span className="font-bold text-[var(--text-muted)]">#{index + 1}</span>
+                        <span className="text-[var(--text-main)] font-semibold">
                           {formatTimecode(cue.start)} → {formatTimecode(cue.end)}
                         </span>
                       </div>
-                      <span className="text-zinc-500 font-mono text-[9px]">
+                      <span className="text-[var(--text-muted)] font-mono text-[9px] font-bold">
                         {cue.tokens.length} words
                       </span>
                     </div>
@@ -292,7 +293,7 @@ export function TranscriptPanel() {
                                 updateWordText(token.id, editWordValue);
                                 setEditingWordId(null);
                               }}
-                              className="px-1 py-0.5 rounded bg-zinc-900 border border-amber-400 text-white text-xs font-bold focus:outline-none max-w-[90px]"
+                              className="px-1.5 py-0.5 rounded-lg bg-[var(--bg-panel)] border-2 border-[var(--border-main)] text-[var(--text-main)] text-xs font-bold focus:outline-none max-w-[90px] shadow-[1px_1px_0px_var(--border-main)]"
                             />
                           );
                         }
@@ -308,12 +309,12 @@ export function TranscriptPanel() {
                               setEditingWordId(token.id);
                               setEditWordValue(token.text);
                             }}
-                            className={`px-1 py-0.5 rounded text-xs transition-colors cursor-pointer ${
+                            className={`px-1.5 py-0.5 rounded-md text-xs transition-all cursor-pointer ${
                               isWordActive
-                                ? "bg-amber-400 text-black font-extrabold shadow-sm scale-105"
+                                ? "bg-[var(--accent-lime)] text-[#142218] border border-[var(--border-main)] font-black shadow-[1px_1px_0px_var(--border-main)] scale-105"
                                 : token.isKeyword
-                                ? "text-amber-300 font-bold hover:bg-zinc-800"
-                                : "text-zinc-200 hover:bg-zinc-800 hover:text-white"
+                                ? "text-[var(--text-main)] font-black underline decoration-[var(--accent-lime)] decoration-2 hover:bg-[var(--accent-lime)]/30"
+                                : "text-[var(--text-main)] hover:bg-[var(--accent-lime)]/20"
                             }`}
                             title={`Click to jump to ${formatTimecode(token.start)}. Double-click to edit.`}
                           >
@@ -334,81 +335,81 @@ export function TranscriptPanel() {
       {activeTab === "smart" && (
         <div className="flex-1 overflow-y-auto p-3 space-y-3 text-xs">
           {/* Viral Mode Card */}
-          <div className="p-3 rounded-xl bg-gradient-to-br from-amber-500/10 via-[#18191e] to-orange-500/10 border border-amber-500/30 space-y-2">
-            <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-lg bg-amber-500/20 text-amber-300 flex items-center justify-center font-bold">
-                <Zap className="w-4 h-4 fill-amber-400 text-amber-400" />
+          <div className="neo-card p-4 space-y-3 bg-[var(--bg-card)]">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-full border-2 border-[var(--border-main)] bg-[var(--accent-lime)] text-[#142218] flex items-center justify-center font-bold shadow-[2px_2px_0px_var(--border-main)]">
+                <Zap className="w-4 h-4 fill-current text-[#142218]" />
               </div>
               <div>
-                <h4 className="font-bold text-white text-xs">1-Click Viral Mode</h4>
-                <p className="text-[10px] text-zinc-400">Tempo + Keywords + Emojis</p>
+                <h4 className="font-extrabold text-[var(--text-main)] text-xs">1-Click Viral Mode</h4>
+                <p className="text-[10px] text-[var(--text-muted)]">Tempo + Keywords + Emojis</p>
               </div>
             </div>
-            <p className="text-[11px] text-zinc-300">
+            <p className="text-[11px] text-[var(--text-muted)] leading-relaxed">
               Analyzes speech tempo (WPM), highlights power keywords, and applies the highest-performing caption preset.
             </p>
             <button
               onClick={handleApplyViralMode}
-              className="w-full py-2 rounded-lg bg-gradient-to-r from-amber-500 to-orange-500 text-black font-extrabold text-xs shadow-md shadow-amber-500/20 hover:opacity-95 transition-all flex items-center justify-center gap-1.5"
+              className="neo-btn w-full py-2 text-xs text-[#142218] gap-1.5 font-black"
             >
               <Zap className="w-3.5 h-3.5 fill-black" />
-              Apply Viral Mode
+              <span>Apply Viral Mode</span>
             </button>
           </div>
 
           {/* Keywords Highlight */}
-          <div className="p-3 rounded-xl bg-[#14151a] border border-zinc-800 space-y-2">
+          <div className="neo-card p-3.5 space-y-2 bg-[var(--bg-card)]">
             <div className="flex items-center justify-between">
-              <span className="font-bold text-white flex items-center gap-1.5">
-                <Sparkles className="w-3.5 h-3.5 text-yellow-400" />
+              <span className="font-bold text-[var(--text-main)] flex items-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5 text-[var(--accent-lime)]" />
                 Power Keywords
               </span>
               <button
                 onClick={handleToggleKeywords}
-                className="px-2.5 py-1 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-[10px] font-semibold"
+                className="neo-btn-secondary px-2.5 py-1 text-[10px]"
               >
                 Highlight
               </button>
             </div>
-            <p className="text-[11px] text-zinc-400">
+            <p className="text-[11px] text-[var(--text-muted)] leading-relaxed">
               Scans technical and action words (e.g. <em>cadastral, blockchain, 3D</em>) for pop accent colors.
             </p>
           </div>
 
           {/* Smart Emojis */}
-          <div className="p-3 rounded-xl bg-[#14151a] border border-zinc-800 space-y-2">
+          <div className="neo-card p-3.5 space-y-2 bg-[var(--bg-card)]">
             <div className="flex items-center justify-between">
-              <span className="font-bold text-white flex items-center gap-1.5">
-                <Smile className="w-3.5 h-3.5 text-cyan-400" />
+              <span className="font-bold text-[var(--text-main)] flex items-center gap-1.5">
+                <Smile className="w-3.5 h-3.5 text-[var(--accent-lime)]" />
                 Creator Emojis
               </span>
               <button
                 onClick={handleSmartEmojis}
-                className="px-2.5 py-1 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-[10px] font-semibold"
+                className="neo-btn-secondary px-2.5 py-1 text-[10px]"
               >
                 Inject Emojis
               </button>
             </div>
-            <p className="text-[11px] text-zinc-400">
+            <p className="text-[11px] text-[var(--text-muted)] leading-relaxed">
               Appends contextual emojis (🎥, 🚀, 💡, 💰) next to matching spoken terms.
             </p>
           </div>
 
           {/* Clean Fillers */}
-          <div className="p-3 rounded-xl bg-[#14151a] border border-zinc-800 space-y-2">
+          <div className="neo-card p-3.5 space-y-2 bg-[var(--bg-card)]">
             <div className="flex items-center justify-between">
-              <span className="font-bold text-white flex items-center gap-1.5">
-                <Trash2 className="w-3.5 h-3.5 text-rose-400" />
+              <span className="font-bold text-[var(--text-main)] flex items-center gap-1.5">
+                <Trash2 className="w-3.5 h-3.5 text-rose-500" />
                 Clean Fillers
               </span>
               <button
                 onClick={handleCleanFillers}
-                className="px-2.5 py-1 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-[10px] font-semibold"
+                className="neo-btn-secondary px-2.5 py-1 text-[10px]"
               >
                 Remove
               </button>
             </div>
-            <p className="text-[11px] text-zinc-400">
+            <p className="text-[11px] text-[var(--text-muted)] leading-relaxed">
               Strips hesitation fillers ("umm", "matlab", "basically") to tighten pacing.
             </p>
           </div>
@@ -419,31 +420,31 @@ export function TranscriptPanel() {
       {activeTab === "replace" && (
         <div className="flex-1 p-3 space-y-3 text-xs">
           <div className="space-y-1.5">
-            <label className="text-[11px] font-semibold text-zinc-400">Find Text</label>
+            <label className="text-[11px] font-bold text-[var(--text-muted)]">Find Text</label>
             <input
               type="text"
               placeholder="e.g. uelpings"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full px-3 py-1.5 rounded-lg bg-[#101114] border border-zinc-800 text-xs text-white focus:outline-none focus:border-amber-500"
+              className="w-full px-3 py-1.5 rounded-xl bg-[var(--bg-card)] border-2 border-[var(--border-main)] text-xs text-[var(--text-main)] focus:outline-none shadow-[2px_2px_0px_var(--border-main)]"
             />
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-[11px] font-semibold text-zinc-400">Replace With</label>
+            <label className="text-[11px] font-bold text-[var(--text-muted)]">Replace With</label>
             <input
               type="text"
               placeholder="e.g. buildings"
               value={replaceQuery}
               onChange={(e) => setReplaceQuery(e.target.value)}
-              className="w-full px-3 py-1.5 rounded-lg bg-[#101114] border border-zinc-800 text-xs text-white focus:outline-none focus:border-amber-500"
+              className="w-full px-3 py-1.5 rounded-xl bg-[var(--bg-card)] border-2 border-[var(--border-main)] text-xs text-[var(--text-main)] focus:outline-none shadow-[2px_2px_0px_var(--border-main)]"
             />
           </div>
 
           <button
             onClick={handleReplaceAll}
             disabled={!searchQuery.trim()}
-            className="w-full py-2 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-300 font-bold text-xs flex items-center justify-center gap-1.5 transition-colors disabled:opacity-40"
+            className="neo-btn w-full py-2 text-xs text-[#142218] gap-1.5 font-bold disabled:opacity-40"
           >
             <Replace className="w-3.5 h-3.5" />
             Replace All Occurrences

@@ -23,29 +23,31 @@ export function KeyboardShortcutsModal({ isOpen, onClose }: KeyboardShortcutsMod
   ];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-150">
-      <div className="w-full max-w-md rounded-2xl bg-zinc-950 border border-zinc-800 p-6 shadow-2xl space-y-4">
-        <div className="flex items-center justify-between pb-3 border-b border-zinc-800">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-in fade-in duration-150">
+      <div className="w-full max-w-md rounded-2xl bg-[var(--bg-card)] border-2 border-[var(--border-main)] p-6 shadow-[6px_6px_0px_var(--border-main)] space-y-4 text-[var(--text-main)]">
+        <div className="flex items-center justify-between pb-3 border-b-2 border-[var(--border-main)]/30">
           <div className="flex items-center gap-2">
-            <Keyboard className="w-5 h-5 text-amber-400" />
-            <h3 className="font-bold text-white text-base">Studio Keyboard Shortcuts</h3>
+            <div className="p-1.5 rounded-full bg-[var(--accent-lime)] text-[#142218] border border-[var(--border-main)] shadow-[1px_1px_0px_var(--border-main)]">
+              <Keyboard className="w-4 h-4 text-[#142218]" />
+            </div>
+            <h3 className="font-fraunces italic font-bold text-lg text-[var(--text-main)]">Studio Shortcuts</h3>
           </div>
           <button
             onClick={onClose}
-            className="p-1 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800"
+            className="neo-btn-secondary p-1.5 rounded-full cursor-pointer"
           >
-            <X className="w-5 h-5" />
+            <X className="w-4 h-4" />
           </button>
         </div>
 
-        <div className="space-y-2.5">
+        <div className="space-y-2">
           {shortcuts.map((sc, i) => (
             <div
               key={i}
-              className="flex items-center justify-between p-2 rounded-lg bg-zinc-900/60 border border-zinc-800/80 text-xs"
+              className="flex items-center justify-between p-2.5 rounded-xl bg-[var(--bg-panel)] border border-[var(--border-main)] text-xs shadow-[1px_1px_0px_var(--border-main)]"
             >
-              <span className="text-zinc-300">{sc.desc}</span>
-              <kbd className="px-2 py-1 rounded bg-zinc-800 text-amber-300 font-mono font-bold text-[11px] border border-zinc-700">
+              <span className="text-[var(--text-main)] font-semibold">{sc.desc}</span>
+              <kbd className="px-2 py-0.5 rounded-full bg-[var(--accent-lime)] text-[#142218] font-mono font-black text-[11px] border border-[var(--border-main)] shadow-[1px_1px_0px_var(--border-main)]">
                 {sc.key}
               </kbd>
             </div>
@@ -55,9 +57,9 @@ export function KeyboardShortcutsModal({ isOpen, onClose }: KeyboardShortcutsMod
         <div className="pt-2 text-center">
           <button
             onClick={onClose}
-            className="w-full py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-100 font-semibold text-xs transition-colors"
+            className="neo-btn-secondary w-full py-2.5 rounded-full font-extrabold text-xs cursor-pointer"
           >
-            Close
+            Close Cheat Sheet
           </button>
         </div>
       </div>

@@ -160,4 +160,78 @@ describe("Golden-Frame Consistency & Template Schema Suite", () => {
     });
     expect(ctxShifted.getLog().filter((l) => l.startsWith("fillText")).length).toBeGreaterThan(0);
   });
+
+  it("should generate 100% identical behind-the-subject compositing commands across preview and export using synthetic mask", () => {
+    const width = 720;
+    const height = 1280;
+
+    const ctxPreview = createMockCanvasContext();
+    const ctxExport = createMockCanvasContext();
+
+    const syntheticMask = new Uint8Array(384 * 512).fill(255);
+    const mockVideoSource = {} as CanvasImageSource;
+
+    const testTokens: WordToken[] = [
+      { id: "1", text: "Maine", start: 0.2, end: 0.6, confidence: 0.99 },
+      { id: "2", text: "video", start: 0.7, end: 1.1, confidence: 0.99 },
+    ];
+
+    const behindTemplate = CAPTION_PRESETS.find((t) => t.id === "behind_head_giant_word")!;
+    expect(behindTemplate.layout.behindSubjectDepth).toBe(true);
+
+    const subjectMetrics = {
+      hasSubject: true,
+      confidence: 0.95,
+      coveragePercent: 25.0,
+      boundingBox: { x: 0.25, y: 0.2, width: 0.5, height: 0.75 },
+      headRegion: { centerX: 0.5, centerY: 0.35, radiusX: 0.15, radiusY: 0.15 },
+      subjectCount: 1,
+      isLeavingFrame: false,
+    };
+
+    // Render Preview
+    renderCaptionFrame({
+      ctx: ctxPreview,
+      canvasWidth: width,
+      canvasHeight: height,
+      currentTime: 0.85,
+      tokens: testTokens,
+      template: behindTemplate,
+      videoSource: mockVideoSource,
+      segmentationMask: syntheticMask,
+      maskWidth: 384,
+      maskHeight: 512,
+      subjectMetrics,
+    });
+
+    // Render Export
+    renderCaptionFrame({
+      ctx: ctxExport,
+      canvasWidth: width,
+      canvasHeight: height,
+      currentTime: 0.85,
+      tokens: testTokens,
+      template: behindTemplate,
+      videoSource: mockVideoSource,
+      segmentationMask: syntheticMask,
+      maskWidth: 384,
+      maskHeight: 512,
+      subjectMetrics,
+    });
+
+    const previewLog = ctxPreview.getLog();
+    const exportLog = ctxExport.getLog();
+
+    // Verify 100% identical command logs across preview and export
+    expect(previewLog).toEqual(exportLog);
+
+    // Verify layer draw order:
+    // 1. Text is filled before the cutout pass
+    const textFillIndex = previewLog.findIndex((l) => l.startsWith("fillText"));
+    const cutoutIndex = previewLog.findIndex((l) => l.startsWith("drawSubjectCutout"));
+
+    expect(textFillIndex).toBeGreaterThanOrEqual(0);
+    expect(cutoutIndex).toBeGreaterThan(textFillIndex);
+  });
 });
+

@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Caption Studio — Complete 72 Preset Collection (Phase 3 Complete)</title>
+  <link rel="stylesheet" href="/fonts/fonts.css">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: #09090b;
+      color: #f4f4f5;
+      font-family: 'Poppins', 'Inter', system-ui, sans-serif;
+      padding: 24px;
+    }
+    header {
+      margin-bottom: 24px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid #27272a;
+    }
+    h1 { font-size: 24px; font-weight: 800; color: #fafafa; }
+    .subtitle { color: #a1a1aa; font-size: 14px; margin-top: 6px; }
+    .stats-bar {
+      display: flex;
+      gap: 16px;
+      margin-top: 16px;
+      flex-wrap: wrap;
+    }
+    .stat-pill {
+      background: #18181b;
+      border: 1px solid #27272a;
+      padding: 6px 12px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+    }
+    .stat-pill strong { color: #f59e0b; }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+      gap: 20px;
+    }
+    .card {
+      background: #121215;
+      border: 1px solid #27272a;
+      border-radius: 12px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+    }
+    .card.part_a {
+      border: 2px solid #38bdf8;
+      background: #0c1726;
+      box-shadow: 0 0 24px rgba(56, 189, 248, 0.2);
+    }
+    .card.part_b {
+      border: 2px solid #a855f7;
+      background: #190e2b;
+      box-shadow: 0 0 24px rgba(168, 85, 247, 0.2);
+    }
+    .card.flagship {
+      border: 1.5px solid #10b981;
+    }
+    .card-header {
+      padding: 10px 14px;
+      background: #18181b;
+      border-bottom: 1px solid #27272a;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 12px;
+    }
+    .card.part_a .card-header {
+      background: #0f233a;
+      border-color: #1e3a5f;
+    }
+    .card.part_b .card-header {
+      background: #25123d;
+      border-color: #3b1d61;
+    }
+    .template-num { font-weight: 800; color: #a1a1aa; }
+    .template-vibe {
+      background: #27272a;
+      padding: 2px 8px;
+      border-radius: 4px;
+      text-transform: uppercase;
+      font-size: 10px;
+      letter-spacing: 0.5px;
+      font-weight: 700;
+    }
+    .status-badge {
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-weight: 700;
+      font-size: 11px;
+    }
+    .status-badge.part_a {
+      background: #0284c7;
+      color: #ffffff;
+    }
+    .status-badge.part_b {
+      background: #9333ea;
+      color: #ffffff;
+    }
+    .status-badge.flagship {
+      background: #f59e0b22;
+      color: #fbbf24;
+      border: 1px solid #d9770644;
+    }
+    .status-badge.keep {
+      background: #10b98122;
+      color: #34d399;
+      border: 1px solid #05966944;
+    }
+    .canvas-container {
+      width: 100%;
+      height: 200px;
+      position: relative;
+      background: radial-gradient(circle at 50% 40%, #1f2430 0%, #0d0f14 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+    .card-footer {
+      padding: 12px 14px;
+      font-size: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      background: #141418;
+    }
+    .template-title {
+      font-weight: 700;
+      font-size: 13px;
+      color: #ffffff;
+    }
+    .metrics-row {
+      display: flex;
+      justify-content: space-between;
+      color: #a1a1aa;
+      font-size: 11px;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Caption Studio — All 72 Presets (Phases 1-3 Complete)</h1>
+    <p class="subtitle">Complete Collection: 10 New Text Styles (Cyan) + 8 Behind-Subject Styles (Purple) | Total: Exactly 72 Presets</p>
+    <div class="stats-bar">
+      <div class="stat-pill">Total Presets: <strong>72 (Exact Invariant)</strong></div>
+      <div class="stat-pill">Part A Text Styles: <strong style="color:#38bdf8">10 Live</strong></div>
+      <div class="stat-pill">Part B Behind-Subject: <strong style="color:#c084fc">8 Live</strong></div>
+      <div class="stat-pill">Retained Originals: <strong>54 Presets</strong></div>
+      <div class="stat-pill">Categories: <strong>Balanced (10, 10, 10, 10, 8, 8, 8, 8)</strong></div>
+    </div>
+  </header>
+
+  <div class="grid" id="preset-grid"></div>
+
+  <script>
+    const PRESETS = [{"id":"behind_you_white","name":"Behind You — Clean White","vibe":"bold_viral","badge":"BEHIND YOU","typography":{"primaryFont":"Impact, sans-serif","secondaryFont":"Playfair Display, serif","primaryWeight":"900","textTransform":"uppercase","fontSizeBasePercent":0.052},"colors":{"primaryText":"#FFFFFF","secondaryText":"rgba(255, 255, 255, 0.45)","activeWordText":"#F59E0B","shadowColor":"rgba(0, 0, 0, 0.8)","shadowBlur":14},"layout":{"yPositionPercent":0.48,"maxWordsPerLine":2,"maxLines":2,"behindSubjectDepth":true},"animation":{"perWordEffect":"scale_pop","scaleMagnitude":1.15},"index":1,"badgeType":"flagship","badgeLabel":"FLAGSHIP"},{"id":"sunshine_impact_yellow","name":"Sunshine Impact","vibe":"bold_viral","badge":"BEHIND YOU","typography":{"primaryFont":"Impact, sans-serif","secondaryFont":"Cinzel, serif","primaryWeight":"900","textTransform":"uppercase","fontSizeBasePercent":0.055},"colors":{"primaryText":"#FFE600","activeWordText":"#FFE600","glowColor":"rgba(250, 204, 21, 0.5)","shadowColor":"rgba(0, 0, 0, 0.9)","shadowBlur":16},"layout":{"yPositionPercent":0.48,"maxWordsPerLine":2,"maxLines":2,"behindSubjectDepth":true},"animation":{"perWordEffect":"glow","scaleMagnitude":1.12},"index":2,"badgeType":"flagship","badgeLabel":"FLAGSHIP"},{"id":"alex_hormozi_punch","name":"Hormozi Punch Yellow","vibe":"bold_viral","typography":{"primaryFont":"Impact, sans-serif","primaryWeight":"900","textTransform":"uppercase","fontSizeBasePercent":0.05},"colors":{"primaryText":"#FFFFFF","activeWordText":"#FACC15","strokeColor":"#000000","strokeWidthPercent":0.008,"shadowColor":"rgba(0,0,0,0.9)","shadowBlur":12},"box":{"enabled":false,"bgColor":"#000000","paddingX":12,"paddingY":6,"borderRadius":8},"layout":{"yPositionPercent":0.72,"maxWordsPerLine":3,"maxLines":2,"behindSubjectDepth":false},"animation":{"perWordEffect":"color_pop","scaleMagnitude":1.2},"index":3,"badgeType":"flagship","badgeLabel":"FLAGSHIP"},{"id":"mr_beast_bold","name":"MrBeast High-Energy","vibe":"bold_viral","typography":{"primaryFont":"Arial Black, sans-serif","primaryWeight":"900","textTransform":"uppercase","fontSizeBasePercent":0.052},"colors":{"primaryText":"#FFFFFF","activeWordText":"#38BDF8","strokeColor":"#000000","strokeWidthPercent":0.01,"shadowColor":"rgba(0,0,0,1)","shadowBlur":14},"layout":{"yPositionPercent":0.7,"maxWordsPerLine":2,"maxLines":2,"behindSubjectDepth":false},"animation":{"perWordEffect":"bounce","scaleMagnitude":1.18},"index":4,"badgeType":"flagship","badgeLabel":"FLAGSHIP"},{"id":"die_cut_sticker","name":"Die-Cut Vinyl Sticker","vibe":"bold_viral","badge":"STICKER","typography":{"primaryFont":"Poppins, sans-serif","secondaryFont":"Noto Sans Devanagari, sans-serif","primaryWeight":"900","textTransform":"uppercase","fontSizeBasePercent":0.052,"wordTransform":{"randomTiltDeg":5}},"colors":{"primaryText":"#18181B","activeWordText":"#FF0055","multiStrokes":[{"color":"#FFFFFF","widthPercent":0.018},{"color":"#000000","widthPercent":0.005}],"shadowColor":"rgba(0, 0, 0, 0.85)","shadowBlur":16},"layout":{"yPositionPercent":0.72,"maxWordsPerLine":2,"maxLines":2,"behindSubjectDepth":false},"animation":{"perWordEffect":"bounce","scaleMagnitude":1.15},"accessibility":{"contrastFallback":"auto_stroke"},"index":5,"badgeType":"part_a","badgeLabel":"NEW TEXT (Part A)"},{"id":"reel_fire_yellow","name":"Reel Fire Amber","vibe":"bold_viral","typography":{"primaryFont":"Impact, sans-serif","primaryWeight":"900","textTransform":"uppercase","fontSizeBasePercent":0.054},"colors":{"primaryText":"#F59E0B","activeWordText":"#FEF08A","glowColor":"rgba(245, 158, 11, 0.6)","shadowColor":"#000000","shadowBlur":14},"layout":{"yPositionPercent":0.52,"maxWordsPerLine":2,"maxLines":2,"behindSubjectDepth":true},"animation":{"perWordEffect":"glow","scaleMagnitude":1.14},"index":6,"badgeType":"keep","badgeLabel":"KEEP"},{"id":"desi_hustler_bold","name":"Desi Hustler Gold","vibe":"bold_viral","badge":"BEHIND YOU","typography":{"primaryFont":"Impact, sans-serif","primaryWeight":"900","textTransform":"uppercase","fontSizeBasePercent":0.052},"colors":{"primaryText":"#FDE047","activeWordText":"#FFFFFF","strokeColor":"#713F12","strokeWidthPercent":0.006,"shadowColor":"rgba(0,0,0,0.85)","shadowBlur":12},"layout":{"yPositionPercent":0.48,"maxWordsPerLine":2,"maxLines":2,"behindSubjectDepth":true},"animation":{"perWordEffect":"scale_pop","scaleMagnitude":1.16},"index":7,"badgeType":"keep","badgeLabel":"KEEP"},{"id":"behind_head_giant_word","name":"Poster Giant Word Behind Head","vibe":"bold_viral","badge":"BEHIND HEAD","typography":{"primaryFont":"Poppins, sans-serif","secondaryFont":"Noto Sans Devanagari, sans-serif","primaryWeight":"900","textTransform":"uppercase","fontSizeBasePercent":0.082},"colors":{"primaryText":"#FFFFFF","activeWordText":"#F59E0B","shadowColor":"rgba(0, 0, 0, 0.95)","shadowBlur":18},"layout":{"yPositionPercent":0.38,"maxWordsPerLine":1,"maxLines":1,"behindSubjectDepth":true,"layerOrder":"behind"},"animation":{"perWordEffect":"scale_pop","scaleMagnitude":1.16},"accessibility":{"contrastFallback":"backdrop_shadow"},"index":8,"badgeType":"part_b","badgeLabel":"BEHIND (Part B)"},{"id":"hollow_outline_fill","name":"Hollow Outline to Solid Fill","vibe":"bold_viral","badge":"HOLLOW","typography":{"primaryFont":"Montserrat, sans-serif","secondaryFont":"Noto Sans Devanagari, sans-serif","primaryWeight":"900","textTransform":"uppercase","fontSizeBasePercent":0.054},"colors":{"primaryText":"#FFFFFF","activeWordText":"#EF4444","strokeColor":"#FFFFFF","strokeWidthPercent":0.008,"glowColor":"rgba(239, 68, 68, 0.7)","shadowColor":"rgba(0, 0, 0, 0.95)","shadowBlur":14},"layout":{"yPositionPercent":0.72,"maxWordsPerLine":2,"maxLines":2,"behindSubjectDepth":false},"animation":{"perWordEffect":"hollow_fill","scaleMagnitude":1.18},"accessibility":{"contrastFallback":"auto_stroke"},"index":9,"badgeType":"part_a","badgeLabel":"NEW TEXT (Part A)"},{"id":"creator_fuel_cyan","name":"Creator Fuel Electric","vibe":"bold_viral","typography":{"primaryFont":"Impact, sans-serif","primaryWeight":"900","textTransform":"uppercase","fontSizeBasePercent":0.052},"colors":{"primaryText":"#38BDF8","activeWordText":"#FFFFFF","glowColor":"rgba(56, 189, 248, 0.5)","shadowColor":"rgba(0,0,0,0.9)","shadowBlur":14},"layout":{"yPositionPercent":0.7,"maxWordsPerLine":2,"maxLines":2,"behindSubjectDepth":false},"animation":{"perWordEffect":"glow","scaleMagnitude":1.15},"index":10,"badgeType":"keep","badgeLabel":"KEEP"},{"id":"neon_sticker_lime","name":"Lime Sticker Box","vibe":"neon","badge":"BEHIND YOU","typography":{"primaryFont":"Impact, sans-serif","secondaryFont":"Playfair Display, serif","primaryWeight":"900","textTransform":"lowercase","fontSizeBasePercent":0.046},"colors":{"primaryText":"#09090B","activeWordText":"#09090B"},"box":{"enabled":true,"bgColor":"#39FF14","paddingX":18,"paddingY":8,"borderRadius":14,"rotationDeg":-2},"layout":{"yPositionPercent":0.48,"maxWordsPerLine":2,"maxLines":2,"behindSubjectDepth":true},"animation":{"perWordEffect":"scale_pop","scaleMagnitude":1.1},"index":11,"badgeType":"flagship","badgeLabel":"FLAGSHIP"},{"id":"chrome_3d_metal","name":"Chrome 3D Reflection","vibe":"neon","badge":"NEW","typography":{"primaryFont":"Impact, sans-serif","primaryWeight":"900","textTransform":"lowercase","fontSizeBasePercent":0.052},"colors":{"primaryText":"#E2E8F0","activeWordText":"#FFFFFF","shadowColor":"rgba(255,255,255,0.4)","shadowBlur":18},"layout":{"yPositionPercent":0.52,"maxWordsPerLine":2,"maxLines":2,"behindSubjectDepth":true},"animation":{"perWordEffect":"glow","scaleMagnitude":1.12},"index":12,"badgeType":"keep","badgeLabel":"KEEP"},{"id":"cyberpunk_cyan","name":"Cyberpunk Cyan Drop","vibe":"neon","typography":{"primaryFont":"Impact, sans-serif","primaryWeight":"900","textTransform":"uppercase","fontSizeBasePercent":0.05},"colors":{"primaryText":"#00F0FF","activeWordText":"#FFFFFF","glowColor":"rgba(0, 240, 255, 0.7)","shadowColor":"rgba(0,0,0,0.9)","shadowBlur":16},"layout":{"yPositionPercent":0.74,"maxWordsPerLine":2,"maxLines":2,"behindSubjectDepth":false},"animation":{"perWordEffect":"glow","scaleMagnitude":1.15},"index":13,"badgeType":"keep","badgeLabel":"KEEP"},{"id":"acid_green_pop","name":"Acid Green Pulse","vibe":"neon","typography":{"primaryFont":"Arial Black, sans-serif","primaryWeight":"900","textTransform":"uppercase","fontSizeBasePercent":0.048},"colors":{"primaryText":"#A3E635","activeWordText":"#FFFFFF","glowColor":"rgba(163, 230, 53, 0.6)","shadowColor":"rgba(0,0,0,0.85)","shadowBlur":14},"layout":{"yPositionPercent":0.72,"maxWordsPerLine":2,"maxLines":2,"behindSubjectDepth":false},"animation":{"perWordEffect":"bounce","scaleMagnitude":1.14},"index":14,"badgeType":"keep","badgeLabel":"KEEP"},{"id":"electric_purple","name":"Electric Violet Glow","vibe":"neon","typography":{"primaryFont":"Impact, sans-serif","primaryWeight":"900","textTransform":"uppercase","fontSizeBasePercent":0.05},"colors":{"primaryText":"#C084FC","activeWordText":"#FDF4FF","glowColor":"rgba(192, 132, 252, 0.65)","shadowColor":"rgba(0,0,0,0.9)","shadowBlur":16},"layout":{"yPositionPercent":0.72,"maxWordsPerLine":2,"maxLines":2,"behindSubjectDepth":false},"animation":{"perWordEffect":"glow","scaleMagnitude":1.15},"index":15,"badgeType":"keep","badgeLabel":"KEEP"},{"id":"tokyo_pink_glow","name":"Tokyo Hot Pink","vibe":"neon","typography":{"primaryFont":"Impact, sans-serif","primaryWeight":"900","textTransform":"uppercase","fontSizeBasePercent":0.052},"colors":{"primaryText":"#F43F5E","activeWordText":"#FFE4E6","glowColor":"rgba(244, 63, 94, 0.7)","shadowColor":"#000000","shadowBlur":14},"layout":{"yPositionPercent":0.72,"maxWordsPerLine":2,"maxLines":2,"behindSubjectDepth":false},"animation":{"perWordEffect":"glow","scaleMagnitude":1.15},"index":16,"badgeType":"keep","badgeLabel":"KEEP"},{"id":"chrome_metallic_3d","name":"Chrome 3D Metallic Specular","vibe":"neon","badge":"3D CHROME","typography":{"primaryFont":"Montserrat, sans-serif","secondaryFont":"Noto Sans Devanagari, sans-serif","primaryWeight":"900","textTransform":"uppercase","fontSizeBasePercent":0.054},"colors":{"primaryText":"#E2E8F0","activeWordText":"#FEF08A","gradient":{"type":"linear","angleDeg":90,"stops":[{"offset":0,"color":"#F8FAFC"},{"offset":0.35,"color":"#94A3B8"},{"offset":0.65,"color":"#FFFFFF"},{"offset":1,"color":"#64748B"}]},"activeWordGradient":{"type":"linear","angleDeg":90,"stops":[{"offset":0,"color":"#FEF08A"},{"offset":0.4,"color":"#EAB308"},{"offset":0.7,"color":"#FEF9C3"},{"offset":1,"color":"#CA8A04"}]},"extrusion":{"depthPercent":0.008,"angleDeg":80,"steps":6,"color":"#0F172A","highlightColor":"#FFFFFF"},"shadowColor":"rgba(0, 0, 0, 0.9)","shadowBlur":16},"layout":{"yPositionPercent":0.7,"maxWordsPerLine":2,"maxLines":2,"behindSubjectDepth":false},"animation":{"perWordEffect":"extrusion_3d","scaleMagnitude":1.1},"accessibility":{"contrastFallback":"backdrop_shadow"},"index":17,"badgeType":"part_a","badgeLabel":"NEW TEXT (Part A)"},{"id":"matrix_terminal","name":"Matrix Hacker Green","vibe":"neon","typography":{"primaryFont":"Courier New, monospace","primaryWeight":"bold","textTransform":"lowercase","fontSizeBasePercent":0.042},"colors":{"primaryText":"#22C55E","activeWordText":"#86EFAC","glowColor":"rgba(34, 197, 94, 0.5)","shadowColor":"#000000","shadowBlur":10},"layout":{"yPositionPercent":0.75,"maxWordsPerLine":3,"maxLines":2,"behindSubjectDepth":false},"animation":{"perWordEffect":"typewriter","scaleMagnitude":1.05},"index":18,"badgeType":"keep","badgeLabel":"KEEP"},{"id":"neon_tube_flicker","name":"Neon Gas Tube (Organic Flicker)","vibe":"neon","badge":"NEON TUBE","typography":{"primaryFont":"Poppins, sans-serif","secondaryFont":"Noto Sans Devanagari, sans-serif","primaryWeight":"700","textTransform":"uppercase","fontSizeBasePercent":0.048},"colors":{"primaryText":"#86EFAC","activeWordText":"#4ADE80","strokeColor":"#14532D","strokeWidthPercent":0.004,"glowColor":"#22C55E","shadowColor":"#15803D","shadowBlur":24,"glowLayers":[{"color":"rgba(74, 222, 128, 0.9)","blur":8},{"color":"rgba(34, 197, 94, 0.6)","blur":22},{"color":"rgba(21, 128, 61, 0.4)","blur":36}]},"layout":{"yPositionPercent":0.74,"maxWordsPerLine":3,"maxLines":2,"behindSubjectDepth":false},"animation":{"perWordEffect":"flicker","scaleMagnitude":1.08,"flickerFrequency":28},"accessibility":{"contrastFallback":"backdrop_shadow"},"index":19,"badgeType":"part_a","badgeLabel":"NEW TEXT (Part A)"},{"id":"vaporwave_duo","name":"Vaporwave Duo (Pink/Cyan)","vibe":"neon","typography":{"primaryFont":"Impact, sans-serif","primaryWeight":"900","textTransform":"uppercase","fontSizeBasePercent":0.05},"colors":{"primaryText":"#EC4899","activeWordText":"#06B6D4","glowColor":"rgba(236, 72, 153, 0.5)","shadowColor":"rgba(0,0,0,0.85)","shadowBlur":14},"layout":{"yPositionPercent":0.72,"maxWordsPerLine":2,"maxLines":2,"behindSubjectDepth":false},"animation":{"perWordEffect":"color_pop","scaleMagnitude":1.18},"index":20,"badgeType":"keep","badgeLabel":"KEEP"},{"id":"editorial_dual_cyan","name":"Editorial Dual-Font (Mirza)","vibe":"aesthetic","badge":"BEHIND YOU","typography":{"primaryFont":"Impact, sans-serif","secondaryFont":"Playfair Display, serif","primaryWeight":"900","textTransform":"none","fontSizeBasePercent":0.048},"colors":{"primaryText":"#FFFFFF","secondaryText":"#38BDF8","activeWordText":"#38BDF8","shadowColor":"rgba(0, 0, 0, 0.8)","shadowBlur":14},"layout":{"yPositionPercent":0.48,"maxWordsPerLine":2,"maxLines":3,"behindSubjectDepth":true},"animation":{"perWordEffect":"color_pop","scaleMagnitude":1.12},"index":21,"badgeType":"keep","badgeLabel":"KEEP"},{"id":"vogue_italic_serif","name":"Vogue Italic Luxury","vibe":"aesthetic","typography":{"primaryFont":"Playfair Display, serif","primaryWeight":"bold","textTransform":"none","fontSizeBasePercent":0.044},"colors":{"primaryText":"#F4F4F5","activeWordText":"#FEF08A","shadowColor":"rgba(0,0,0,0.7)","shadowBlur":10},"layout":{"yPositionPercent":0.76,"maxWordsPerLine":3,"maxLines":2,"behindSubjectDepth":false},"animation":{"perWordEffect":"color_pop","scaleMagnitude":1.1},"index":22,"badgeType":"flagship","badgeLabel":"FLAGSHIP"},{"id":"golden_hour_serif","name":"Golden Hour Glow","vibe":"aesthetic","badge":"BEHIND YOU","typography":{"primaryFont":"Cinzel, serif","primaryWeight":"bold","textTransform":"uppercase","fontSizeBasePercent":0.046},"colors":{"primaryText":"#FBBF24","activeWordText":"#FFFBEB","glowColor":"rgba(251, 191, 36, 0.4)","shadowColor":"rgba(0,0,0,0.8)","shadowBlur":12},"layout":{"yPositionPercent":0.5,"maxWordsPerLine":2,"maxLines":2,"behindSubjectDepth":true},"animation":{"perWordEffect":"glow","scaleMagnitude":1.1},"index":23,"badgeType":"flagship","badgeLabel":"FLAGSHIP"},{"id":"cinematic_letterbox","name":"Cinematic Subtitle Bar","vibe":"aesthetic","typography":{"primaryFont":"Inter, sans-serif","primaryWeight":"600","textTransform":"none","fontSizeBasePercent":0.038},"colors":{"primaryText":"#FFFFFF","activeWordText":"#FDE047","shadowColor":"rgba(0,0,0,0.9)","shadowBlur":6},"layout":{"yPositionPercent":0.8,"maxWordsPerLine":4,"maxLines":2,"behindSubjectDepth":false},"animation":{"perWordEffect":"color_pop","scaleMagnitude":1.08},"index":24,"badgeType":"keep","badgeLabel":"KEEP"},{"id":"silk_white_script","name":"Silk White Minimal","vibe":"aesthetic","typography":{"primaryFont":"Playfair Display, serif","primaryWeight":"normal","textTransform":"none","fontSizeBasePercent":0.042},"colors":{"primaryText":"#E4E4E7","activeWordText":"#FFFFFF","shadowColor":"rgba(0,0,0,0.6)","shadowBlur":8},"layout":{"yPositionPercent":0.76,"maxWordsPerLine":3,"maxLines":2,"behindSubjectDepth":false},"animation":{"perWordEffect":"scale_pop","scaleMagnitude":1.08},"index":25,"badgeType":"keep","badgeLabel":"KEEP"},{"id":"editorial_serif_luxury","name":"Editorial Serif (High-Contrast Italic)","vibe":"aesthetic","badge":"EDITORIAL","typography":{"primaryFont":"Playfair Display, serif","secondaryFont":"Rozha One, serif","primaryWeight":"900","textTransform":"none","fontSizeBasePercent":0.046,"wordTransform":{"letterSpacingEm":-0.04,"italicKeyword":true}},"colors":{"primaryText":"#FFFFFF","secondaryText":"rgba(255, 255, 255, 0.5)","activeWordText":"#FDE047","shadowColor":"rgba(0, 0, 0, 0.8)","shadowBlur":10},"layout":{"yPositionPercent":0.76,"maxWordsPerLine":3,"maxLines":2,"behindSubjectDepth":false},"animation":{"perWordEffect":"scale_pop","scaleMagnitude":1.12},"accessibility":{"contrastFallback":"backdrop_shadow"},"index":26,"badgeType":"part_a","badgeLabel":"NEW TEXT (Part A)"},{"id":"cafe_cream_minimal","name":"Cafe Aesthetic Cream","vibe":"aesthetic","typography":{"primaryFont":"Playfair Display, serif","primaryWeight":"bold","textTransform":"none","fontSizeBasePercent":0.042},"colors":{"primaryText":"#FEF3C7","activeWordText":"#F59E0B","shadowColor":"rgba(0,0,0,0.7)","shadowBlur":8},"layout":{"yPositionPercent":0.76,"maxWordsPerLine":3,"maxLines":2,"behindSubjectDepth":false},"animation":{"perWordEffect":"color_pop","scaleMagnitude":1.08},"index":27,"badgeType":"keep","badgeLabel":"KEEP"},{"id":"behind_cover_stack","name":"Magazine-Cover Stack Behind Subject","vibe":"aesthetic","badge":"MAGAZINE","typography":{"primaryFont":"Playfair Display, serif","secondaryFont":"Rozha One, serif","primaryWeight":"900","textTransform":"uppercase","fontSizeBasePercent":0.065},"colors":{"primaryText":"#F8FAFC","activeWordText":"#FDE047","shadowColor":"rgba(0, 0, 0, 0.85)","shadowBlur":14},"layout":{"yPositionPercent":0.32,"maxWordsPerLine":2,"maxLines":2,"behindSubjectDepth":true,"layerOrder":"behind"},"animation":{"perWordEffect":"scale_pop","scaleMagnitude":1.12},"accessibility":{"contrastFallback":"backdrop_shadow"},"index":28,"badgeType":"part_b","badgeLabel":"BEHIND (Part B)"},{"id":"autumn_amber_serif","name":"Autumn Amber Elegance","vibe":"aesthetic","typography":{"primaryFont":"Cinzel, serif","primaryWeight":"bold","textTransform":"capitalize","fontSizeBasePercent":0.044},"colors":{"primaryText":"#FDE68A","activeWordText":"#D97706","shadowColor":"rgba(0,0,0,0.7)","shadowBlur":10},"layout":{"yPositionPercent":0.75,"maxWordsPerLine":3,"maxLines":2,"behindSubjectDepth":false},"animation":{"perWordEffect":"color_pop","scaleMagnitude":1.1},"index":29,"badgeType":"keep","badgeLabel":"KEEP"},{"id":"paris_chic_black","name":"Paris Fashion Week","vibe":"aesthetic","typography":{"primaryFont":"Playfair Display, serif","primaryWeight":"900","textTransform":"uppercase","fontSizeBasePercent":0.046},"colors":{"primaryText":"#FFFFFF","activeWordText":"#F43F5E","shadowColor":"rgba(0,0,0,0.85)","shadowBlur":12},"layout":{"yPositionPercent":0.74,"maxWordsPerLine":2,"maxLines":2,"behindSubjectDepth":false},"animation":{"perWordEffect":"scale_pop","scaleMagnitude":1.14},"index":30,"badgeType":"keep","badgeLabel":"KEEP"},{"id":"crimson_glow_serif","name":"Crimson Glow (Jetty)","vibe":"bollywood","badge":"BEHIND YOU","typography":{"primaryFont":"Playfair Display, serif","secondaryFont":"Cinzel, serif","primaryWeight":"900","textTransform":"uppercase","fontSizeBasePercent":0.052},"colors":{"primaryText":"#FF1E27","activeWordText":"#FF1E27","glowColor":"rgba(255, 30, 39, 0.6)","shadowColor":"rgba(0, 0, 0, 0.9)","shadowBlur":16},"layout":{"yPositionPercent":0.48,"maxWordsPerLine":2,"maxLines":2,"behindSubjectDepth":true},"animation":{"perWordEffect":"glow","scaleMagnitude":1.15},"index":31,"badgeType":"keep","badgeLabel":"KEEP"},{"id":"kool_luxury_serif","name":"Kool Luxury Gold","vibe":"bollywood","badge":"BEHIND YOU","typography":{"primaryFont":"Cinzel, serif","primaryWeight":"bold","textTransform":"uppercase","fontSizeBasePercent":0.05},"colors":{"primaryText":"#F59E0B","activeWordText":"#FEF08A","shadowColor":"rgba(0,0,0,0.85)","shadowBlur":14},"layout":{"yPositionPercent":0.48,"maxWordsPerLine":2,"maxLines":2,"behindSubjectDepth":true},"animation":{"perWordEffect":"scale_pop","scaleMagnitude":1.12},"index":32,"badgeType":"keep","badgeLabel":"KEEP"},{"id":"masala_blockbuster_gold","name":"Masala Blockbuster 3D","vibe":"bollywood","typography":{"primaryFont":"Impact, sans-serif","primaryWeight":"900","textTransform":"uppercase","fontSizeBasePercent":0.054},"colors":{"primaryText":"#FBBF24","activeWordText":"#FFFFFF","strokeColor":"#B45309","strokeWidthPercent":0.008,"shadowColor":"#000000","shadowBlur":14},"layout":{"yPositionPercent":0.7,"maxWordsPerLine":2,"maxLines":2,"behindSubjectDepth":false},"animation":{"perWordEffect":"bounce","scaleMagnitude":1.2},"index":33,"badgeType":"flagship","badgeLabel":"FLAGSHIP"},{"id":"dharma_romance_glow","name":"Dharma Romance Script","vibe":"bollywood","typography":{"primaryFont":"Playfair Display, serif","primaryWeight":"bold","textTransform":"none","fontSizeBasePercent":0.046},"colors":{"primaryText":"#FDA4AF","activeWordText":"#FFFFFF","glowColor":"rgba(253, 164, 175, 0.5)","shadowColor":"rgba(0,0,0,0.7)","shadowBlur":10},"layout":{"yPositionPercent":0.74,"maxWordsPerLine":3,"maxLines":2,"behindSubjectDepth":false},"animation":{"perWordEffect":"glow","scaleMagnitude":1.1},"index":34,"badgeType":"keep","badgeLabel":"KEEP"},{"id":"retro_70s_bollywood","name":"Retro 70s Sholay Yellow","vibe":"bollywood","typography":{"primaryFont":"Impact, sans-serif","primaryWeight":"900","textTransform":"uppercase","fontSizeBasePercent":0.052},"colors":{"primaryText":"#FACC15","activeWordText":"#EF4444","strokeColor":"#000000","strokeWidthPercent":0.006,"shadowColor":"rgba(0,0,0,0.9)","shadowBlur":12},"layout":{"yPositionPercent":0.72,"maxWordsPerLine":2,"maxLines":2,"behindSubjectDepth":false},"animation":{"perWordEffect":"color_pop","scaleMagnitude":1.16},"index":35,"badgeType":"keep","badgeLabel":"KEEP"},{"id":"behind_devanagari_calligraphy","name":"Devanagari Calligraphy Behind Subject","vibe":"bollywood","badge":"HINDI POSTER","typography":{"primaryFont":"Rozha One, serif","secondaryFont":"Yatra One, cursive","primaryWeight":"900","textTransform":"none","fontSizeBasePercent":0.065},"colors":{"primaryText":"#FEF08A","activeWordText":"#F59E0B","strokeColor":"#450A0A","strokeWidthPercent":0.007,"gradient":{"type":"linear","angleDeg":90,"stops":[{"offset":0,"color":"#FEF08A"},{"offset":0.5,"color":"#F59E0B"},{"offset":1,"color":"#B45309"}]},"shadowColor":"rgba(69, 10, 10, 0.95)","shadowBlur":16},"layout":{"yPositionPercent":0.42,"maxWordsPerLine":2,"maxLines":2,"behindSubjectDepth":true,"layerOrder":"behind"},"animation":{"perWordEffect":"scale_pop","scaleMagnitude":1.16},"accessibility":{"contrastFallback":"auto_stroke"},"index":36,"badgeType":"part_b","badgeLabel":"BEHIND (Part B)"},{"id":"behind_vertical_sidetext","name":"Vertical Side-Text Behind Shoulders","vibe":"bollywood","badge":"VERTICAL","typography":{"primaryFont":"Syne, sans-serif","secondaryFont":"Rozha One, serif","primaryWeight":"900","textTransform":"uppercase","fontSizeBasePercent":0.054},"colors":{"primaryText":"#FFFFFF","activeWordText":"#EF4444","strokeColor":"#000000","strokeWidthPercent":0.006,"shadowColor":"rgba(0, 0, 0, 0.95)","shadowBlur":14},"layout":{"yPositionPercent":0.5,"maxWordsPerLine":1,"maxLines":4,"behindSubjectDepth":true,"layerOrder":"behind"},"animation":{"perWordEffect":"scale_pop","scaleMagnitude":1.15},"accessibility":{"contrastFallback":"auto_stroke"},"index":37,"badgeType":"part_b","badgeLabel":"BEHIND (Part B)"},{"id":"shahrukh_classic","name":"King Khan Classic Serif","vibe":"bollywood","typography":{"primaryFont":"Cinzel, serif","primaryWeight":"bold","textTransform":"uppercase","fontSizeBasePercent":0.046},"colors":{"primaryText":"#FFFFFF","activeWordText":"#EAB308","shadowColor":"rgba(0,0,0,0.8)","shadowBlur":10},"layout":{"yPositionPercent":0.74,"maxWordsPerLine":3,"maxLines":2,"behindSubjectDepth":false},"animation":{"perWordEffect":"color_pop","scaleMagnitude":1.12},"index":38,"badgeType":"keep","badgeLabel":"KEEP"},{"id":"devanagari_calligraphy_bold","name":"Devanagari Royal Calligraphy","vibe":"bollywood","badge":"CALLIGRAPHY","typography":{"primaryFont":"Rozha One, serif","secondaryFont":"Yatra One, cursive","primaryWeight":"900","textTransform":"none","fontSizeBasePercent":0.052},"colors":{"primaryText":"#FEF08A","secondaryText":"rgba(254, 240, 138, 0.6)","activeWordText":"#F59E0B","strokeColor":"#450A0A","strokeWidthPercent":0.006,"glowColor":"rgba(245, 158, 11, 0.5)","shadowColor":"rgba(69, 10, 10, 0.9)","shadowBlur":14,"gradient":{"type":"linear","angleDeg":90,"stops":[{"offset":0,"color":"#FEF08A"},{"offset":0.5,"color":"#F59E0B"},{"offset":1,"color":"#D97706"}]}},"layout":{"yPositionPercent":0.72,"maxWordsPerLine":3,"maxLines":2,"behindSubjectDepth":false},"animation":{"perWordEffect":"scale_pop","scaleMagnitude":1.15},"accessibility":{"contrastFallback":"auto_stroke"},"index":39,"badgeType":"part_a","badgeLabel":"NEW TEXT (Part A)"},{"id":"bappi_disco_gold","name":"Bappi Disco Sparkle","vibe":"bollywood","typography":{"primaryFont":"Impact, sans-serif","primaryWeight":"900","textTransform":"uppercase","fontSizeBasePercent":0.052},"colors":{"primaryText":"#EAB308","activeWordText":"#FFFFFF","glowColor":"rgba(234, 179, 8, 0.7)","shadowColor":"#000000","shadowBlur":16},"layout":{"yPositionPercent":0.52,"maxWordsPerLine":2,"maxLines":2,"behindSubjectDepth":true},"animation":{"perWordEffect":"glow","scaleMagnitude":1.15},"index":40,"badgeType":"keep","badgeLabel":"KEEP"},{"id":"clean_sub_inter","name":"Clean Subtitle Inter","vibe":"minimal","typography":{"primaryFont":"Inter, sans-serif","primaryWeight":"600","textTransform":"none","fontSizeBasePercent":0.038},"colors":{"primaryText":"#FFFFFF","activeWordText":"#FACC15","shadowColor":"rgba(0,0,0,0.8)","shadowBlur":6},"layout":{"yPositionPercent":0.8,"maxWordsPerLine":4,"maxLines":2,"behindSubjectDepth":false},"animation":{"perWordEffect":"color_pop","scaleMagnitude":1.05},"index":41,"badgeType":"keep","badgeLabel":"KEEP"},{"id":"modern_capsule_gray","name":"Dark Capsule Pill","vibe":"minimal","typography":{"primaryFont":"Inter, sans-serif","primaryWeight":"600","textTransform":"none","fontSizeBasePercent":0.036},"colors":{"primaryText":"#E4E4E7","activeWordText":"#FFFFFF"},"box":{"enabled":true,"bgColor":"rgba(24, 24, 27, 0.85)","paddingX":14,"paddingY":6,"borderRadius":9999},"layout":{"yPositionPercent":0.78,"maxWordsPerLine":3,"maxLines":2,"behindSubjectDepth":false},"animation":{"perWordEffect":"scale_pop","scaleMagnitude":1.06},"index":42,"badgeType":"keep","badgeLabel":"KEEP"},{"id":"whisper_simple","name":"Whisper Simple White","vibe":"minimal","typography":{"primaryFont":"Inter, sans-serif","primaryWeight":"normal","textTransform":"none","fontSizeBasePercent":0.036},"colors":{"primaryText":"#F4F4F5","activeWordText":"#FFFFFF","shadowColor":"rgba(0,0,0,0.6)","shadowBlur":4},"layout":{"yPositionPercent":0.82,"maxWordsPerLine":4,"maxLines":2,"behindSubjectDepth":false},"animation":{"perWordEffect":"none","scaleMagnitude":1},"index":43,"badgeType":"keep","badgeLabel":"KEEP"},{"id":"behind_outline_huge","name":"Outline-Only Huge Behind Subject","vibe":"minimal","badge":"OUTLINE BEHIND","typography":{"primaryFont":"Montserrat, sans-serif","secondaryFont":"Noto Sans Devanagari, sans-serif","primaryWeight":"900","textTransform":"uppercase","fontSizeBasePercent":0.075},"colors":{"primaryText":"transparent","activeWordText":"#38BDF8","strokeColor":"#FFFFFF","strokeWidthPercent":0.007,"shadowColor":"rgba(0, 0, 0, 0.9)","shadowBlur":12},"layout":{"yPositionPercent":0.45,"maxWordsPerLine":2,"maxLines":2,"behindSubjectDepth":true,"layerOrder":"behind"},"animation":{"perWordEffect":"hollow_fill","scaleMagnitude":1.14},"accessibility":{"contrastFallback":"auto_stroke"},"index":44,"badgeType":"part_b","badgeLabel":"BEHIND (Part B)"},{"id":"studio_clean_mono","name":"Studio Clean Monospace","vibe":"minimal","typography":{"primaryFont":"monospace","primaryWeight":"bold","textTransform":"none","fontSizeBasePercent":0.036},"colors":{"primaryText":"#E4E4E7","activeWordText":"#FDE047","shadowColor":"rgba(0,0,0,0.8)","shadowBlur":6},"layout":{"yPositionPercent":0.8,"maxWordsPerLine":3,"maxLines":2,"behindSubjectDepth":false},"animation":{"perWordEffect":"color_pop","scaleMagnitude":1.08},"index":45,"badgeType":"keep","badgeLabel":"KEEP"},{"id":"invisible_sub_dark","name":"Ghost Underlay","vibe":"minimal","typography":{"primaryFont":"Inter, sans-serif","primaryWeight":"600","textTransform":"none","fontSizeBasePercent":0.036},"colors":{"primaryText":"#FFFFFF","activeWordText":"#38BDF8"},"box":{"enabled":true,"bgColor":"rgba(0, 0, 0, 0.5)","paddingX":12,"paddingY":4,"borderRadius":6},"layout":{"yPositionPercent":0.82,"maxWordsPerLine":4,"maxLines":2,"behindSubjectDepth":false},"animation":{"perWordEffect":"color_pop","scaleMagnitude":1.06},"index":46,"badgeType":"keep","badgeLabel":"KEEP"},{"id":"swiss_helvetica_clean","name":"Swiss International","vibe":"minimal","typography":{"primaryFont":"Helvetica Neue, Arial, sans-serif","primaryWeight":"bold","textTransform":"none","fontSizeBasePercent":0.038},"colors":{"primaryText":"#FFFFFF","activeWordText":"#EF4444","shadowColor":"rgba(0,0,0,0.8)","shadowBlur":6},"layout":{"yPositionPercent":0.78,"maxWordsPerLine":3,"maxLines":2,"behindSubjectDepth":false},"animation":{"perWordEffect":"color_pop","scaleMagnitude":1.06},"index":47,"badgeType":"keep","badgeLabel":"KEEP"},{"id":"behind_depth_fade","name":"Depth Fade Behind Subject (Atmospheric)","vibe":"minimal","badge":"DEPTH FADE","typography":{"primaryFont":"Poppins, sans-serif","secondaryFont":"Noto Sans Devanagari, sans-serif","primaryWeight":"700","textTransform":"none","fontSizeBasePercent":0.052},"colors":{"primaryText":"rgba(255, 255, 255, 0.85)","activeWordText":"#FFFFFF","shadowColor":"rgba(0, 0, 0, 0.65)","shadowBlur":24,"gradient":{"type":"linear","angleDeg":90,"stops":[{"offset":0,"color":"rgba(255, 255, 255, 0.95)"},{"offset":1,"color":"rgba(255, 255, 255, 0.4)"}]}},"layout":{"yPositionPercent":0.46,"maxWordsPerLine":2,"maxLines":2,"behindSubjectDepth":true,"layerOrder":"behind"},"animation":{"perWordEffect":"color_pop","scaleMagnitude":1.1},"accessibility":{"contrastFallback":"backdrop_shadow"},"index":48,"badgeType":"part_b","badgeLabel":"BEHIND (Part B)"},{"id":"deep_dive_navy","name":"Deep Dive Navy Pill","vibe":"podcast","typography":{"primaryFont":"Inter, sans-serif","primaryWeight":"bold","textTransform":"none","fontSizeBasePercent":0.04},"colors":{"primaryText":"#F8FAFC","activeWordText":"#38BDF8"},"box":{"enabled":true,"bgColor":"rgba(15, 23, 42, 0.9)","paddingX":16,"paddingY":6,"borderRadius":12},"layout":{"yPositionPercent":0.74,"maxWordsPerLine":3,"maxLines":2,"behindSubjectDepth":false},"animation":{"perWordEffect":"color_pop","scaleMagnitude":1.08},"index":49,"badgeType":"keep","badgeLabel":"KEEP"},{"id":"conversation_pill","name":"Conversation Bubble","vibe":"podcast","typography":{"primaryFont":"Inter, sans-serif","primaryWeight":"600","textTransform":"none","fontSizeBasePercent":0.038},"colors":{"primaryText":"#FFFFFF","activeWordText":"#FDE047"},"box":{"enabled":true,"bgColor":"rgba(39, 39, 42, 0.85)","paddingX":14,"paddingY":6,"borderRadius":9999},"layout":{"yPositionPercent":0.76,"maxWordsPerLine":3,"maxLines":2,"behindSubjectDepth":false},"animation":{"perWordEffect":"scale_pop","scaleMagnitude":1.08},"index":50,"badgeType":"keep","badgeLabel":"KEEP"},{"id":"studio_mic_amber","name":"Studio Mic Warm Amber","vibe":"podcast","typography":{"primaryFont":"Inter, sans-serif","primaryWeight":"bold","textTransform":"none","fontSizeBasePercent":0.042},"colors":{"primaryText":"#FEF3C7","activeWordText":"#F59E0B","shadowColor":"rgba(0,0,0,0.8)","shadowBlur":8},"layout":{"yPositionPercent":0.74,"maxWordsPerLine":3,"maxLines":2,"behindSubjectDepth":false},"animation":{"perWordEffect":"color_pop","scaleMagnitude":1.1},"index":51,"badgeType":"keep","badgeLabel":"KEEP"},{"id":"behind_curved_arc","name":"Curved Arc Behind Head / Shoulders","vibe":"podcast","badge":"CURVED ARC","typography":{"primaryFont":"Poppins, sans-serif","secondaryFont":"Noto Sans Devanagari, sans-serif","primaryWeight":"800","textTransform":"uppercase","fontSizeBasePercent":0.05},"colors":{"primaryText":"#F8FAFC","activeWordText":"#38BDF8","shadowColor":"rgba(0, 0, 0, 0.9)","shadowBlur":12},"layout":{"yPositionPercent":0.38,"maxWordsPerLine":3,"maxLines":1,"behindSubjectDepth":true,"layerOrder":"behind"},"animation":{"perWordEffect":"scale_pop","scaleMagnitude":1.12},"accessibility":{"contrastFallback":"backdrop_shadow"},"index":52,"badgeType":"part_b","badgeLabel":"BEHIND (Part B)"},{"id":"talk_show_box","name":"Talk Show Dark Box","vibe":"podcast","typography":{"primaryFont":"Impact, sans-serif","primaryWeight":"bold","textTransform":"uppercase","fontSizeBasePercent":0.044},"colors":{"primaryText":"#FFFFFF","activeWordText":"#FACC15"},"box":{"enabled":true,"bgColor":"rgba(0,0,0,0.85)","paddingX":16,"paddingY":6,"borderRadius":8},"layout":{"yPositionPercent":0.72,"maxWordsPerLine":2,"maxLines":2,"behindSubjectDepth":false},"animation":{"perWordEffect":"color_pop","scaleMagnitude":1.1},"index":53,"badgeType":"keep","badgeLabel":"KEEP"},{"id":"interview_stacked","name":"Interview Stacked Serif","vibe":"podcast","typography":{"primaryFont":"Playfair Display, serif","primaryWeight":"bold","textTransform":"none","fontSizeBasePercent":0.04},"colors":{"primaryText":"#F4F4F5","activeWordText":"#38BDF8","shadowColor":"rgba(0,0,0,0.7)","shadowBlur":8},"layout":{"yPositionPercent":0.75,"maxWordsPerLine":3,"maxLines":2,"behindSubjectDepth":false},"animation":{"perWordEffect":"color_pop","scaleMagnitude":1.08},"index":54,"badgeType":"keep","badgeLabel":"KEEP"},{"id":"behind_sandwich_layer","name":"Sandwich Layering (Keyword Behind)","vibe":"podcast","badge":"SANDWICH","typography":{"primaryFont":"Inter, sans-serif","secondaryFont":"Noto Sans Devanagari, sans-serif","primaryWeight":"900","textTransform":"uppercase","fontSizeBasePercent":0.054},"colors":{"primaryText":"#FFFFFF","activeWordText":"#F59E0B","strokeColor":"#000000","strokeWidthPercent":0.005,"shadowColor":"rgba(0, 0, 0, 0.9)","shadowBlur":14},"layout":{"yPositionPercent":0.48,"maxWordsPerLine":3,"maxLines":2,"behindSubjectDepth":true,"layerOrder":"sandwich"},"animation":{"perWordEffect":"scale_pop","scaleMagnitude":1.18},"accessibility":{"contrastFallback":"auto_stroke"},"index":55,"badgeType":"part_b","badgeLabel":"BEHIND (Part B)"},{"id":"huberman_focus_teal","name":"Focus Mode Teal","vibe":"podcast","typography":{"primaryFont":"Inter, sans-serif","primaryWeight":"bold","textTransform":"none","fontSizeBasePercent":0.04},"colors":{"primaryText":"#CCFBF1","activeWordText":"#14B8A6","shadowColor":"rgba(0,0,0,0.85)","shadowBlur":8},"layout":{"yPositionPercent":0.75,"maxWordsPerLine":3,"maxLines":2,"behindSubjectDepth":false},"animation":{"perWordEffect":"color_pop","scaleMagnitude":1.1},"index":56,"badgeType":"keep","badgeLabel":"KEEP"},{"id":"comic_bubble_yellow","name":"Comic Bubble Bang","vibe":"comic","typography":{"primaryFont":"Impact, sans-serif","primaryWeight":"900","textTransform":"uppercase","fontSizeBasePercent":0.05},"colors":{"primaryText":"#000000","activeWordText":"#EF4444","strokeColor":"#000000","strokeWidthPercent":0.005},"box":{"enabled":true,"bgColor":"#FEF08A","paddingX":16,"paddingY":8,"borderRadius":16,"rotationDeg":2},"layout":{"yPositionPercent":0.68,"maxWordsPerLine":2,"maxLines":2,"behindSubjectDepth":false},"animation":{"perWordEffect":"bounce","scaleMagnitude":1.25},"index":57,"badgeType":"flagship","badgeLabel":"FLAGSHIP"},{"id":"pop_art_boom","name":"Pop Art Red Boom","vibe":"comic","typography":{"primaryFont":"Impact, sans-serif","primaryWeight":"900","textTransform":"uppercase","fontSizeBasePercent":0.054},"colors":{"primaryText":"#FFFFFF","activeWordText":"#FACC15","strokeColor":"#000000","strokeWidthPercent":0.01,"shadowColor":"#EF4444","shadowBlur":14},"layout":{"yPositionPercent":0.7,"maxWordsPerLine":2,"maxLines":2,"behindSubjectDepth":false},"animation":{"perWordEffect":"scale_pop","scaleMagnitude":1.22},"index":58,"badgeType":"keep","badgeLabel":"KEEP"},{"id":"brush_graffiti_paint","name":"Street Brush / Graffiti Reveal","vibe":"comic","badge":"GRAFFITI","typography":{"primaryFont":"Kalam, cursive","secondaryFont":"Rozha One, serif","primaryWeight":"700","textTransform":"uppercase","fontSizeBasePercent":0.052,"wordTransform":{"randomTiltDeg":4}},"colors":{"primaryText":"#FFFFFF","activeWordText":"#FACC15","strokeColor":"#09090B","strokeWidthPercent":0.008,"glowColor":"rgba(244, 63, 94, 0.6)","shadowColor":"rgba(0, 0, 0, 0.95)","shadowBlur":14},"layout":{"yPositionPercent":0.7,"maxWordsPerLine":2,"maxLines":2,"behindSubjectDepth":false},"animation":{"perWordEffect":"brush_reveal","scaleMagnitude":1.2},"accessibility":{"contrastFallback":"auto_stroke"},"index":59,"badgeType":"part_a","badgeLabel":"NEW TEXT (Part A)"},{"id":"punchy_sticker_red","name":"Punchy Red Sticker","vibe":"comic","typography":{"primaryFont":"Impact, sans-serif","primaryWeight":"900","textTransform":"uppercase","fontSizeBasePercent":0.048},"colors":{"primaryText":"#FFFFFF","activeWordText":"#FFFFFF"},"box":{"enabled":true,"bgColor":"#DC2626","paddingX":18,"paddingY":8,"borderRadius":12,"rotationDeg":-3},"layout":{"yPositionPercent":0.7,"maxWordsPerLine":2,"maxLines":2,"behindSubjectDepth":false},"animation":{"perWordEffect":"scale_pop","scaleMagnitude":1.15},"index":60,"badgeType":"keep","badgeLabel":"KEEP"},{"id":"cartoon_bold_border","name":"Cartoon Heavy Stroke","vibe":"comic","typography":{"primaryFont":"Arial Black, sans-serif","primaryWeight":"900","textTransform":"uppercase","fontSizeBasePercent":0.05},"colors":{"primaryText":"#38BDF8","activeWordText":"#FACC15","strokeColor":"#000000","strokeWidthPercent":0.012,"shadowColor":"rgba(0,0,0,1)","shadowBlur":8},"layout":{"yPositionPercent":0.72,"maxWordsPerLine":2,"maxLines":2,"behindSubjectDepth":false},"animation":{"perWordEffect":"bounce","scaleMagnitude":1.2},"index":61,"badgeType":"keep","badgeLabel":"KEEP"},{"id":"superhero_smash","name":"Superhero Smash Purple","vibe":"comic","typography":{"primaryFont":"Impact, sans-serif","primaryWeight":"900","textTransform":"uppercase","fontSizeBasePercent":0.052},"colors":{"primaryText":"#A855F7","activeWordText":"#FDE047","strokeColor":"#000000","strokeWidthPercent":0.008,"shadowColor":"rgba(0,0,0,0.9)","shadowBlur":12},"layout":{"yPositionPercent":0.7,"maxWordsPerLine":2,"maxLines":2,"behindSubjectDepth":false},"animation":{"perWordEffect":"color_pop","scaleMagnitude":1.18},"index":62,"badgeType":"keep","badgeLabel":"KEEP"},{"id":"hand_script_marker","name":"Hand-Script Marker (Animated Swash)","vibe":"comic","badge":"MARKER","typography":{"primaryFont":"Kalam, cursive","secondaryFont":"Kalam, cursive","primaryWeight":"700","textTransform":"none","fontSizeBasePercent":0.048,"wordTransform":{"randomTiltDeg":3}},"colors":{"primaryText":"#F8FAFC","activeWordText":"#38BDF8","strokeColor":"#0F172A","strokeWidthPercent":0.004,"shadowColor":"rgba(0, 0, 0, 0.8)","shadowBlur":8},"layout":{"yPositionPercent":0.74,"maxWordsPerLine":3,"maxLines":2,"behindSubjectDepth":false},"animation":{"perWordEffect":"swash_underline","scaleMagnitude":1.1,"underline":{"enabled":true,"color":"#38BDF8","thicknessPercent":0.006,"animated":true}},"accessibility":{"contrastFallback":"auto_stroke"},"index":63,"badgeType":"part_a","badgeLabel":"NEW TEXT (Part A)"},{"id":"toot_and_whistle","name":"Candy Pop Cyan","vibe":"comic","typography":{"primaryFont":"Impact, sans-serif","primaryWeight":"900","textTransform":"uppercase","fontSizeBasePercent":0.048},"colors":{"primaryText":"#000000","activeWordText":"#000000"},"box":{"enabled":true,"bgColor":"#67E8F9","paddingX":14,"paddingY":6,"borderRadius":14,"rotationDeg":2},"layout":{"yPositionPercent":0.72,"maxWordsPerLine":2,"maxLines":2,"behindSubjectDepth":false},"animation":{"perWordEffect":"bounce","scaleMagnitude":1.16},"index":64,"badgeType":"keep","badgeLabel":"KEEP"},{"id":"breaking_ticker_red","name":"Breaking News Ticker","vibe":"news","typography":{"primaryFont":"Arial Black, sans-serif","primaryWeight":"900","textTransform":"uppercase","fontSizeBasePercent":0.044},"colors":{"primaryText":"#FFFFFF","activeWordText":"#FEF08A"},"box":{"enabled":true,"bgColor":"#B91C1C","paddingX":20,"paddingY":8,"borderRadius":4},"layout":{"yPositionPercent":0.82,"maxWordsPerLine":3,"maxLines":1,"behindSubjectDepth":false},"animation":{"perWordEffect":"color_pop","scaleMagnitude":1.08},"index":65,"badgeType":"flagship","badgeLabel":"FLAGSHIP"},{"id":"retro_80s_synth","name":"Retro 80s Synthwave Gradient","vibe":"news","badge":"80S RETRO","typography":{"primaryFont":"Righteous, cursive","secondaryFont":"Yatra One, cursive","primaryWeight":"900","textTransform":"uppercase","fontSizeBasePercent":0.048},"colors":{"primaryText":"#F8FAFC","activeWordText":"#F472B6","gradient":{"type":"linear","angleDeg":90,"stops":[{"offset":0,"color":"#FB7185"},{"offset":0.5,"color":"#C084FC"},{"offset":1,"color":"#38BDF8"}]},"multiStrokes":[{"color":"#4A044E","widthPercent":0.008}],"shadowColor":"#E879F9","shadowBlur":16},"layout":{"yPositionPercent":0.75,"maxWordsPerLine":3,"maxLines":2,"behindSubjectDepth":false},"animation":{"perWordEffect":"scale_pop","scaleMagnitude":1.15},"accessibility":{"contrastFallback":"auto_stroke"},"index":66,"badgeType":"part_a","badgeLabel":"NEW TEXT (Part A)"},{"id":"headline_sharp_white","name":"Sharp Headline Dark Bar","vibe":"news","typography":{"primaryFont":"Helvetica Neue, sans-serif","primaryWeight":"900","textTransform":"uppercase","fontSizeBasePercent":0.042},"colors":{"primaryText":"#FFFFFF","activeWordText":"#F59E0B"},"box":{"enabled":true,"bgColor":"#18181B","paddingX":16,"paddingY":6,"borderRadius":6},"layout":{"yPositionPercent":0.78,"maxWordsPerLine":3,"maxLines":2,"behindSubjectDepth":false},"animation":{"perWordEffect":"color_pop","scaleMagnitude":1.08},"index":67,"badgeType":"keep","badgeLabel":"KEEP"},{"id":"bulletin_strap_blue","name":"TV Bulletin Navy Strap","vibe":"news","typography":{"primaryFont":"Inter, sans-serif","primaryWeight":"bold","textTransform":"uppercase","fontSizeBasePercent":0.04},"colors":{"primaryText":"#FFFFFF","activeWordText":"#FACC15"},"box":{"enabled":true,"bgColor":"#1E3A8A","paddingX":18,"paddingY":6,"borderRadius":4},"layout":{"yPositionPercent":0.8,"maxWordsPerLine":3,"maxLines":2,"behindSubjectDepth":false},"animation":{"perWordEffect":"color_pop","scaleMagnitude":1.06},"index":68,"badgeType":"keep","badgeLabel":"KEEP"},{"id":"fact_checker_box","name":"Fact Check Amber Strap","vibe":"news","typography":{"primaryFont":"Inter, sans-serif","primaryWeight":"bold","textTransform":"none","fontSizeBasePercent":0.04},"colors":{"primaryText":"#000000","activeWordText":"#000000"},"box":{"enabled":true,"bgColor":"#F59E0B","paddingX":16,"paddingY":6,"borderRadius":6},"layout":{"yPositionPercent":0.78,"maxWordsPerLine":3,"maxLines":2,"behindSubjectDepth":false},"animation":{"perWordEffect":"scale_pop","scaleMagnitude":1.08},"index":69,"badgeType":"keep","badgeLabel":"KEEP"},{"id":"journal_serif_black","name":"Journalist Editorial White","vibe":"news","typography":{"primaryFont":"Georgia, serif","primaryWeight":"bold","textTransform":"none","fontSizeBasePercent":0.042},"colors":{"primaryText":"#FFFFFF","activeWordText":"#E11D48","shadowColor":"rgba(0,0,0,0.85)","shadowBlur":8},"layout":{"yPositionPercent":0.76,"maxWordsPerLine":3,"maxLines":2,"behindSubjectDepth":false},"animation":{"perWordEffect":"color_pop","scaleMagnitude":1.08},"index":70,"badgeType":"keep","badgeLabel":"KEEP"},{"id":"glitch_rgb_split","name":"Glitch RGB-Split Jitter","vibe":"news","badge":"GLITCH","typography":{"primaryFont":"Syne, sans-serif","secondaryFont":"Noto Sans Devanagari, sans-serif","primaryWeight":"800","textTransform":"uppercase","fontSizeBasePercent":0.048},"colors":{"primaryText":"#F8FAFC","activeWordText":"#FB7185","strokeColor":"#000000","strokeWidthPercent":0.006,"shadowColor":"rgba(0, 0, 0, 0.95)","shadowBlur":10},"layout":{"yPositionPercent":0.75,"maxWordsPerLine":3,"maxLines":2,"behindSubjectDepth":false},"animation":{"perWordEffect":"glitch_jitter","scaleMagnitude":1.14,"glitchOffsetPx":5},"accessibility":{"contrastFallback":"auto_stroke"},"index":71,"badgeType":"part_a","badgeLabel":"NEW TEXT (Part A)"},{"id":"prime_time_desk","name":"Prime Time News Anchor","vibe":"news","typography":{"primaryFont":"Arial Black, sans-serif","primaryWeight":"900","textTransform":"uppercase","fontSizeBasePercent":0.042},"colors":{"primaryText":"#FFFFFF","activeWordText":"#38BDF8","shadowColor":"rgba(0,0,0,0.9)","shadowBlur":10},"layout":{"yPositionPercent":0.8,"maxWordsPerLine":3,"maxLines":2,"behindSubjectDepth":false},"animation":{"perWordEffect":"color_pop","scaleMagnitude":1.06},"index":72,"badgeType":"keep","badgeLabel":"KEEP"}];
+
+    const SAMPLE_TOKENS = [
+      { id: "w1", text: "Viral", start: 0.1, end: 0.5, confidence: 0.99 },
+      { id: "w2", text: "Hinglish", start: 0.5, end: 1.0, confidence: 0.99 },
+      { id: "w3", text: "शानदार", start: 1.0, end: 1.5, confidence: 0.98, script: "devanagari" },
+      { id: "w4", text: "कैप्शन्स", start: 1.5, end: 2.0, confidence: 0.99, script: "devanagari" }
+    ];
+
+    function roundRect(ctx, x, y, w, h, radius) {
+      const r = Math.min(radius, w / 2, h / 2);
+      ctx.beginPath();
+      ctx.moveTo(x + r, y);
+      ctx.lineTo(x + w - r, y);
+      ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+      ctx.lineTo(x + w, y + h - r);
+      ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+      ctx.lineTo(x + r, y + h);
+      ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+      ctx.lineTo(x, y + r);
+      ctx.quadraticCurveTo(x, y, x + r, y);
+      ctx.closePath();
+    }
+
+    function formatWordText(text, transform) {
+      if (transform === "uppercase") return text.toUpperCase();
+      if (transform === "lowercase") return text.toLowerCase();
+      if (transform === "capitalize") return text.charAt(0).toUpperCase() + text.slice(1);
+      return text;
+    }
+
+    function renderCaption(ctx, width, height, template) {
+      const grad = ctx.createRadialGradient(width/2, height*0.4, 30, width/2, height/2, width*0.7);
+      grad.addColorStop(0, "#1e2433");
+      grad.addColorStop(1, "#0a0c10");
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, width, height);
+
+      const isBehind = template.layout.behindSubjectDepth;
+
+      // Function to draw simulated person silhouette
+      const drawPersonSilhouette = () => {
+        ctx.save();
+        ctx.fillStyle = "#1e293b";
+        ctx.beginPath();
+        ctx.arc(width * 0.5, height * 0.38, height * 0.14, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.ellipse(width * 0.5, height * 0.72, width * 0.35, height * 0.28, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      };
+
+      // Draw silhouette BEFORE text if NOT behind-subject, or AFTER text if behind-subject!
+      if (!isBehind) {
+        drawPersonSilhouette();
+      }
+
+      // Render Text
+      const fontSize = Math.round(height * (template.typography.fontSizeBasePercent || 0.052) * 1.55);
+      const lineHeight = fontSize * 1.25;
+      const primaryFontFamily = template.typography.primaryFont || "Impact, sans-serif";
+      const secondaryFontFamily = template.typography.secondaryFont || "Playfair Display, serif";
+
+      const lines = [
+        [SAMPLE_TOKENS[0], SAMPLE_TOKENS[1]],
+        [SAMPLE_TOKENS[2], SAMPLE_TOKENS[3]]
+      ];
+
+      const totalBlockHeight = lines.length * lineHeight;
+      const centerY = height * template.layout.yPositionPercent;
+      const startY = centerY - totalBlockHeight / 2;
+
+      // Badge
+      if (template.badge) {
+        const bH = Math.round(fontSize * 0.45);
+        const bW = Math.round(bH * 4.4);
+        const bX = width * 0.06;
+        const bY = height * 0.08;
+        ctx.save();
+        ctx.fillStyle = isBehind ? "#A855F7" : "#F59E0B";
+        roundRect(ctx, bX, bY, bW, bH, bH / 2);
+        ctx.fill();
+        ctx.fillStyle = "#FFFFFF";
+        ctx.font = `bold ${Math.round(bH * 0.65)}px sans-serif`;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(template.badge, bX + bW / 2, bY + bH / 2);
+        ctx.restore();
+      }
+
+      // Text Lines
+      lines.forEach((line, lineIdx) => {
+        const lineY = startY + lineIdx * lineHeight + lineHeight / 2;
+        let totalLineWidth = 0;
+        const wordMetrics = [];
+
+        line.forEach((word) => {
+          const isSecondary = !!template.typography.secondaryFont && (word.script === "devanagari" || lineIdx === 0);
+          const font = isSecondary
+            ? `italic ${fontSize}px ${secondaryFontFamily}`
+            : `${template.typography.primaryWeight} ${fontSize}px ${primaryFontFamily}`;
+          ctx.font = font;
+          const formatted = formatWordText(word.text, template.typography.textTransform);
+          const m = ctx.measureText(formatted);
+          wordMetrics.push({ width: m.width, isSecondary, text: formatted });
+          totalLineWidth += m.width;
+        });
+
+        const spaceWidth = fontSize * 0.28;
+        totalLineWidth += (line.length - 1) * spaceWidth;
+        let currentX = (width - totalLineWidth) / 2;
+
+        line.forEach((word, wordIdx) => {
+          const metric = wordMetrics[wordIdx];
+          const isActive = word.id === "w2";
+          const isPast = word.id === "w1";
+
+          ctx.save();
+          const isItalicKeyword = isActive && template.typography.wordTransform?.italicKeyword;
+          ctx.font = isItalicKeyword
+            ? `italic ${template.typography.primaryWeight} ${fontSize}px ${primaryFontFamily}`
+            : metric.isSecondary
+            ? `italic ${fontSize}px ${secondaryFontFamily}`
+            : `${template.typography.primaryWeight} ${fontSize}px ${primaryFontFamily}`;
+          ctx.textBaseline = "middle";
+
+          const wordCenterX = currentX + metric.width / 2;
+          const wordCenterY = lineY;
+
+          if (template.typography.wordTransform?.randomTiltDeg) {
+            const tilt = (((wordIdx * 7 + 3) % 5) - 2) * (template.typography.wordTransform.randomTiltDeg / 2);
+            ctx.translate(wordCenterX, wordCenterY);
+            ctx.rotate((tilt * Math.PI) / 180);
+            ctx.translate(-wordCenterX, -wordCenterY);
+          }
+
+          if (isActive && template.animation) {
+            const { perWordEffect, scaleMagnitude = 1.15 } = template.animation;
+            if (perWordEffect === "scale_pop" || perWordEffect === "bounce" || perWordEffect === "brush_reveal") {
+              ctx.translate(wordCenterX, wordCenterY);
+              ctx.scale(scaleMagnitude, scaleMagnitude);
+              ctx.translate(-wordCenterX, -wordCenterY);
+            }
+          }
+
+          if (isActive && template.colors.glowColor) {
+            ctx.shadowColor = template.colors.glowColor;
+            ctx.shadowBlur = template.colors.shadowBlur || 20;
+          } else if (template.colors.shadowColor) {
+            ctx.shadowColor = template.colors.shadowColor;
+            ctx.shadowBlur = template.colors.shadowBlur || 10;
+          }
+
+          if (template.colors.extrusion) {
+            const ext = template.colors.extrusion;
+            const totalD = height * ext.depthPercent;
+            const r = (ext.angleDeg * Math.PI) / 180;
+            const sX = (Math.cos(r) * totalD) / ext.steps;
+            const sY = (Math.sin(r) * totalD) / ext.steps;
+            ctx.save();
+            ctx.fillStyle = ext.color;
+            for (let s = ext.steps; s >= 1; s--) {
+              ctx.fillText(metric.text, currentX + s * sX, lineY + s * sY);
+            }
+            ctx.restore();
+          }
+
+          if (template.colors.multiStrokes && template.colors.multiStrokes.length > 0) {
+            const sorted = [...template.colors.multiStrokes].sort((a,b) => b.widthPercent - a.widthPercent);
+            for (const st of sorted) {
+              ctx.save();
+              ctx.strokeStyle = st.color;
+              ctx.lineWidth = Math.round(height * st.widthPercent);
+              ctx.lineJoin = "round";
+              ctx.strokeText(metric.text, currentX, lineY);
+              ctx.restore();
+            }
+          } else if (template.colors.strokeColor && template.colors.strokeWidthPercent) {
+            ctx.strokeStyle = template.colors.strokeColor;
+            ctx.lineWidth = Math.round(height * template.colors.strokeWidthPercent);
+            ctx.lineJoin = "round";
+            ctx.strokeText(metric.text, currentX, lineY);
+          }
+
+          const activeColor = template.colors.activeWordText || "#F59E0B";
+          let fillStyle = isActive
+            ? activeColor
+            : isPast
+            ? template.colors.primaryText
+            : template.colors.secondaryText || "rgba(255, 255, 255, 0.5)";
+
+          const gradConfig = (isActive && template.colors.activeWordGradient) || template.colors.gradient;
+          if (gradConfig && gradConfig.stops.length >= 2) {
+            const rad = ((gradConfig.angleDeg ?? 90) * Math.PI) / 180;
+            const grad = ctx.createLinearGradient(currentX, lineY - fontSize/2, currentX + Math.cos(rad) * metric.width, lineY - fontSize/2 + Math.sin(rad) * fontSize);
+            for (const stop of gradConfig.stops) {
+              grad.addColorStop(stop.offset, stop.color);
+            }
+            fillStyle = grad;
+          }
+
+          if (template.animation?.perWordEffect === "hollow_fill" && !isActive) {
+            fillStyle = "transparent";
+          }
+
+          ctx.fillStyle = fillStyle;
+          ctx.fillText(metric.text, currentX, lineY);
+
+          if (isActive && template.animation?.underline?.enabled) {
+            const u = template.animation.underline;
+            const uY = lineY + fontSize * 0.52;
+            ctx.save();
+            ctx.strokeStyle = u.color;
+            ctx.lineWidth = Math.round(height * u.thicknessPercent);
+            ctx.lineCap = "round";
+            ctx.beginPath();
+            ctx.moveTo(currentX - 2, uY);
+            ctx.quadraticCurveTo(currentX + metric.width / 2, uY + 4, currentX + metric.width + 4, uY - 1);
+            ctx.stroke();
+            ctx.restore();
+          }
+
+          ctx.restore();
+          currentX += metric.width + spaceWidth;
+        });
+      });
+
+      // If BEHIND subject, draw person silhouette ON TOP of text so text is cut out behind!
+      if (isBehind) {
+        drawPersonSilhouette();
+      }
+    }
+
+    const grid = document.getElementById("preset-grid");
+
+    PRESETS.forEach((p) => {
+      const card = document.createElement("div");
+      card.className = "card " + p.badgeType;
+
+      card.innerHTML = `
+        <div class="card-header">
+          <div><span class="template-num">#${p.index}</span> <span class="template-vibe">${p.vibe}</span></div>
+          <span class="status-badge ${p.badgeType}">${p.badgeLabel}</span>
+        </div>
+        <div class="canvas-container">
+          <canvas id="canvas-${p.id}" width="720" height="400"></canvas>
+        </div>
+        <div class="card-footer">
+          <div class="template-title">${p.name}</div>
+          <div class="metrics-row">
+            <span>Font: ${p.typography.primaryFont}</span>
+            <span>Anim: ${p.animation.perWordEffect}</span>
+          </div>
+        </div>
+      `;
+
+      grid.appendChild(card);
+    });
+
+    document.fonts.ready.then(() => {
+      setTimeout(() => {
+        PRESETS.forEach((p) => {
+          const cv = document.getElementById("canvas-" + p.id);
+          if (cv) {
+            const ctx = cv.getContext("2d");
+            renderCaption(ctx, 720, 400, p);
+          }
+        });
+        window.__ALL_CANVASES_RENDERED__ = true;
+      }, 600);
+    });
+  </script>
+</body>
+</html>

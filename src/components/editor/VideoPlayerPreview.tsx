@@ -2,8 +2,10 @@
 
 import React, { useEffect, useRef, useState, useCallback } from "react";
 import { useEditorStore } from "@/lib/editorStore";
-import { renderCaptionsToCanvas } from "@/lib/renderer/captionRenderer";
+import { renderCaptionsToCanvas, buildCaptionCues } from "@/lib/renderer/captionRenderer";
 import { getTemplateById } from "@/lib/templates";
+import { segmentationPipeline } from "@/lib/segmentation/segmentationPipeline";
+import type { SegmentationMaskFrame } from "@/lib/segmentation/types";
 import {
   Play,
   Pause,
@@ -47,6 +49,13 @@ export function VideoPlayerPreview({ onOpenTranscribe }: VideoPlayerPreviewProps
     toggleSafeZones,
     syncOffset,
     setSyncOffset,
+    layerOrder,
+    maskQualityTier,
+    maskFeather,
+    maskExpandContract,
+    showMaskOverlay,
+    exportSettings,
+    setExportSettings,
   } = useEditorStore();
 
   const template = getTemplateById(templateId);
@@ -54,8 +63,25 @@ export function VideoPlayerPreview({ onOpenTranscribe }: VideoPlayerPreviewProps
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const containerRef = useRef<HTMLDivElement | null>(null);
 
-  const [aspectRatio, setAspectRatio] = useState<"9:16" | "1:1" | "16:9">("16:9");
+  const handleToggleFullscreen = () => {
+    if (!containerRef.current) return;
+    if (!document.fullscreenElement) {
+      containerRef.current.requestFullscreen().catch(() => {});
+    } else {
+      document.exitFullscreen().catch(() => {});
+    }
+  };
+
+  const aspectRatio: "9:16" | "1:1" | "16:9" =
+    exportSettings.aspectRatio === "16:9" || exportSettings.aspectRatio === "1:1" || exportSettings.aspectRatio === "9:16"
+      ? exportSettings.aspectRatio
+      : "9:16";
+
+  const setAspectRatio = (ratio: "9:16" | "1:1" | "16:9") => {
+    setExportSettings({ aspectRatio: ratio });
+  };
   const [detectedSpecs, setDetectedSpecs] = useState<string>("1920×1080 · 24fps");
   const [zoomLevel, setZoomLevel] = useState<"fit" | "100%" | "75%" | "50%">("fit");
   const [isMuted, setIsMuted] = useState(false);
@@ -76,12 +102,71 @@ export function VideoPlayerPreview({ onOpenTranscribe }: VideoPlayerPreviewProps
 
   const lastReportedTime = useRef(0);
 
+  // Behind-the-subject mask cache reference for 60fps non-blocking rendering
+  const currentMaskRef = useRef<SegmentationMaskFrame | null>(null);
+  const isInferencingRef = useRef<boolean>(false);
+  const lastInferenceTimeRef = useRef<number>(-1);
+
+  const isDepthActive =
+    (layerOrder ? layerOrder !== "front" : !!template.layout.behindSubjectDepth);
+
+  // Synchronize segmentation pipeline config with user settings
+  useEffect(() => {
+    segmentationPipeline.setConfig({
+      targetResolution: maskQualityTier === "fast" ? 256 : maskQualityTier === "ultra" ? 512 : 384,
+      featherRadius: maskFeather,
+      expandContractPx: maskExpandContract,
+    });
+    currentMaskRef.current = null;
+  }, [maskQualityTier, maskFeather, maskExpandContract]);
+
+  // Lazy background pre-caching for visible cue ranges
+  useEffect(() => {
+    if (!isDepthActive || !tokens || tokens.length === 0) return;
+
+    const cueRanges: Array<{ start: number; end: number }> = [];
+    const cues = buildCaptionCues(tokens, 8);
+    for (const c of cues) {
+      cueRanges.push({ start: c.start, end: c.displayEnd });
+    }
+
+    if (cueRanges.length > 0) {
+      segmentationPipeline.processVisibleCueRanges(
+        videoTitle || "preview_stream",
+        cueRanges,
+        duration || 10
+      ).catch(() => {});
+    }
+  }, [isDepthActive, tokens, videoTitle, duration]);
+
   // Re-render canvas frame when paused and seeking/scrubbing
   useEffect(() => {
     if (!isPlaying && canvasRef.current) {
       const canvas = canvasRef.current;
       const ctx = canvas.getContext("2d");
-      if (ctx) {
+      if (!ctx) return;
+
+      let isCancelled = false;
+
+      const render = async () => {
+        let mask = currentMaskRef.current;
+        if (isDepthActive && videoRef.current) {
+          try {
+            mask = await segmentationPipeline.getOrProcessFrameMask(
+              videoTitle || "preview_stream",
+              currentTime,
+              videoRef.current,
+              canvasDims.width,
+              canvasDims.height
+            );
+            if (isCancelled) return;
+            currentMaskRef.current = mask;
+          } catch {
+            // graceful fallback
+          }
+        }
+
+        if (isCancelled) return;
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         renderCaptionsToCanvas(
           ctx,
@@ -90,11 +175,39 @@ export function VideoPlayerPreview({ onOpenTranscribe }: VideoPlayerPreviewProps
           currentTime,
           canvas.width,
           canvas.height,
-          syncOffset
+          syncOffset,
+          isDepthActive && mask
+            ? {
+                videoSource: videoRef.current,
+                segmentationMask: mask.maskData,
+                maskWidth: mask.width,
+                maskHeight: mask.height,
+                subjectMetrics: mask.metrics,
+                showMaskOverlay,
+                layerOrder,
+              }
+            : undefined
         );
-      }
+      };
+
+      render();
+
+      return () => {
+        isCancelled = true;
+      };
     }
-  }, [currentTime, isPlaying, tokens, template, canvasDims, syncOffset]);
+  }, [
+    currentTime,
+    isPlaying,
+    tokens,
+    template,
+    canvasDims,
+    syncOffset,
+    isDepthActive,
+    showMaskOverlay,
+    layerOrder,
+    videoTitle,
+  ]);
 
   // 60fps hardware-synchronized render loop during playback
   useEffect(() => {
@@ -123,6 +236,32 @@ export function VideoPlayerPreview({ onOpenTranscribe }: VideoPlayerPreviewProps
         const ctx = canvas.getContext("2d");
         if (ctx) {
           ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+          // Asynchronously query mask in background without blocking 60fps rAF
+          if (isDepthActive && videoRef.current && !isInferencingRef.current) {
+            const timeDiff = Math.abs(liveTime - lastInferenceTimeRef.current);
+            if (timeDiff >= 0.05) {
+              isInferencingRef.current = true;
+              lastInferenceTimeRef.current = liveTime;
+              segmentationPipeline
+                .getOrProcessFrameMask(
+                  videoTitle || "preview_stream",
+                  liveTime,
+                  videoRef.current,
+                  canvasDims.width,
+                  canvasDims.height
+                )
+                .then((m) => {
+                  currentMaskRef.current = m;
+                  isInferencingRef.current = false;
+                })
+                .catch(() => {
+                  isInferencingRef.current = false;
+                });
+            }
+          }
+
+          const activeMask = currentMaskRef.current;
           renderCaptionsToCanvas(
             ctx,
             tokens,
@@ -130,7 +269,18 @@ export function VideoPlayerPreview({ onOpenTranscribe }: VideoPlayerPreviewProps
             liveTime,
             canvas.width,
             canvas.height,
-            syncOffset
+            syncOffset,
+            isDepthActive && activeMask
+              ? {
+                  videoSource: videoRef.current,
+                  segmentationMask: activeMask.maskData,
+                  maskWidth: activeMask.width,
+                  maskHeight: activeMask.height,
+                  subjectMetrics: activeMask.metrics,
+                  showMaskOverlay,
+                  layerOrder,
+                }
+              : undefined
           );
         }
       }
@@ -152,7 +302,18 @@ export function VideoPlayerPreview({ onOpenTranscribe }: VideoPlayerPreviewProps
 
     animId = requestAnimationFrame(render);
     return () => cancelAnimationFrame(animId);
-  }, [isPlaying, tokens, template, setCurrentTime, canvasDims, syncOffset]);
+  }, [
+    isPlaying,
+    tokens,
+    template,
+    setCurrentTime,
+    canvasDims,
+    syncOffset,
+    isDepthActive,
+    showMaskOverlay,
+    layerOrder,
+    videoTitle,
+  ]);
 
   // Sync play/pause with HTMLVideoElement
   useEffect(() => {
@@ -226,35 +387,36 @@ export function VideoPlayerPreview({ onOpenTranscribe }: VideoPlayerPreviewProps
 
   return (
     <div
+      ref={containerRef}
       onDragOver={(e) => {
         e.preventDefault();
         setIsDraggingFile(true);
       }}
       onDragLeave={() => setIsDraggingFile(false)}
       onDrop={handleDrop}
-      className={`flex-1 flex flex-col bg-[#121316] rounded-xl border transition-all overflow-hidden ${
-        isDraggingFile ? "border-amber-500 shadow-xl shadow-amber-500/10" : "border-[#24262c]"
+      className={`flex-1 flex flex-col bg-[var(--bg-panel)] rounded-2xl border-2 border-[var(--border-main)] transition-all overflow-hidden shadow-[3px_3px_0px_var(--border-main)] ${
+        isDraggingFile ? "ring-4 ring-[var(--accent-lime)] shadow-[5px_5px_0px_var(--border-main)]" : ""
       }`}
     >
       {/* 1. NLE Program Monitor Top Bar */}
-      <div className="h-10 px-3 bg-[#18191e] border-b border-[#24262c] flex items-center justify-between text-xs select-none">
+      <div className="h-12 px-3 bg-[var(--bg-card)] border-b-2 border-[var(--border-main)] flex items-center justify-between text-xs select-none">
         {/* Left: Monitor Title & Format */}
         <div className="flex items-center gap-2.5">
-          <div className="flex items-center gap-1.5 font-bold text-zinc-200">
-            <Film className="w-3.5 h-3.5 text-amber-400" />
+          <div className="flex items-center gap-1.5 font-extrabold text-[var(--text-main)]">
+            <Film className="w-3.5 h-3.5 text-[var(--accent-lime)]" />
             <span className="tracking-wide">Program Monitor</span>
           </div>
 
-          <div className="h-3.5 w-px bg-zinc-700/80" />
+          <div className="h-4 w-px bg-[var(--border-main)] opacity-30" />
 
           {/* Aspect Ratio Switcher */}
-          <div className="flex items-center bg-[#101114] rounded-lg p-0.5 border border-zinc-800 text-[11px] font-medium">
+          <div className="flex items-center bg-[var(--bg-panel)] rounded-full p-0.5 border-2 border-[var(--border-main)] text-[11px] font-bold shadow-[2px_2px_0px_var(--border-main)]">
             <button
               onClick={() => setAspectRatio("16:9")}
-              className={`px-2 py-0.5 rounded-md transition-colors ${
+              className={`px-2.5 py-0.5 rounded-full transition-all cursor-pointer ${
                 aspectRatio === "16:9"
-                  ? "bg-amber-500/20 text-amber-300 font-bold border border-amber-500/30"
-                  : "text-zinc-400 hover:text-zinc-200"
+                  ? "bg-[var(--accent-lime)] text-[#142218] font-black border border-[var(--border-main)] shadow-sm"
+                  : "text-[var(--text-muted)] hover:text-[var(--text-main)]"
               }`}
               title="16:9 Landscape (YouTube / Presentations)"
             >
@@ -262,10 +424,10 @@ export function VideoPlayerPreview({ onOpenTranscribe }: VideoPlayerPreviewProps
             </button>
             <button
               onClick={() => setAspectRatio("9:16")}
-              className={`px-2 py-0.5 rounded-md transition-colors ${
+              className={`px-2.5 py-0.5 rounded-full transition-all cursor-pointer ${
                 aspectRatio === "9:16"
-                  ? "bg-amber-500/20 text-amber-300 font-bold border border-amber-500/30"
-                  : "text-zinc-400 hover:text-zinc-200"
+                  ? "bg-[var(--accent-lime)] text-[#142218] font-black border border-[var(--border-main)] shadow-sm"
+                  : "text-[var(--text-muted)] hover:text-[var(--text-main)]"
               }`}
               title="9:16 Vertical (Shorts / Reels)"
             >
@@ -273,10 +435,10 @@ export function VideoPlayerPreview({ onOpenTranscribe }: VideoPlayerPreviewProps
             </button>
             <button
               onClick={() => setAspectRatio("1:1")}
-              className={`px-2 py-0.5 rounded-md transition-colors ${
+              className={`px-2.5 py-0.5 rounded-full transition-all cursor-pointer ${
                 aspectRatio === "1:1"
-                  ? "bg-amber-500/20 text-amber-300 font-bold border border-amber-500/30"
-                  : "text-zinc-400 hover:text-zinc-200"
+                  ? "bg-[var(--accent-lime)] text-[#142218] font-black border border-[var(--border-main)] shadow-sm"
+                  : "text-[var(--text-muted)] hover:text-[var(--text-main)]"
               }`}
               title="1:1 Square (Instagram Feed)"
             >
@@ -284,55 +446,45 @@ export function VideoPlayerPreview({ onOpenTranscribe }: VideoPlayerPreviewProps
             </button>
           </div>
 
-          <span className="text-[11px] text-zinc-400 font-mono hidden sm:inline">
+          <span className="text-[11px] text-[var(--text-muted)] font-mono font-semibold hidden xl:inline">
             {detectedSpecs}
           </span>
         </div>
 
         {/* Right: View Options & File Import */}
-        <div className="flex items-center gap-2">
-          {/* AI Transcribe Trigger */}
-          <button
-            onClick={onOpenTranscribe}
-            className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-gradient-to-r from-amber-500/15 to-orange-500/15 hover:from-amber-500/25 hover:to-orange-500/25 border border-amber-500/40 text-amber-300 text-[11px] font-bold transition-all shadow-sm"
-            title="Transcribe Audio and Generate Captions"
-          >
-            <Mic className="w-3 h-3 text-amber-400" />
-            <span>Transcribe AI</span>
-          </button>
-
+        <div className="flex items-center gap-1.5">
           {/* Safe Zones Toggle */}
           <button
             onClick={toggleSafeZones}
-            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-[11px] font-semibold transition-colors ${
+            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full border-2 border-[var(--border-main)] text-[11px] font-bold transition-all cursor-pointer shadow-[2px_2px_0px_var(--border-main)] ${
               showSafeZones
-                ? "bg-amber-500/15 border-amber-500/50 text-amber-300"
-                : "bg-[#101114] border-zinc-800 text-zinc-400 hover:text-zinc-200"
+                ? "bg-[var(--accent-lime)] text-[#142218]"
+                : "bg-[var(--bg-panel)] text-[var(--text-muted)] hover:text-[var(--text-main)]"
             }`}
             title="Toggle Instagram Reels & YouTube Shorts UI Guides"
           >
-            <Layers className="w-3 h-3" />
-            <span className="hidden md:inline">Safe Zones</span>
+            <Layers className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Safe Zones</span>
           </button>
 
           {/* Audio / Caption Sync Calibration */}
           <div
-            className="flex items-center gap-1 bg-[#101114] px-2 py-0.5 rounded-lg border border-zinc-800 text-[10px] font-mono"
+            className="flex items-center gap-1 bg-[var(--bg-panel)] px-2.5 py-0.5 rounded-full border-2 border-[var(--border-main)] text-[10px] font-mono shadow-[2px_2px_0px_var(--border-main)]"
             title="Fine-tune audio-to-caption synchronization offset"
           >
-            <span className="text-zinc-500 font-bold hidden sm:inline">SYNC:</span>
+            <span className="text-[var(--text-muted)] font-bold hidden sm:inline">SYNC:</span>
             <button
               onClick={() => setSyncOffset(Math.max(-0.5, syncOffset - 0.05))}
-              className="px-1 py-0.5 rounded hover:bg-zinc-800 text-zinc-400 hover:text-amber-400 font-bold transition-colors"
+              className="px-1 py-0.5 rounded hover:bg-[var(--accent-lime)]/20 text-[var(--text-muted)] hover:text-[var(--text-main)] font-bold transition-colors cursor-pointer"
               title="Nudge captions 50ms earlier (-50ms)"
             >
               -50ms
             </button>
             <span
-              className={`px-1 py-0.5 rounded font-bold ${
+              className={`px-1.5 py-0.5 rounded font-bold ${
                 syncOffset === 0
-                  ? "text-zinc-400"
-                  : "bg-amber-500/15 text-amber-300 border border-amber-500/30"
+                  ? "text-[var(--text-muted)]"
+                  : "bg-[var(--accent-lime)] text-[#142218] border border-[var(--border-main)]"
               }`}
             >
               {syncOffset > 0
@@ -343,7 +495,7 @@ export function VideoPlayerPreview({ onOpenTranscribe }: VideoPlayerPreviewProps
             </span>
             <button
               onClick={() => setSyncOffset(Math.min(0.5, syncOffset + 0.05))}
-              className="px-1 py-0.5 rounded hover:bg-zinc-800 text-zinc-400 hover:text-amber-400 font-bold transition-colors"
+              className="px-1 py-0.5 rounded hover:bg-[var(--accent-lime)]/20 text-[var(--text-muted)] hover:text-[var(--text-main)] font-bold transition-colors cursor-pointer"
               title="Nudge captions 50ms later (+50ms)"
             >
               +50ms
@@ -351,7 +503,7 @@ export function VideoPlayerPreview({ onOpenTranscribe }: VideoPlayerPreviewProps
             {syncOffset !== 0 && (
               <button
                 onClick={() => setSyncOffset(0)}
-                className="text-[9px] text-zinc-500 hover:text-white px-1 underline"
+                className="text-[9px] text-[var(--text-muted)] hover:text-[var(--text-main)] px-1 underline cursor-pointer"
                 title="Reset sync offset to 0ms"
               >
                 Reset
@@ -360,13 +512,26 @@ export function VideoPlayerPreview({ onOpenTranscribe }: VideoPlayerPreviewProps
           </div>
 
           {/* Import / Replace Clip */}
+          {videoUrl && (
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="neo-btn-secondary px-2.5 py-1 text-[11px] gap-1.5 cursor-pointer"
+              title="Change video source file"
+            >
+              <Upload className="w-3 h-3 text-[var(--text-main)]" />
+              <span className="hidden lg:inline">Replace</span>
+            </button>
+          )}
+
+          {/* Fullscreen monitor toggle */}
           <button
-            onClick={() => fileInputRef.current?.click()}
-            className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#101114] hover:bg-zinc-800 border border-zinc-800 hover:border-zinc-700 text-zinc-300 hover:text-white text-[11px] font-semibold transition-colors"
+            onClick={handleToggleFullscreen}
+            className="neo-btn-secondary p-1.5 rounded-full cursor-pointer"
+            title="Toggle Program Monitor Fullscreen"
           >
-            <Upload className="w-3 h-3 text-amber-400" />
-            <span>{videoUrl ? "Replace Clip" : "Import Clip"}</span>
+            <Maximize2 className="w-3.5 h-3.5" />
           </button>
+
           <input
             ref={fileInputRef}
             type="file"
@@ -384,10 +549,10 @@ export function VideoPlayerPreview({ onOpenTranscribe }: VideoPlayerPreviewProps
       </div>
 
       {/* 2. Monitor Viewport & Audio VU Meter Flank */}
-      <div className="flex-1 flex items-center justify-center p-2 relative bg-[#0a0a0d] overflow-hidden min-h-0">
+      <div className="flex-1 flex items-center justify-center p-2 relative bg-[var(--bg-canvas)] overflow-hidden min-h-0">
         {/* Dynamic Display Bezel */}
         <div
-          className={`relative h-full max-h-[calc(100%-8px)] rounded-2xl bg-black border-2 border-[#2b2d35] shadow-2xl overflow-hidden flex items-center justify-center transition-all ${
+          className={`relative h-full max-h-[calc(100%-8px)] rounded-2xl bg-black border-2 border-[var(--border-main)] shadow-[4px_4px_0px_var(--border-main)] overflow-hidden flex items-center justify-center transition-all ${
             aspectRatio === "9:16"
               ? "aspect-[9/16] max-w-[260px] sm:max-w-[320px]"
               : aspectRatio === "1:1"
@@ -398,6 +563,7 @@ export function VideoPlayerPreview({ onOpenTranscribe }: VideoPlayerPreviewProps
           {/* Background Video Stream */}
           {videoUrl ? (
             <video
+              id="preview-video-element"
               ref={videoRef}
               src={videoUrl}
               onLoadedMetadata={() => {
@@ -416,27 +582,130 @@ export function VideoPlayerPreview({ onOpenTranscribe }: VideoPlayerPreviewProps
                   }
                 }
               }}
+              onLoadedData={() => {
+                if (videoRef.current && isDepthActive) {
+                  segmentationPipeline.getOrProcessFrameMask(
+                    videoTitle || "preview_stream",
+                    videoRef.current.currentTime || 0,
+                    videoRef.current,
+                    canvasDims.width,
+                    canvasDims.height
+                  ).then((m) => {
+                    currentMaskRef.current = m;
+                    if (canvasRef.current) {
+                      const ctx = canvasRef.current.getContext("2d");
+                      if (ctx) {
+                        ctx.clearRect(0, 0, canvasDims.width, canvasDims.height);
+                        renderCaptionsToCanvas(
+                          ctx,
+                          tokens,
+                          template,
+                          videoRef.current?.currentTime || 0,
+                          canvasDims.width,
+                          canvasDims.height,
+                          syncOffset,
+                          {
+                            videoSource: videoRef.current,
+                            segmentationMask: m.maskData,
+                            maskWidth: m.width,
+                            maskHeight: m.height,
+                            subjectMetrics: m.metrics,
+                            showMaskOverlay,
+                            layerOrder,
+                          }
+                        );
+                      }
+                    }
+                  }).catch(() => {});
+                }
+              }}
+              onSeeked={() => {
+                if (videoRef.current && isDepthActive) {
+                  segmentationPipeline.getOrProcessFrameMask(
+                    videoTitle || "preview_stream",
+                    videoRef.current.currentTime || 0,
+                    videoRef.current,
+                    canvasDims.width,
+                    canvasDims.height
+                  ).then((m) => {
+                    currentMaskRef.current = m;
+                    if (canvasRef.current) {
+                      const ctx = canvasRef.current.getContext("2d");
+                      if (ctx) {
+                        ctx.clearRect(0, 0, canvasDims.width, canvasDims.height);
+                        renderCaptionsToCanvas(
+                          ctx,
+                          tokens,
+                          template,
+                          videoRef.current?.currentTime || 0,
+                          canvasDims.width,
+                          canvasDims.height,
+                          syncOffset,
+                          {
+                            videoSource: videoRef.current,
+                            segmentationMask: m.maskData,
+                            maskWidth: m.width,
+                            maskHeight: m.height,
+                            subjectMetrics: m.metrics,
+                            showMaskOverlay,
+                            layerOrder,
+                          }
+                        );
+                      }
+                    }
+                  }).catch(() => {});
+                }
+              }}
               className="absolute inset-0 w-full h-full object-contain z-0"
               playsInline
               muted={isMuted}
               onEnded={() => useEditorStore.getState().setIsPlaying(false)}
             />
           ) : (
-            <div className="absolute inset-0 bg-gradient-to-b from-zinc-950 via-[#101114] to-black z-0 flex flex-col items-center justify-center p-6 text-center select-none">
-              <div className="w-16 h-16 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 mb-3 shadow-inner">
-                <Film className="w-8 h-8 text-amber-400" />
+            <div className="absolute inset-0 bg-[var(--bg-panel)] z-0 flex flex-col items-center justify-center p-6 text-center select-none">
+              <div className="w-16 h-16 rounded-2xl bg-[var(--accent-lime)] text-[#142218] border-2 border-[var(--border-main)] shadow-[3px_3px_0px_var(--border-main)] flex items-center justify-center mb-3">
+                <Film className="w-8 h-8 stroke-[2.2]" />
               </div>
-              <h3 className="text-sm font-bold text-white tracking-wide">Broadcast Program Monitor</h3>
-              <p className="text-xs text-zinc-400 mt-1 max-w-[280px] leading-relaxed">
+              <h3 className="font-fraunces italic text-lg sm:text-xl font-black text-[var(--text-main)] flex items-center gap-2">
+                Program Monitor
+                <span className="neo-pill bg-[var(--accent-lime)]/25 text-[var(--text-main)] text-[9px] py-0 px-2">
+                  Studio Ready
+                </span>
+              </h3>
+              <p className="text-xs text-[var(--text-muted)] mt-1.5 max-w-[290px] leading-relaxed font-medium">
                 Drop any video file (MP4, MOV, WebM) here to automatically extract audio and transcribe captions.
               </p>
-              <div className="mt-5 flex items-center justify-center gap-2 w-full max-w-[220px]">
+              <div className="mt-5 flex flex-col sm:flex-row items-center justify-center gap-2.5 w-full max-w-[320px]">
                 <button
                   onClick={() => fileInputRef.current?.click()}
-                  className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-black text-xs font-bold shadow-lg shadow-amber-500/20 hover:opacity-95 flex items-center justify-center gap-2 transition-all cursor-pointer"
+                  className="neo-btn w-full sm:flex-1 py-2 px-3.5 text-xs font-black gap-2 cursor-pointer shadow-[3px_3px_0px_var(--border-main)] text-[#142218]"
                 >
-                  <Upload className="w-4 h-4 text-black" />
-                  Select Video Clip
+                  <Upload className="w-3.5 h-3.5 stroke-[2.5]" />
+                  <span>Select Video Clip</span>
+                </button>
+                <button
+                  onClick={async () => {
+                    try {
+                      const res = await fetch("/sih_final.mp4");
+                      const blob = await res.blob();
+                      const file = new File([blob], "sih_final.mp4", { type: "video/mp4" });
+                      setVideo(file);
+                      const tokRes = await fetch("/sih_tokens.json");
+                      if (tokRes.ok) {
+                        const json = await tokRes.json();
+                        if (Array.isArray(json)) {
+                          useEditorStore.getState().setTokens(json);
+                        }
+                      }
+                    } catch (e) {
+                      console.warn("Failed to load demo:", e);
+                    }
+                  }}
+                  className="neo-btn-secondary w-full sm:w-auto py-2 px-3 text-xs font-bold gap-1.5 cursor-pointer shadow-[2px_2px_0px_var(--border-main)]"
+                  title="Instantly test with the built-in sample clip"
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-[var(--text-main)]" />
+                  <span>Load Demo Reel</span>
                 </button>
               </div>
             </div>
@@ -454,22 +723,22 @@ export function VideoPlayerPreview({ onOpenTranscribe }: VideoPlayerPreviewProps
           {showSafeZones && (
             <div className="absolute inset-0 z-20 pointer-events-none p-4">
               {aspectRatio === "16:9" ? (
-                <div className="w-full h-full border border-dashed border-amber-500/50 flex flex-col justify-between p-3">
-                  <span className="text-[10px] text-amber-400 font-mono font-bold tracking-wider uppercase">
+                <div className="w-full h-full border-2 border-dashed border-[var(--accent-lime)]/80 flex flex-col justify-between p-3">
+                  <span className="text-[10px] text-[var(--text-main)] bg-[var(--bg-card)] border border-[var(--border-main)] px-2 py-0.5 rounded-full font-mono font-bold tracking-wider uppercase inline-block w-fit shadow-sm">
                     16:9 Broadcast Action Safe (90%)
                   </span>
-                  <div className="w-full h-[85%] border border-dashed border-red-500/40 flex items-end justify-center pb-2">
-                    <span className="text-[10px] text-red-400 font-mono font-bold tracking-wider uppercase">
+                  <div className="w-full h-[85%] border-2 border-dashed border-red-500/60 flex items-end justify-center pb-2">
+                    <span className="text-[10px] text-red-500 bg-[var(--bg-card)] border border-red-500/40 px-2 py-0.5 rounded-full font-mono font-bold tracking-wider uppercase shadow-sm">
                       16:9 Subtitle Title Safe (80%)
                     </span>
                   </div>
                 </div>
               ) : (
                 <div className="w-full h-full flex flex-col justify-between">
-                  <div className="h-12 border-b-2 border-dashed border-red-500/60 bg-red-500/5 flex items-center justify-center text-[10px] text-red-400 font-mono font-bold tracking-wider uppercase">
+                  <div className="h-12 border-b-2 border-dashed border-red-500/60 bg-red-500/10 flex items-center justify-center text-[10px] text-red-500 font-mono font-bold tracking-wider uppercase">
                     Top UI Safe Margin
                   </div>
-                  <div className="h-28 border-t-2 border-dashed border-red-500/60 bg-red-500/5 flex items-center justify-center text-[10px] text-red-400 font-mono font-bold tracking-wider uppercase">
+                  <div className="h-28 border-t-2 border-dashed border-red-500/60 bg-red-500/10 flex items-center justify-center text-[10px] text-red-500 font-mono font-bold tracking-wider uppercase">
                     Bottom Caption & Sound Safe Area
                   </div>
                 </div>
@@ -479,22 +748,22 @@ export function VideoPlayerPreview({ onOpenTranscribe }: VideoPlayerPreviewProps
         </div>
 
         {/* Right Side: Broadcast Stereo Audio VU Level Meter */}
-        <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5 p-2 bg-[#121316]/90 backdrop-blur-md rounded-xl border border-zinc-800/80 select-none shadow-xl">
+        <div className="absolute right-3 top-1/2 -translate-y-1/2 hidden 2xl:flex items-center gap-1.5 p-2 bg-[var(--bg-card)] rounded-xl border-2 border-[var(--border-main)] select-none shadow-[3px_3px_0px_var(--border-main)]">
           {/* Left Meter */}
-          <div className="w-1.5 h-36 bg-zinc-900 rounded-full overflow-hidden flex flex-col justify-end p-0.5">
+          <div className="w-1.5 h-36 bg-[var(--bg-panel)] rounded-full overflow-hidden flex flex-col justify-end p-0.5 border border-[var(--border-main)]/30">
             <div
-              className="w-full rounded-full transition-all duration-75 bg-gradient-to-t from-emerald-500 via-amber-400 to-red-500"
+              className="w-full rounded-full transition-all duration-75 bg-gradient-to-t from-[var(--accent-lime)] to-[var(--accent-forest)]"
               style={{ height: `${vuLeft}%` }}
             />
           </div>
           {/* Right Meter */}
-          <div className="w-1.5 h-36 bg-zinc-900 rounded-full overflow-hidden flex flex-col justify-end p-0.5">
+          <div className="w-1.5 h-36 bg-[var(--bg-panel)] rounded-full overflow-hidden flex flex-col justify-end p-0.5 border border-[var(--border-main)]/30">
             <div
-              className="w-full rounded-full transition-all duration-75 bg-gradient-to-t from-emerald-500 via-amber-400 to-red-500"
+              className="w-full rounded-full transition-all duration-75 bg-gradient-to-t from-[var(--accent-lime)] to-[var(--accent-forest)]"
               style={{ height: `${vuRight}%` }}
             />
           </div>
-          <div className="flex flex-col justify-between h-36 text-[8px] font-mono text-zinc-500 py-0.5">
+          <div className="flex flex-col justify-between h-36 text-[8px] font-mono font-bold text-[var(--text-muted)] py-0.5">
             <span>0</span>
             <span>-6</span>
             <span>-18</span>
@@ -504,22 +773,22 @@ export function VideoPlayerPreview({ onOpenTranscribe }: VideoPlayerPreviewProps
       </div>
 
       {/* 3. NLE Transport Bar & Timecode Controller */}
-      <div className="h-14 px-4 bg-[#18191e] border-t border-[#24262c] flex items-center justify-between text-xs select-none">
+      <div className="h-13 px-4 bg-[var(--bg-card)] border-t-2 border-[var(--border-main)] flex items-center justify-between text-xs select-none">
         {/* Timecode Readout */}
         <div className="flex items-center gap-2 font-mono">
-          <div className="px-2.5 py-1 rounded-lg bg-[#101114] border border-zinc-800 text-amber-400 font-bold text-xs tracking-wider shadow-inner">
+          <div className="px-3 py-1 rounded-full bg-[var(--bg-panel)] border-2 border-[var(--border-main)] text-[var(--text-main)] font-extrabold text-xs tracking-wider shadow-[2px_2px_0px_var(--border-main)]">
             {formatSmpte(currentTime)}
           </div>
-          <span className="text-zinc-600 font-semibold">/</span>
-          <span className="text-zinc-400 text-xs">{formatSmpte(duration || 5)}</span>
+          <span className="text-[var(--text-muted)] font-semibold">/</span>
+          <span className="text-[var(--text-muted)] text-xs font-bold">{formatSmpte(duration || 5)}</span>
         </div>
 
         {/* Transport Buttons */}
-        <div className="flex items-center gap-1 sm:gap-1.5">
+        <div className="flex items-center gap-1 sm:gap-2">
           {/* Jump to Previous Word */}
           <button
             onClick={() => handleJumpToWord("prev")}
-            className="p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors"
+            className="neo-btn-secondary p-1.5 rounded-full cursor-pointer"
             title="Previous word cue"
           >
             <SkipBack className="w-3.5 h-3.5" />
@@ -528,7 +797,7 @@ export function VideoPlayerPreview({ onOpenTranscribe }: VideoPlayerPreviewProps
           {/* Frame Step Back */}
           <button
             onClick={() => handleFrameStep(-1)}
-            className="p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors"
+            className="neo-btn-secondary p-1.5 rounded-full cursor-pointer"
             title="Step 1 frame backward (Left)"
           >
             <ChevronLeft className="w-4 h-4" />
@@ -537,7 +806,7 @@ export function VideoPlayerPreview({ onOpenTranscribe }: VideoPlayerPreviewProps
           {/* Play / Pause Primary Button */}
           <button
             onClick={togglePlay}
-            className="w-9 h-9 rounded-full bg-gradient-to-tr from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-black flex items-center justify-center font-bold shadow-lg shadow-amber-500/25 transition-all hover:scale-105 active:scale-95 cursor-pointer mx-1"
+            className="w-10 h-10 rounded-full neo-btn text-[#142218] flex items-center justify-center font-bold shadow-[3px_3px_0px_var(--border-main)] transition-all cursor-pointer mx-1"
             title={isPlaying ? "Pause (Space)" : "Play (Space)"}
           >
             {isPlaying ? <Pause className="w-4 h-4 fill-black" /> : <Play className="w-4 h-4 fill-black ml-0.5" />}
@@ -546,7 +815,7 @@ export function VideoPlayerPreview({ onOpenTranscribe }: VideoPlayerPreviewProps
           {/* Frame Step Forward */}
           <button
             onClick={() => handleFrameStep(1)}
-            className="p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors"
+            className="neo-btn-secondary p-1.5 rounded-full cursor-pointer"
             title="Step 1 frame forward (Right)"
           >
             <ChevronRight className="w-4 h-4" />
@@ -555,7 +824,7 @@ export function VideoPlayerPreview({ onOpenTranscribe }: VideoPlayerPreviewProps
           {/* Jump to Next Word */}
           <button
             onClick={() => handleJumpToWord("next")}
-            className="p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors"
+            className="neo-btn-secondary p-1.5 rounded-full cursor-pointer"
             title="Next word cue"
           >
             <SkipForward className="w-3.5 h-3.5" />
@@ -565,15 +834,15 @@ export function VideoPlayerPreview({ onOpenTranscribe }: VideoPlayerPreviewProps
         {/* Speed & Volume Controls */}
         <div className="flex items-center gap-3">
           {/* Playback Speed Pill */}
-          <div className="flex items-center bg-[#101114] rounded-lg p-0.5 border border-zinc-800 text-[10px] font-mono">
+          <div className="flex items-center bg-[var(--bg-panel)] rounded-full p-0.5 border-2 border-[var(--border-main)] text-[10px] font-mono shadow-[2px_2px_0px_var(--border-main)]">
             {([1.0, 1.5, 2.0] as const).map((rate) => (
               <button
                 key={rate}
                 onClick={() => setPlaybackRate(rate)}
-                className={`px-1.5 py-0.5 rounded transition-colors ${
+                className={`px-2 py-0.5 rounded-full transition-all cursor-pointer ${
                   playbackRate === rate
-                    ? "bg-zinc-800 text-amber-400 font-bold"
-                    : "text-zinc-500 hover:text-zinc-300"
+                    ? "bg-[var(--accent-lime)] text-[#142218] font-black border border-[var(--border-main)] shadow-sm"
+                    : "text-[var(--text-muted)] hover:text-[var(--text-main)]"
                 }`}
               >
                 {rate}x
@@ -585,10 +854,10 @@ export function VideoPlayerPreview({ onOpenTranscribe }: VideoPlayerPreviewProps
           <div className="flex items-center gap-1.5">
             <button
               onClick={() => setIsMuted((m) => !m)}
-              className="text-zinc-400 hover:text-white transition-colors"
+              className="text-[var(--text-muted)] hover:text-[var(--text-main)] transition-colors cursor-pointer"
             >
               {isMuted || volume === 0 ? (
-                <VolumeX className="w-3.5 h-3.5 text-rose-400" />
+                <VolumeX className="w-3.5 h-3.5 text-rose-500" />
               ) : (
                 <Volume2 className="w-3.5 h-3.5" />
               )}
@@ -603,7 +872,7 @@ export function VideoPlayerPreview({ onOpenTranscribe }: VideoPlayerPreviewProps
                 setVolume(parseFloat(e.target.value));
                 if (isMuted) setIsMuted(false);
               }}
-              className="w-14 h-1 bg-zinc-800 rounded-full accent-amber-500 cursor-pointer"
+              className="w-14 h-1 bg-[var(--border-main)]/30 rounded-full accent-[var(--accent-lime)] cursor-pointer"
             />
           </div>
         </div>
