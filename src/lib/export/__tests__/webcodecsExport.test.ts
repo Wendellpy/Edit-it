@@ -3,6 +3,7 @@ import {
   RESOLUTION_DIMENSIONS,
   calculateExportDimensions,
   testEncoderSupport,
+  probeAudioEncoderSupport,
   extractAudioFromSource,
 } from '../webcodecsExport';
 import { isFileSystemAccessSupported } from '../fileSaver';
@@ -123,5 +124,32 @@ describe('webcodecsExport configuration & preflight', () => {
     expect(res.codec).toBe('avc1.4d002a');
 
     (globalThis as unknown as { VideoEncoder?: unknown }).VideoEncoder = originalVideoEncoder;
+  });
+
+  it('safely handles probeAudioEncoderSupport and probes mp4a.40.2 AAC-LC', async () => {
+    // When AudioEncoder is undefined (Node / Vitest environment)
+    const fallback = await probeAudioEncoderSupport(44100, 2);
+    expect(fallback.codec).toBe('mp4a.40.2');
+    expect(fallback.supported).toBe(false);
+
+    // With simulated AudioEncoder supporting 192k AAC-LC
+    const originalAudioEncoder = (globalThis as unknown as { AudioEncoder?: unknown }).AudioEncoder;
+    (globalThis as unknown as { AudioEncoder: unknown }).AudioEncoder = {
+      isConfigSupported: async (cfg: { codec: string; bitrate: number }) => {
+        return {
+          supported: cfg.codec === 'mp4a.40.2' && cfg.bitrate <= 192_000,
+          config: cfg,
+        };
+      },
+    };
+    (globalThis as unknown as { AudioData: unknown }).AudioData = class {};
+
+    const probe = await probeAudioEncoderSupport(44100, 2);
+    expect(probe.supported).toBe(true);
+    expect(probe.codec).toBe('mp4a.40.2');
+    expect(probe.bitrate).toBe(192_000);
+
+    (globalThis as unknown as { AudioEncoder?: unknown }).AudioEncoder = originalAudioEncoder;
+    delete (globalThis as unknown as { AudioData?: unknown }).AudioData;
   });
 });

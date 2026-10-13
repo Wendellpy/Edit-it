@@ -281,13 +281,53 @@ export async function extractAudioFromMedia(
 }
 
 /**
- * Encodes audio using WebCodecs AudioEncoder and muxes chunks into mp4-muxer
+ * Probes browser AudioEncoder support for MP4-compliant AAC-LC audio.
+ * Tests 192kbps (studio fidelity limit for WebCodecs AAC), then 160kbps, then 128kbps.
+ */
+export async function probeAudioEncoderSupport(
+  sampleRate: number = 44100,
+  numberOfChannels: number = 2
+): Promise<{ supported: boolean; bitrate: number; codec: string }> {
+  if (
+    typeof window === 'undefined' ||
+    typeof (window as unknown as { AudioEncoder?: unknown }).AudioEncoder === 'undefined' ||
+    typeof (window as unknown as { AudioData?: unknown }).AudioData === 'undefined'
+  ) {
+    return { supported: false, bitrate: 128_000, codec: 'mp4a.40.2' };
+  }
+
+  const AudioEncoderClass = (window as unknown as { AudioEncoder: typeof AudioEncoder }).AudioEncoder;
+
+  // Windows Media Player, QuickTime, iOS, and Android natively require standard AAC-LC ('mp4a.40.2')
+  // We probe descending bitrates within Chromium's supported range (max 192kbps for AAC-LC)
+  for (const br of [192_000, 160_000, 128_000, 96_000]) {
+    try {
+      const res = await AudioEncoderClass.isConfigSupported({
+        codec: 'mp4a.40.2',
+        sampleRate,
+        numberOfChannels: Math.min(2, numberOfChannels),
+        bitrate: br,
+      });
+      if (res && res.supported) {
+        return { supported: true, bitrate: br, codec: 'mp4a.40.2' };
+      }
+    } catch {}
+  }
+
+  return { supported: false, bitrate: 128_000, codec: 'mp4a.40.2' };
+}
+
+/**
+ * Encodes audio using WebCodecs AudioEncoder and muxes chunks into mp4-muxer.
+ * Exclusively uses standard AAC-LC (mp4a.40.2) for 100% universal compatibility across Windows Media Player,
+ * Apple QuickTime, DaVinci Resolve, Premiere Pro, and all mobile players.
  */
 export async function encodeAndMuxAudioWithWebCodecs(
   audioBuffer: AudioBuffer,
   muxer: Muxer<ArrayBufferTarget>,
   durationSeconds: number,
-  signal?: AbortSignal
+  signal?: AbortSignal,
+  targetBitrate: number = 192_000
 ): Promise<boolean> {
   if (
     typeof window === 'undefined' ||
@@ -303,25 +343,27 @@ export async function encodeAndMuxAudioWithWebCodecs(
   const sampleRate = audioBuffer.sampleRate;
   const numberOfChannels = Math.min(2, audioBuffer.numberOfChannels);
 
-  // Check supported audio codec for MP4 container
-  let supportedCodec: string | null = null;
-  for (const candidate of ['mp4a.40.2', 'opus']) {
+  // Probe highest supported AAC-LC bitrate (max 192 kbps in Chromium)
+  let chosenBitrate = targetBitrate;
+  let isAacSupported = false;
+  for (const br of [targetBitrate, 192_000, 160_000, 128_000, 96_000]) {
     try {
       const isSupp = await AudioEncoderClass.isConfigSupported({
-        codec: candidate,
+        codec: 'mp4a.40.2',
         sampleRate,
         numberOfChannels,
-        bitrate: 256_000,
+        bitrate: br,
       });
       if (isSupp && isSupp.supported) {
-        supportedCodec = candidate;
+        chosenBitrate = br;
+        isAacSupported = true;
         break;
       }
     } catch {}
   }
 
-  if (!supportedCodec) {
-    console.warn('AudioEncoder does not support mp4a.40.2 or opus in this browser');
+  if (!isAacSupported) {
+    console.warn('AudioEncoder does not support mp4a.40.2 (AAC-LC) for MP4 in this browser');
     return false;
   }
 
@@ -341,10 +383,10 @@ export async function encodeAndMuxAudioWithWebCodecs(
   });
 
   encoder.configure({
-    codec: supportedCodec,
+    codec: 'mp4a.40.2',
     sampleRate,
     numberOfChannels,
-    bitrate: 256_000,
+    bitrate: chosenBitrate,
   });
 
   const chunkSize = 1024;
@@ -620,6 +662,8 @@ export async function exportVideoWithWebCodecs(options: ExportJobOptions): Promi
 
   // 3. Audio Extraction & Muxer Preparation
   let audioBuffer: AudioBuffer | null = null;
+  let audioConfig = { supported: false, bitrate: 192_000, codec: 'mp4a.40.2' };
+
   if (config.includeAudio !== false) {
     onProgress?.({
       phase: 'preparing',
@@ -632,13 +676,18 @@ export async function exportVideoWithWebCodecs(options: ExportJobOptions): Promi
     audioBuffer = await extractAudioFromSource(
       options.videoFile || options.videoUrl || videoEl
     );
+    if (audioBuffer) {
+      audioConfig = await probeAudioEncoderSupport(
+        audioBuffer.sampleRate,
+        Math.min(2, audioBuffer.numberOfChannels)
+      );
+    }
   }
 
   const canMuxAudio =
     audioBuffer !== null &&
-    (config.includeAudio ?? true) &&
-    typeof window !== 'undefined' &&
-    typeof (window as unknown as { AudioEncoder?: unknown }).AudioEncoder !== 'undefined';
+    audioConfig.supported &&
+    (config.includeAudio ?? true);
 
   const muxerAudioConfig = canMuxAudio
     ? {
@@ -666,7 +715,7 @@ export async function exportVideoWithWebCodecs(options: ExportJobOptions): Promi
   if (canMuxAudio && audioBuffer) {
     try {
       const exactDuration = totalFrames / fps;
-      await encodeAndMuxAudioWithWebCodecs(audioBuffer, muxer, exactDuration, signal);
+      await encodeAndMuxAudioWithWebCodecs(audioBuffer, muxer, exactDuration, signal, audioConfig.bitrate);
     } catch (err) {
       console.warn('Audio hardware muxing skipped due to encoding error:', err);
     }
