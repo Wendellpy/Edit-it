@@ -1,0 +1,2107 @@
+{
+  "language": "en",
+  "duration": 127.168,
+  "word_count": 300,
+  "words": [
+    {
+      "id": "token_1",
+      "text": "Today",
+      "start": 0.0,
+      "end": 0.24,
+      "confidence": 0.86
+    },
+    {
+      "id": "token_2",
+      "text": "urban",
+      "start": 0.24,
+      "end": 0.48,
+      "confidence": 0.83
+    },
+    {
+      "id": "token_3",
+      "text": "properties",
+      "start": 0.48,
+      "end": 1.0,
+      "confidence": 0.99
+    },
+    {
+      "id": "token_4",
+      "text": "are",
+      "start": 1.0,
+      "end": 1.2,
+      "confidence": 0.99
+    },
+    {
+      "id": "token_5",
+      "text": "no",
+      "start": 1.2,
+      "end": 1.38,
+      "confidence": 1.0
+    },
+    {
+      "id": "token_6",
+      "text": "longer",
+      "start": 1.38,
+      "end": 1.68,
+      "confidence": 0.99
+    },
+    {
+      "id": "token_7",
+      "text": "simply",
+      "start": 1.68,
+      "end": 2.14,
+      "confidence": 0.99
+    },
+    {
+      "id": "token_8",
+      "text": "two",
+      "start": 2.14,
+      "end": 2.42,
+      "confidence": 0.85
+    },
+    {
+      "id": "token_9",
+      "text": "-dimensional",
+      "start": 2.42,
+      "end": 2.86,
+      "confidence": 0.62
+    },
+    {
+      "id": "token_10",
+      "text": "plots",
+      "start": 2.86,
+      "end": 3.22,
+      "confidence": 0.96
+    },
+    {
+      "id": "token_11",
+      "text": "of",
+      "start": 3.22,
+      "end": 3.44,
+      "confidence": 0.99
+    },
+    {
+      "id": "token_12",
+      "text": "land.",
+      "start": 3.44,
+      "end": 3.66,
+      "confidence": 0.99
+    },
+    {
+      "id": "token_13",
+      "text": "A",
+      "start": 4.04,
+      "end": 4.22,
+      "confidence": 0.97
+    },
+    {
+      "id": "token_14",
+      "text": "single",
+      "start": 4.22,
+      "end": 4.46,
+      "confidence": 1.0
+    },
+    {
+      "id": "token_15",
+      "text": "parcel",
+      "start": 4.46,
+      "end": 4.76,
+      "confidence": 0.91
+    },
+    {
+      "id": "token_16",
+      "text": "can",
+      "start": 4.76,
+      "end": 5.12,
+      "confidence": 0.97
+    },
+    {
+      "id": "token_17",
+      "text": "contain",
+      "start": 5.12,
+      "end": 5.46,
+      "confidence": 1.0
+    },
+    {
+      "id": "token_18",
+      "text": "multiple",
+      "start": 5.46,
+      "end": 5.82,
+      "confidence": 1.0
+    },
+    {
+      "id": "token_19",
+      "text": "floors,",
+      "start": 5.82,
+      "end": 6.32,
+      "confidence": 0.87
+    },
+    {
+      "id": "token_20",
+      "text": "apartments,",
+      "start": 6.6,
+      "end": 6.98,
+      "confidence": 0.97
+    },
+    {
+      "id": "token_21",
+      "text": "commercial",
+      "start": 7.7,
+      "end": 8.14,
+      "confidence": 0.99
+    },
+    {
+      "id": "token_22",
+      "text": "spaces,",
+      "start": 8.14,
+      "end": 8.56,
+      "confidence": 0.98
+    },
+    {
+      "id": "token_23",
+      "text": "parking",
+      "start": 8.82,
+      "end": 8.98,
+      "confidence": 0.83
+    },
+    {
+      "id": "token_24",
+      "text": "areas",
+      "start": 8.98,
+      "end": 9.36,
+      "confidence": 0.98
+    },
+    {
+      "id": "token_25",
+      "text": "and",
+      "start": 9.36,
+      "end": 9.62,
+      "confidence": 0.34
+    },
+    {
+      "id": "token_26",
+      "text": "underground",
+      "start": 9.62,
+      "end": 10.02,
+      "confidence": 0.99
+    },
+    {
+      "id": "token_27",
+      "text": "infrastructure.",
+      "start": 10.02,
+      "end": 10.74,
+      "confidence": 0.93
+    },
+    {
+      "id": "token_28",
+      "text": "Traditional",
+      "start": 11.2,
+      "end": 11.62,
+      "confidence": 0.92
+    },
+    {
+      "id": "token_29",
+      "text": "2D",
+      "start": 11.62,
+      "end": 12.06,
+      "confidence": 0.89
+    },
+    {
+      "id": "token_30",
+      "text": "records",
+      "start": 12.06,
+      "end": 12.46,
+      "confidence": 0.97
+    },
+    {
+      "id": "token_31",
+      "text": "cannot",
+      "start": 12.46,
+      "end": 12.92,
+      "confidence": 0.99
+    },
+    {
+      "id": "token_32",
+      "text": "completely",
+      "start": 12.92,
+      "end": 13.48,
+      "confidence": 0.99
+    },
+    {
+      "id": "token_33",
+      "text": "represent",
+      "start": 13.48,
+      "end": 14.0,
+      "confidence": 0.99
+    },
+    {
+      "id": "token_34",
+      "text": "this",
+      "start": 14.0,
+      "end": 14.24,
+      "confidence": 0.98
+    },
+    {
+      "id": "token_35",
+      "text": "vertical",
+      "start": 14.24,
+      "end": 14.64,
+      "confidence": 0.98
+    },
+    {
+      "id": "token_36",
+      "text": "and",
+      "start": 14.64,
+      "end": 14.9,
+      "confidence": 0.99
+    },
+    {
+      "id": "token_37",
+      "text": "underground",
+      "start": 14.9,
+      "end": 15.26,
+      "confidence": 0.99
+    },
+    {
+      "id": "token_38",
+      "text": "complexity.",
+      "start": 15.26,
+      "end": 15.94,
+      "confidence": 0.99
+    },
+    {
+      "id": "token_39",
+      "text": "Our",
+      "start": 16.5,
+      "end": 16.6,
+      "confidence": 0.91
+    },
+    {
+      "id": "token_40",
+      "text": "solution",
+      "start": 16.6,
+      "end": 17.02,
+      "confidence": 0.98
+    },
+    {
+      "id": "token_41",
+      "text": "is",
+      "start": 17.02,
+      "end": 17.3,
+      "confidence": 1.0
+    },
+    {
+      "id": "token_42",
+      "text": "a",
+      "start": 17.3,
+      "end": 17.4,
+      "confidence": 0.96
+    },
+    {
+      "id": "token_43",
+      "text": "3D",
+      "start": 17.4,
+      "end": 17.76,
+      "confidence": 0.97
+    },
+    {
+      "id": "token_44",
+      "text": "European",
+      "start": 17.76,
+      "end": 18.04,
+      "confidence": 0.1
+    },
+    {
+      "id": "token_45",
+      "text": "-based",
+      "start": 18.04,
+      "end": 18.5,
+      "confidence": 0.88
+    },
+    {
+      "id": "token_46",
+      "text": "digital",
+      "start": 18.5,
+      "end": 18.92,
+      "confidence": 0.92
+    },
+    {
+      "id": "token_47",
+      "text": "cadastral",
+      "start": 18.92,
+      "end": 19.48,
+      "confidence": 0.51
+    },
+    {
+      "id": "token_48",
+      "text": "system.",
+      "start": 19.48,
+      "end": 19.88,
+      "confidence": 0.99
+    },
+    {
+      "id": "token_49",
+      "text": "Our",
+      "start": 20.0,
+      "end": 20.14,
+      "confidence": 0.88
+    },
+    {
+      "id": "token_50",
+      "text": "solution",
+      "start": 20.14,
+      "end": 20.52,
+      "confidence": 0.97
+    },
+    {
+      "id": "token_51",
+      "text": "transform",
+      "start": 20.52,
+      "end": 20.94,
+      "confidence": 0.25
+    },
+    {
+      "id": "token_52",
+      "text": "traditional",
+      "start": 20.94,
+      "end": 21.66,
+      "confidence": 0.89
+    },
+    {
+      "id": "token_53",
+      "text": "2D",
+      "start": 21.66,
+      "end": 22.16,
+      "confidence": 0.98
+    },
+    {
+      "id": "token_54",
+      "text": "land",
+      "start": 22.16,
+      "end": 22.46,
+      "confidence": 0.96
+    },
+    {
+      "id": "token_55",
+      "text": "records",
+      "start": 22.46,
+      "end": 22.78,
+      "confidence": 0.84
+    },
+    {
+      "id": "token_56",
+      "text": "into",
+      "start": 22.78,
+      "end": 23.2,
+      "confidence": 0.99
+    },
+    {
+      "id": "token_57",
+      "text": "a",
+      "start": 23.2,
+      "end": 23.34,
+      "confidence": 0.98
+    },
+    {
+      "id": "token_58",
+      "text": "connected",
+      "start": 23.34,
+      "end": 23.6,
+      "confidence": 0.98
+    },
+    {
+      "id": "token_59",
+      "text": "3D",
+      "start": 23.6,
+      "end": 24.2,
+      "confidence": 0.99
+    },
+    {
+      "id": "token_60",
+      "text": "cadastral",
+      "start": 24.2,
+      "end": 24.74,
+      "confidence": 0.92
+    },
+    {
+      "id": "token_61",
+      "text": "system.",
+      "start": 24.74,
+      "end": 25.18,
+      "confidence": 1.0
+    },
+    {
+      "id": "token_62",
+      "text": "A",
+      "start": 25.6,
+      "end": 25.72,
+      "confidence": 0.98
+    },
+    {
+      "id": "token_63",
+      "text": "single",
+      "start": 25.72,
+      "end": 26.0,
+      "confidence": 1.0
+    },
+    {
+      "id": "token_64",
+      "text": "parcel",
+      "start": 26.0,
+      "end": 26.34,
+      "confidence": 0.98
+    },
+    {
+      "id": "token_65",
+      "text": "can",
+      "start": 26.34,
+      "end": 26.66,
+      "confidence": 1.0
+    },
+    {
+      "id": "token_66",
+      "text": "be",
+      "start": 26.66,
+      "end": 26.84,
+      "confidence": 1.0
+    },
+    {
+      "id": "token_67",
+      "text": "linked",
+      "start": 26.84,
+      "end": 27.06,
+      "confidence": 1.0
+    },
+    {
+      "id": "token_68",
+      "text": "to",
+      "start": 27.06,
+      "end": 27.34,
+      "confidence": 1.0
+    },
+    {
+      "id": "token_69",
+      "text": "its",
+      "start": 27.34,
+      "end": 27.5,
+      "confidence": 0.95
+    },
+    {
+      "id": "token_70",
+      "text": "building,",
+      "start": 27.5,
+      "end": 27.86,
+      "confidence": 0.94
+    },
+    {
+      "id": "token_71",
+      "text": "individual",
+      "start": 28.12,
+      "end": 28.38,
+      "confidence": 0.96
+    },
+    {
+      "id": "token_72",
+      "text": "vertical",
+      "start": 28.38,
+      "end": 28.9,
+      "confidence": 0.48
+    },
+    {
+      "id": "token_73",
+      "text": "unit",
+      "start": 28.9,
+      "end": 29.28,
+      "confidence": 0.9
+    },
+    {
+      "id": "token_74",
+      "text": "and",
+      "start": 29.28,
+      "end": 29.52,
+      "confidence": 0.75
+    },
+    {
+      "id": "token_75",
+      "text": "underground",
+      "start": 29.52,
+      "end": 29.98,
+      "confidence": 0.99
+    },
+    {
+      "id": "token_76",
+      "text": "infrastructure",
+      "start": 29.98,
+      "end": 30.76,
+      "confidence": 0.86
+    },
+    {
+      "id": "token_77",
+      "text": "through",
+      "start": 30.76,
+      "end": 31.38,
+      "confidence": 0.87
+    },
+    {
+      "id": "token_78",
+      "text": "a",
+      "start": 31.38,
+      "end": 31.62,
+      "confidence": 0.95
+    },
+    {
+      "id": "token_79",
+      "text": "unique",
+      "start": 31.62,
+      "end": 32.02,
+      "confidence": 0.98
+    },
+    {
+      "id": "token_80",
+      "text": "3D",
+      "start": 32.02,
+      "end": 32.48,
+      "confidence": 0.93
+    },
+    {
+      "id": "token_81",
+      "text": "European.",
+      "start": 32.48,
+      "end": 32.78,
+      "confidence": 0.02
+    },
+    {
+      "id": "token_82",
+      "text": "This",
+      "start": 33.42,
+      "end": 33.68,
+      "confidence": 0.97
+    },
+    {
+      "id": "token_83",
+      "text": "allows",
+      "start": 33.68,
+      "end": 34.02,
+      "confidence": 0.99
+    },
+    {
+      "id": "token_84",
+      "text": "every",
+      "start": 34.02,
+      "end": 34.44,
+      "confidence": 0.97
+    },
+    {
+      "id": "token_85",
+      "text": "property",
+      "start": 34.44,
+      "end": 34.92,
+      "confidence": 0.99
+    },
+    {
+      "id": "token_86",
+      "text": "space",
+      "start": 34.92,
+      "end": 35.5,
+      "confidence": 0.99
+    },
+    {
+      "id": "token_87",
+      "text": "within",
+      "start": 35.5,
+      "end": 35.76,
+      "confidence": 0.98
+    },
+    {
+      "id": "token_88",
+      "text": "a",
+      "start": 35.76,
+      "end": 35.94,
+      "confidence": 0.93
+    },
+    {
+      "id": "token_89",
+      "text": "building",
+      "start": 35.94,
+      "end": 36.22,
+      "confidence": 0.99
+    },
+    {
+      "id": "token_90",
+      "text": "to",
+      "start": 36.22,
+      "end": 36.48,
+      "confidence": 0.99
+    },
+    {
+      "id": "token_91",
+      "text": "be",
+      "start": 36.48,
+      "end": 36.6,
+      "confidence": 1.0
+    },
+    {
+      "id": "token_92",
+      "text": "identified",
+      "start": 36.6,
+      "end": 37.06,
+      "confidence": 0.99
+    },
+    {
+      "id": "token_93",
+      "text": "independently.",
+      "start": 37.06,
+      "end": 38.02,
+      "confidence": 0.99
+    },
+    {
+      "id": "token_94",
+      "text": "We",
+      "start": 38.56,
+      "end": 38.84,
+      "confidence": 0.48
+    },
+    {
+      "id": "token_95",
+      "text": "further",
+      "start": 38.84,
+      "end": 39.18,
+      "confidence": 0.96
+    },
+    {
+      "id": "token_96",
+      "text": "strengthen",
+      "start": 39.18,
+      "end": 39.68,
+      "confidence": 0.81
+    },
+    {
+      "id": "token_97",
+      "text": "the",
+      "start": 39.68,
+      "end": 40.02,
+      "confidence": 0.99
+    },
+    {
+      "id": "token_98",
+      "text": "system",
+      "start": 40.02,
+      "end": 40.4,
+      "confidence": 0.99
+    },
+    {
+      "id": "token_99",
+      "text": "with",
+      "start": 40.4,
+      "end": 40.72,
+      "confidence": 0.99
+    },
+    {
+      "id": "token_100",
+      "text": "blockchain,",
+      "start": 40.72,
+      "end": 41.14,
+      "confidence": 0.83
+    },
+    {
+      "id": "token_101",
+      "text": "maintaining",
+      "start": 41.44,
+      "end": 41.78,
+      "confidence": 0.99
+    },
+    {
+      "id": "token_102",
+      "text": "a",
+      "start": 41.78,
+      "end": 42.18,
+      "confidence": 0.95
+    },
+    {
+      "id": "token_103",
+      "text": "tamper",
+      "start": 42.18,
+      "end": 42.68,
+      "confidence": 0.97
+    },
+    {
+      "id": "token_104",
+      "text": "evident",
+      "start": 42.68,
+      "end": 43.04,
+      "confidence": 0.67
+    },
+    {
+      "id": "token_105",
+      "text": "and",
+      "start": 43.04,
+      "end": 43.4,
+      "confidence": 0.98
+    },
+    {
+      "id": "token_106",
+      "text": "verifiable",
+      "start": 43.4,
+      "end": 44.08,
+      "confidence": 0.99
+    },
+    {
+      "id": "token_107",
+      "text": "audit",
+      "start": 44.08,
+      "end": 45.02,
+      "confidence": 0.97
+    },
+    {
+      "id": "token_108",
+      "text": "trail",
+      "start": 45.02,
+      "end": 45.44,
+      "confidence": 0.96
+    },
+    {
+      "id": "token_109",
+      "text": "for",
+      "start": 45.44,
+      "end": 45.96,
+      "confidence": 0.95
+    },
+    {
+      "id": "token_110",
+      "text": "critical",
+      "start": 45.96,
+      "end": 46.44,
+      "confidence": 0.98
+    },
+    {
+      "id": "token_111",
+      "text": "cadastral",
+      "start": 46.44,
+      "end": 47.0,
+      "confidence": 0.55
+    },
+    {
+      "id": "token_112",
+      "text": "transactions,",
+      "start": 47.0,
+      "end": 47.62,
+      "confidence": 0.99
+    },
+    {
+      "id": "token_113",
+      "text": "ensuring",
+      "start": 48.18,
+      "end": 48.5,
+      "confidence": 0.98
+    },
+    {
+      "id": "token_114",
+      "text": "greater",
+      "start": 48.5,
+      "end": 48.82,
+      "confidence": 1.0
+    },
+    {
+      "id": "token_115",
+      "text": "trust,",
+      "start": 48.82,
+      "end": 49.26,
+      "confidence": 0.93
+    },
+    {
+      "id": "token_116",
+      "text": "transparency",
+      "start": 49.74,
+      "end": 50.08,
+      "confidence": 1.0
+    },
+    {
+      "id": "token_117",
+      "text": "and",
+      "start": 50.08,
+      "end": 50.82,
+      "confidence": 0.82
+    },
+    {
+      "id": "token_118",
+      "text": "traceability.",
+      "start": 50.82,
+      "end": 51.52,
+      "confidence": 0.89
+    },
+    {
+      "id": "token_119",
+      "text": "Our",
+      "start": 51.72,
+      "end": 51.82,
+      "confidence": 0.98
+    },
+    {
+      "id": "token_120",
+      "text": "system",
+      "start": 51.82,
+      "end": 52.18,
+      "confidence": 0.99
+    },
+    {
+      "id": "token_121",
+      "text": "also",
+      "start": 52.18,
+      "end": 52.48,
+      "confidence": 0.99
+    },
+    {
+      "id": "token_122",
+      "text": "provides",
+      "start": 52.48,
+      "end": 52.86,
+      "confidence": 0.99
+    },
+    {
+      "id": "token_123",
+      "text": "detailed",
+      "start": 52.86,
+      "end": 53.38,
+      "confidence": 1.0
+    },
+    {
+      "id": "token_124",
+      "text": "property",
+      "start": 53.38,
+      "end": 54.18,
+      "confidence": 0.98
+    },
+    {
+      "id": "token_125",
+      "text": "information",
+      "start": 54.18,
+      "end": 54.8,
+      "confidence": 1.0
+    },
+    {
+      "id": "token_126",
+      "text": "for",
+      "start": 54.8,
+      "end": 55.04,
+      "confidence": 1.0
+    },
+    {
+      "id": "token_127",
+      "text": "individual",
+      "start": 55.04,
+      "end": 55.42,
+      "confidence": 0.99
+    },
+    {
+      "id": "token_128",
+      "text": "flats",
+      "start": 55.42,
+      "end": 55.8,
+      "confidence": 0.93
+    },
+    {
+      "id": "token_129",
+      "text": "including",
+      "start": 55.8,
+      "end": 56.36,
+      "confidence": 0.57
+    },
+    {
+      "id": "token_130",
+      "text": "the",
+      "start": 56.36,
+      "end": 56.66,
+      "confidence": 0.72
+    },
+    {
+      "id": "token_131",
+      "text": "RERA,",
+      "start": 56.66,
+      "end": 57.08,
+      "confidence": 0.51
+    },
+    {
+      "id": "token_132",
+      "text": "registration",
+      "start": 57.24,
+      "end": 57.6,
+      "confidence": 0.94
+    },
+    {
+      "id": "token_133",
+      "text": "details",
+      "start": 57.6,
+      "end": 58.08,
+      "confidence": 0.98
+    },
+    {
+      "id": "token_134",
+      "text": "and",
+      "start": 58.08,
+      "end": 58.36,
+      "confidence": 0.79
+    },
+    {
+      "id": "token_135",
+      "text": "carpet",
+      "start": 58.36,
+      "end": 58.64,
+      "confidence": 0.92
+    },
+    {
+      "id": "token_136",
+      "text": "area.",
+      "start": 58.64,
+      "end": 58.98,
+      "confidence": 0.89
+    },
+    {
+      "id": "token_137",
+      "text": "This",
+      "start": 59.14,
+      "end": 59.22,
+      "confidence": 0.97
+    },
+    {
+      "id": "token_138",
+      "text": "gives",
+      "start": 59.22,
+      "end": 59.42,
+      "confidence": 0.99
+    },
+    {
+      "id": "token_139",
+      "text": "users",
+      "start": 59.42,
+      "end": 59.84,
+      "confidence": 0.46
+    },
+    {
+      "id": "token_140",
+      "text": "a",
+      "start": 59.84,
+      "end": 59.96,
+      "confidence": 0.45
+    },
+    {
+      "id": "token_141",
+      "text": "clear",
+      "start": 59.96,
+      "end": 60.34,
+      "confidence": 0.16
+    },
+    {
+      "id": "token_142",
+      "text": "and",
+      "start": 60.34,
+      "end": 60.6,
+      "confidence": 0.95
+    },
+    {
+      "id": "token_143",
+      "text": "standardized",
+      "start": 60.6,
+      "end": 61.12,
+      "confidence": 0.73
+    },
+    {
+      "id": "token_144",
+      "text": "view",
+      "start": 61.12,
+      "end": 61.6,
+      "confidence": 0.98
+    },
+    {
+      "id": "token_145",
+      "text": "of",
+      "start": 61.6,
+      "end": 61.78,
+      "confidence": 0.99
+    },
+    {
+      "id": "token_146",
+      "text": "the",
+      "start": 61.78,
+      "end": 61.96,
+      "confidence": 0.95
+    },
+    {
+      "id": "token_147",
+      "text": "actual",
+      "start": 61.96,
+      "end": 62.34,
+      "confidence": 0.99
+    },
+    {
+      "id": "token_148",
+      "text": "property",
+      "start": 62.34,
+      "end": 62.72,
+      "confidence": 0.9
+    },
+    {
+      "id": "token_149",
+      "text": "space",
+      "start": 62.72,
+      "end": 63.08,
+      "confidence": 1.0
+    },
+    {
+      "id": "token_150",
+      "text": "within",
+      "start": 63.08,
+      "end": 63.4,
+      "confidence": 0.98
+    },
+    {
+      "id": "token_151",
+      "text": "the",
+      "start": 63.4,
+      "end": 63.56,
+      "confidence": 0.98
+    },
+    {
+      "id": "token_152",
+      "text": "building.",
+      "start": 63.56,
+      "end": 63.84,
+      "confidence": 0.99
+    },
+    {
+      "id": "token_153",
+      "text": "One",
+      "start": 64.16,
+      "end": 64.28,
+      "confidence": 0.03
+    },
+    {
+      "id": "token_154",
+      "text": "is",
+      "start": 64.28,
+      "end": 64.4,
+      "confidence": 0.98
+    },
+    {
+      "id": "token_155",
+      "text": "designed",
+      "start": 64.4,
+      "end": 64.64,
+      "confidence": 0.98
+    },
+    {
+      "id": "token_156",
+      "text": "to",
+      "start": 64.64,
+      "end": 64.9,
+      "confidence": 1.0
+    },
+    {
+      "id": "token_157",
+      "text": "work",
+      "start": 64.9,
+      "end": 65.08,
+      "confidence": 1.0
+    },
+    {
+      "id": "token_158",
+      "text": "with",
+      "start": 65.08,
+      "end": 65.28,
+      "confidence": 0.99
+    },
+    {
+      "id": "token_159",
+      "text": "the",
+      "start": 65.28,
+      "end": 65.46,
+      "confidence": 0.97
+    },
+    {
+      "id": "token_160",
+      "text": "Maharashtra",
+      "start": 65.46,
+      "end": 65.92,
+      "confidence": 0.96
+    },
+    {
+      "id": "token_161",
+      "text": "cadastral",
+      "start": 65.92,
+      "end": 66.3,
+      "confidence": 0.39
+    },
+    {
+      "id": "token_162",
+      "text": "ecosystem,",
+      "start": 66.3,
+      "end": 66.62,
+      "confidence": 0.95
+    },
+    {
+      "id": "token_163",
+      "text": "connecting",
+      "start": 67.06,
+      "end": 67.2,
+      "confidence": 0.98
+    },
+    {
+      "id": "token_164",
+      "text": "property",
+      "start": 67.2,
+      "end": 67.62,
+      "confidence": 0.99
+    },
+    {
+      "id": "token_165",
+      "text": "information",
+      "start": 67.62,
+      "end": 68.18,
+      "confidence": 1.0
+    },
+    {
+      "id": "token_166",
+      "text": "across",
+      "start": 68.18,
+      "end": 68.46,
+      "confidence": 1.0
+    },
+    {
+      "id": "token_167",
+      "text": "districts,",
+      "start": 68.46,
+      "end": 68.82,
+      "confidence": 0.98
+    },
+    {
+      "id": "token_168",
+      "text": "alukas,",
+      "start": 69.02,
+      "end": 69.26,
+      "confidence": 0.47
+    },
+    {
+      "id": "token_169",
+      "text": "villages",
+      "start": 69.42,
+      "end": 69.54,
+      "confidence": 0.99
+    },
+    {
+      "id": "token_170",
+      "text": "and",
+      "start": 69.54,
+      "end": 69.86,
+      "confidence": 0.68
+    },
+    {
+      "id": "token_171",
+      "text": "survey",
+      "start": 69.86,
+      "end": 70.1,
+      "confidence": 0.72
+    },
+    {
+      "id": "token_172",
+      "text": "records.",
+      "start": 70.1,
+      "end": 70.36,
+      "confidence": 0.78
+    },
+    {
+      "id": "token_173",
+      "text": "Since",
+      "start": 70.92,
+      "end": 71.02,
+      "confidence": 0.98
+    },
+    {
+      "id": "token_174",
+      "text": "many",
+      "start": 71.02,
+      "end": 71.28,
+      "confidence": 0.99
+    },
+    {
+      "id": "token_175",
+      "text": "government",
+      "start": 71.28,
+      "end": 71.52,
+      "confidence": 0.96
+    },
+    {
+      "id": "token_176",
+      "text": "portals",
+      "start": 71.52,
+      "end": 71.98,
+      "confidence": 0.69
+    },
+    {
+      "id": "token_177",
+      "text": "rely",
+      "start": 71.98,
+      "end": 72.18,
+      "confidence": 1.0
+    },
+    {
+      "id": "token_178",
+      "text": "on",
+      "start": 72.18,
+      "end": 72.36,
+      "confidence": 1.0
+    },
+    {
+      "id": "token_179",
+      "text": "legacy",
+      "start": 72.36,
+      "end": 72.78,
+      "confidence": 0.97
+    },
+    {
+      "id": "token_180",
+      "text": "web",
+      "start": 72.78,
+      "end": 72.94,
+      "confidence": 0.98
+    },
+    {
+      "id": "token_181",
+      "text": "interfaces",
+      "start": 72.94,
+      "end": 73.44,
+      "confidence": 0.99
+    },
+    {
+      "id": "token_182",
+      "text": "rather",
+      "start": 73.44,
+      "end": 73.78,
+      "confidence": 0.96
+    },
+    {
+      "id": "token_183",
+      "text": "than",
+      "start": 73.78,
+      "end": 73.98,
+      "confidence": 0.99
+    },
+    {
+      "id": "token_184",
+      "text": "modern",
+      "start": 73.98,
+      "end": 74.26,
+      "confidence": 1.0
+    },
+    {
+      "id": "token_185",
+      "text": "APIs,",
+      "start": 74.26,
+      "end": 74.64,
+      "confidence": 0.98
+    },
+    {
+      "id": "token_186",
+      "text": "we",
+      "start": 75.18,
+      "end": 75.26,
+      "confidence": 0.98
+    },
+    {
+      "id": "token_187",
+      "text": "developed",
+      "start": 75.26,
+      "end": 75.68,
+      "confidence": 0.89
+    },
+    {
+      "id": "token_188",
+      "text": "a",
+      "start": 75.68,
+      "end": 75.82,
+      "confidence": 0.89
+    },
+    {
+      "id": "token_189",
+      "text": "dedicated",
+      "start": 75.82,
+      "end": 76.1,
+      "confidence": 1.0
+    },
+    {
+      "id": "token_190",
+      "text": "integrated",
+      "start": 76.1,
+      "end": 76.6,
+      "confidence": 0.55
+    },
+    {
+      "id": "token_191",
+      "text": "layer",
+      "start": 76.6,
+      "end": 77.0,
+      "confidence": 0.99
+    },
+    {
+      "id": "token_192",
+      "text": "with",
+      "start": 77.0,
+      "end": 77.38,
+      "confidence": 0.98
+    },
+    {
+      "id": "token_193",
+      "text": "scraping",
+      "start": 77.38,
+      "end": 77.68,
+      "confidence": 0.86
+    },
+    {
+      "id": "token_194",
+      "text": "and",
+      "start": 77.68,
+      "end": 78.04,
+      "confidence": 0.99
+    },
+    {
+      "id": "token_195",
+      "text": "adapter",
+      "start": 78.04,
+      "end": 78.36,
+      "confidence": 0.86
+    },
+    {
+      "id": "token_196",
+      "text": "capabilities.",
+      "start": 78.36,
+      "end": 78.92,
+      "confidence": 0.99
+    },
+    {
+      "id": "token_197",
+      "text": "This",
+      "start": 78.92,
+      "end": 79.6,
+      "confidence": 0.22
+    },
+    {
+      "id": "token_198",
+      "text": "allows",
+      "start": 79.6,
+      "end": 79.88,
+      "confidence": 0.98
+    },
+    {
+      "id": "token_199",
+      "text": "a",
+      "start": 79.88,
+      "end": 80.08,
+      "confidence": 0.35
+    },
+    {
+      "id": "token_200",
+      "text": "system",
+      "start": 80.08,
+      "end": 80.3,
+      "confidence": 0.99
+    },
+    {
+      "id": "token_201",
+      "text": "to",
+      "start": 80.3,
+      "end": 80.48,
+      "confidence": 0.99
+    },
+    {
+      "id": "token_202",
+      "text": "retrieve",
+      "start": 80.48,
+      "end": 80.74,
+      "confidence": 0.99
+    },
+    {
+      "id": "token_203",
+      "text": "and",
+      "start": 80.74,
+      "end": 81.04,
+      "confidence": 0.99
+    },
+    {
+      "id": "token_204",
+      "text": "process",
+      "start": 81.04,
+      "end": 81.4,
+      "confidence": 0.99
+    },
+    {
+      "id": "token_205",
+      "text": "cadastral",
+      "start": 81.4,
+      "end": 81.84,
+      "confidence": 0.46
+    },
+    {
+      "id": "token_206",
+      "text": "information",
+      "start": 81.84,
+      "end": 82.32,
+      "confidence": 0.99
+    },
+    {
+      "id": "token_207",
+      "text": "while",
+      "start": 82.32,
+      "end": 82.56,
+      "confidence": 0.86
+    },
+    {
+      "id": "token_208",
+      "text": "handling",
+      "start": 82.56,
+      "end": 82.88,
+      "confidence": 1.0
+    },
+    {
+      "id": "token_209",
+      "text": "unavailable",
+      "start": 82.88,
+      "end": 83.44,
+      "confidence": 0.82
+    },
+    {
+      "id": "token_210",
+      "text": "or",
+      "start": 83.44,
+      "end": 83.66,
+      "confidence": 0.98
+    },
+    {
+      "id": "token_211",
+      "text": "incomplete",
+      "start": 83.66,
+      "end": 83.9,
+      "confidence": 0.96
+    },
+    {
+      "id": "token_212",
+      "text": "government",
+      "start": 83.9,
+      "end": 84.36,
+      "confidence": 0.94
+    },
+    {
+      "id": "token_213",
+      "text": "response",
+      "start": 84.36,
+      "end": 84.78,
+      "confidence": 0.98
+    },
+    {
+      "id": "token_214",
+      "text": "gracefully.",
+      "start": 84.78,
+      "end": 85.4,
+      "confidence": 0.76
+    },
+    {
+      "id": "token_215",
+      "text": "We",
+      "start": 85.82,
+      "end": 86.02,
+      "confidence": 0.94
+    },
+    {
+      "id": "token_216",
+      "text": "also",
+      "start": 86.02,
+      "end": 86.36,
+      "confidence": 0.99
+    },
+    {
+      "id": "token_217",
+      "text": "introduce",
+      "start": 86.36,
+      "end": 86.76,
+      "confidence": 0.63
+    },
+    {
+      "id": "token_218",
+      "text": "a",
+      "start": 86.76,
+      "end": 86.92,
+      "confidence": 0.63
+    },
+    {
+      "id": "token_219",
+      "text": "time",
+      "start": 86.92,
+      "end": 87.12,
+      "confidence": 0.91
+    },
+    {
+      "id": "token_220",
+      "text": "dimension,",
+      "start": 87.12,
+      "end": 87.56,
+      "confidence": 0.83
+    },
+    {
+      "id": "token_221",
+      "text": "allows",
+      "start": 87.78,
+      "end": 87.98,
+      "confidence": 0.9
+    },
+    {
+      "id": "token_222",
+      "text": "us",
+      "start": 87.98,
+      "end": 88.18,
+      "confidence": 1.0
+    },
+    {
+      "id": "token_223",
+      "text": "to",
+      "start": 88.18,
+      "end": 88.3,
+      "confidence": 0.99
+    },
+    {
+      "id": "token_224",
+      "text": "track",
+      "start": 88.3,
+      "end": 88.52,
+      "confidence": 1.0
+    },
+    {
+      "id": "token_225",
+      "text": "how",
+      "start": 88.52,
+      "end": 88.74,
+      "confidence": 0.97
+    },
+    {
+      "id": "token_226",
+      "text": "buildings",
+      "start": 88.74,
+      "end": 89.04,
+      "confidence": 0.96
+    },
+    {
+      "id": "token_227",
+      "text": "and",
+      "start": 89.04,
+      "end": 89.28,
+      "confidence": 0.99
+    },
+    {
+      "id": "token_228",
+      "text": "urban",
+      "start": 89.28,
+      "end": 89.5,
+      "confidence": 0.99
+    },
+    {
+      "id": "token_229",
+      "text": "development",
+      "start": 89.5,
+      "end": 90.0,
+      "confidence": 0.99
+    },
+    {
+      "id": "token_230",
+      "text": "change",
+      "start": 90.0,
+      "end": 90.3,
+      "confidence": 0.89
+    },
+    {
+      "id": "token_231",
+      "text": "over",
+      "start": 90.3,
+      "end": 90.6,
+      "confidence": 1.0
+    },
+    {
+      "id": "token_232",
+      "text": "different",
+      "start": 90.6,
+      "end": 91.02,
+      "confidence": 0.99
+    },
+    {
+      "id": "token_233",
+      "text": "periods.",
+      "start": 91.02,
+      "end": 91.5,
+      "confidence": 1.0
+    },
+    {
+      "id": "token_234",
+      "text": "Separately,",
+      "start": 92.06,
+      "end": 92.66,
+      "confidence": 0.98
+    },
+    {
+      "id": "token_235",
+      "text": "our",
+      "start": 92.78,
+      "end": 92.82,
+      "confidence": 0.48
+    },
+    {
+      "id": "token_236",
+      "text": "flood",
+      "start": 92.82,
+      "end": 93.0,
+      "confidence": 0.96
+    },
+    {
+      "id": "token_237",
+      "text": "simulation",
+      "start": 93.0,
+      "end": 93.36,
+      "confidence": 0.98
+    },
+    {
+      "id": "token_238",
+      "text": "shows",
+      "start": 93.36,
+      "end": 93.9,
+      "confidence": 1.0
+    },
+    {
+      "id": "token_239",
+      "text": "how",
+      "start": 93.9,
+      "end": 94.18,
+      "confidence": 0.99
+    },
+    {
+      "id": "token_240",
+      "text": "rising",
+      "start": 94.18,
+      "end": 94.6,
+      "confidence": 0.92
+    },
+    {
+      "id": "token_241",
+      "text": "water",
+      "start": 94.6,
+      "end": 94.9,
+      "confidence": 1.0
+    },
+    {
+      "id": "token_242",
+      "text": "levels",
+      "start": 94.9,
+      "end": 95.22,
+      "confidence": 0.99
+    },
+    {
+      "id": "token_243",
+      "text": "could",
+      "start": 95.22,
+      "end": 95.46,
+      "confidence": 0.97
+    },
+    {
+      "id": "token_244",
+      "text": "impact",
+      "start": 95.46,
+      "end": 95.76,
+      "confidence": 0.99
+    },
+    {
+      "id": "token_245",
+      "text": "buildings,",
+      "start": 95.76,
+      "end": 96.14,
+      "confidence": 0.85
+    },
+    {
+      "id": "token_246",
+      "text": "parcels",
+      "start": 96.4,
+      "end": 96.7,
+      "confidence": 0.57
+    },
+    {
+      "id": "token_247",
+      "text": "and",
+      "start": 96.7,
+      "end": 96.86,
+      "confidence": 0.79
+    },
+    {
+      "id": "token_248",
+      "text": "surrounding",
+      "start": 96.86,
+      "end": 97.26,
+      "confidence": 0.98
+    },
+    {
+      "id": "token_249",
+      "text": "infrastructure.",
+      "start": 97.26,
+      "end": 97.94,
+      "confidence": 0.98
+    },
+    {
+      "id": "token_250",
+      "text": "To",
+      "start": 97.94,
+      "end": 99.04,
+      "confidence": 0.82
+    },
+    {
+      "id": "token_251",
+      "text": "conclude,",
+      "start": 99.04,
+      "end": 99.48,
+      "confidence": 1.0
+    },
+    {
+      "id": "token_252",
+      "text": "our",
+      "start": 99.68,
+      "end": 99.74,
+      "confidence": 0.31
+    },
+    {
+      "id": "token_253",
+      "text": "solution",
+      "start": 99.74,
+      "end": 100.14,
+      "confidence": 0.97
+    },
+    {
+      "id": "token_254",
+      "text": "goes",
+      "start": 100.14,
+      "end": 100.4,
+      "confidence": 0.99
+    },
+    {
+      "id": "token_255",
+      "text": "beyond",
+      "start": 100.4,
+      "end": 100.84,
+      "confidence": 0.99
+    },
+    {
+      "id": "token_256",
+      "text": "traditional",
+      "start": 100.84,
+      "end": 101.36,
+      "confidence": 0.99
+    },
+    {
+      "id": "token_257",
+      "text": "land",
+      "start": 101.36,
+      "end": 101.64,
+      "confidence": 0.87
+    },
+    {
+      "id": "token_258",
+      "text": "records",
+      "start": 101.64,
+      "end": 102.02,
+      "confidence": 0.98
+    },
+    {
+      "id": "token_259",
+      "text": "by",
+      "start": 102.02,
+      "end": 102.66,
+      "confidence": 0.93
+    },
+    {
+      "id": "token_260",
+      "text": "combining",
+      "start": 102.66,
+      "end": 103.14,
+      "confidence": 1.0
+    },
+    {
+      "id": "token_261",
+      "text": "3D",
+      "start": 103.14,
+      "end": 103.58,
+      "confidence": 0.93
+    },
+    {
+      "id": "token_262",
+      "text": "uelpings,",
+      "start": 103.58,
+      "end": 104.24,
+      "confidence": 0.26
+    },
+    {
+      "id": "token_263",
+      "text": "vertical",
+      "start": 104.72,
+      "end": 104.98,
+      "confidence": 0.95
+    },
+    {
+      "id": "token_264",
+      "text": "property",
+      "start": 104.98,
+      "end": 105.46,
+      "confidence": 0.98
+    },
+    {
+      "id": "token_265",
+      "text": "mapping,",
+      "start": 105.46,
+      "end": 105.8,
+      "confidence": 0.94
+    },
+    {
+      "id": "token_266",
+      "text": "underground",
+      "start": 106.46,
+      "end": 106.76,
+      "confidence": 0.97
+    },
+    {
+      "id": "token_267",
+      "text": "assets,",
+      "start": 106.76,
+      "end": 107.4,
+      "confidence": 0.99
+    },
+    {
+      "id": "token_268",
+      "text": "blockchain",
+      "start": 108.08,
+      "end": 108.48,
+      "confidence": 0.91
+    },
+    {
+      "id": "token_269",
+      "text": "-based",
+      "start": 108.48,
+      "end": 108.78,
+      "confidence": 0.81
+    },
+    {
+      "id": "token_270",
+      "text": "verification,",
+      "start": 108.78,
+      "end": 109.44,
+      "confidence": 0.99
+    },
+    {
+      "id": "token_271",
+      "text": "time",
+      "start": 109.94,
+      "end": 110.14,
+      "confidence": 0.97
+    },
+    {
+      "id": "token_272",
+      "text": "-based",
+      "start": 110.14,
+      "end": 110.4,
+      "confidence": 0.96
+    },
+    {
+      "id": "token_273",
+      "text": "development",
+      "start": 110.4,
+      "end": 110.92,
+      "confidence": 1.0
+    },
+    {
+      "id": "token_274",
+      "text": "tracking",
+      "start": 110.92,
+      "end": 111.38,
+      "confidence": 0.99
+    },
+    {
+      "id": "token_275",
+      "text": "and",
+      "start": 111.38,
+      "end": 111.94,
+      "confidence": 0.47
+    },
+    {
+      "id": "token_276",
+      "text": "flood",
+      "start": 111.94,
+      "end": 112.2,
+      "confidence": 0.95
+    },
+    {
+      "id": "token_277",
+      "text": "simulation",
+      "start": 112.2,
+      "end": 112.64,
+      "confidence": 0.97
+    },
+    {
+      "id": "token_278",
+      "text": "into",
+      "start": 112.64,
+      "end": 113.1,
+      "confidence": 0.99
+    },
+    {
+      "id": "token_279",
+      "text": "one",
+      "start": 113.1,
+      "end": 113.3,
+      "confidence": 0.94
+    },
+    {
+      "id": "token_280",
+      "text": "platform.",
+      "start": 113.3,
+      "end": 113.86,
+      "confidence": 0.99
+    },
+    {
+      "id": "token_281",
+      "text": "Together,",
+      "start": 114.44,
+      "end": 114.68,
+      "confidence": 0.99
+    },
+    {
+      "id": "token_282",
+      "text": "these",
+      "start": 114.92,
+      "end": 115.1,
+      "confidence": 0.95
+    },
+    {
+      "id": "token_283",
+      "text": "features",
+      "start": 115.1,
+      "end": 115.44,
+      "confidence": 0.99
+    },
+    {
+      "id": "token_284",
+      "text": "create",
+      "start": 115.44,
+      "end": 115.84,
+      "confidence": 0.8
+    },
+    {
+      "id": "token_285",
+      "text": "a",
+      "start": 115.84,
+      "end": 116.04,
+      "confidence": 0.96
+    },
+    {
+      "id": "token_286",
+      "text": "trusted,",
+      "start": 116.04,
+      "end": 116.46,
+      "confidence": 0.99
+    },
+    {
+      "id": "token_287",
+      "text": "intelligent",
+      "start": 116.98,
+      "end": 117.42,
+      "confidence": 1.0
+    },
+    {
+      "id": "token_288",
+      "text": "and",
+      "start": 117.42,
+      "end": 117.76,
+      "confidence": 0.77
+    },
+    {
+      "id": "token_289",
+      "text": "future",
+      "start": 117.76,
+      "end": 118.1,
+      "confidence": 0.99
+    },
+    {
+      "id": "token_290",
+      "text": "-ready",
+      "start": 118.1,
+      "end": 118.36,
+      "confidence": 0.95
+    },
+    {
+      "id": "token_291",
+      "text": "digital",
+      "start": 118.36,
+      "end": 118.8,
+      "confidence": 0.95
+    },
+    {
+      "id": "token_292",
+      "text": "cadastral",
+      "start": 118.8,
+      "end": 119.28,
+      "confidence": 0.51
+    },
+    {
+      "id": "token_293",
+      "text": "system",
+      "start": 119.28,
+      "end": 119.78,
+      "confidence": 0.98
+    },
+    {
+      "id": "token_294",
+      "text": "for",
+      "start": 119.78,
+      "end": 120.28,
+      "confidence": 0.96
+    },
+    {
+      "id": "token_295",
+      "text": "better",
+      "start": 120.28,
+      "end": 120.56,
+      "confidence": 0.98
+    },
+    {
+      "id": "token_296",
+      "text": "land",
+      "start": 120.56,
+      "end": 120.86,
+      "confidence": 0.97
+    },
+    {
+      "id": "token_297",
+      "text": "management",
+      "start": 120.86,
+      "end": 121.3,
+      "confidence": 1.0
+    },
+    {
+      "id": "token_298",
+      "text": "and",
+      "start": 121.3,
+      "end": 121.66,
+      "confidence": 0.99
+    },
+    {
+      "id": "token_299",
+      "text": "urban",
+      "start": 121.66,
+      "end": 121.9,
+      "confidence": 1.0
+    },
+    {
+      "id": "token_300",
+      "text": "planning.",
+      "start": 121.9,
+      "end": 122.34,
+      "confidence": 1.0
+    }
+  ]
+}

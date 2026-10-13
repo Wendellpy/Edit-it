@@ -1,0 +1,3002 @@
+[
+  {
+    "id": "sih_1",
+    "text": "Today",
+    "romanText": "Today",
+    "devanagariText": "Today",
+    "start": 0.05,
+    "end": 0.353,
+    "confidence": 0.86,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_2",
+    "text": "urban",
+    "romanText": "urban",
+    "devanagariText": "urban",
+    "start": 0.353,
+    "end": 0.657,
+    "confidence": 0.83,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_3",
+    "text": "properties",
+    "romanText": "properties",
+    "devanagariText": "properties",
+    "start": 0.657,
+    "end": 1.209,
+    "confidence": 0.99,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_4",
+    "text": "are",
+    "romanText": "are",
+    "devanagariText": "are",
+    "start": 1.209,
+    "end": 1.435,
+    "confidence": 0.99,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_5",
+    "text": "no",
+    "romanText": "no",
+    "devanagariText": "no",
+    "start": 1.435,
+    "end": 1.567,
+    "confidence": 1,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_6",
+    "text": "longer",
+    "romanText": "longer",
+    "devanagariText": "longer",
+    "start": 1.567,
+    "end": 1.909,
+    "confidence": 0.99,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_7",
+    "text": "simply",
+    "romanText": "simply",
+    "devanagariText": "simply",
+    "start": 1.909,
+    "end": 2.252,
+    "confidence": 0.99,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_8",
+    "text": "two",
+    "romanText": "two",
+    "devanagariText": "two",
+    "start": 2.252,
+    "end": 2.423,
+    "confidence": 0.85,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_9",
+    "text": "-dimensional",
+    "romanText": "-dimensional",
+    "devanagariText": "-dimensional",
+    "start": 2.423,
+    "end": 3.069,
+    "confidence": 0.62,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_10",
+    "text": "plots",
+    "romanText": "plots",
+    "devanagariText": "plots",
+    "start": 3.069,
+    "end": 3.318,
+    "confidence": 0.96,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_11",
+    "text": "of",
+    "romanText": "of",
+    "devanagariText": "of",
+    "start": 3.318,
+    "end": 3.45,
+    "confidence": 0.99,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_12",
+    "text": "land.",
+    "romanText": "land.",
+    "devanagariText": "land.",
+    "start": 3.45,
+    "end": 3.66,
+    "confidence": 0.99,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_13",
+    "text": "A",
+    "romanText": "A",
+    "devanagariText": "A",
+    "start": 4.13,
+    "end": 4.236,
+    "confidence": 0.97,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_14",
+    "text": "single",
+    "romanText": "single",
+    "devanagariText": "single",
+    "start": 4.236,
+    "end": 4.624,
+    "confidence": 1,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_15",
+    "text": "parcel",
+    "romanText": "parcel",
+    "devanagariText": "parcel",
+    "start": 4.624,
+    "end": 5.012,
+    "confidence": 0.91,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_16",
+    "text": "can",
+    "romanText": "can",
+    "devanagariText": "can",
+    "start": 5.012,
+    "end": 5.206,
+    "confidence": 0.97,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_17",
+    "text": "contain",
+    "romanText": "contain",
+    "devanagariText": "contain",
+    "start": 5.206,
+    "end": 5.639,
+    "confidence": 1,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_18",
+    "text": "multiple",
+    "romanText": "multiple",
+    "devanagariText": "multiple",
+    "start": 5.639,
+    "end": 6.177,
+    "confidence": 1,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_19",
+    "text": "floors,",
+    "romanText": "floors,",
+    "devanagariText": "floors,",
+    "start": 6.177,
+    "end": 6.504,
+    "confidence": 0.87,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_20",
+    "text": "apartments,",
+    "romanText": "apartments,",
+    "devanagariText": "apartments,",
+    "start": 6.504,
+    "end": 7.13,
+    "confidence": 0.97,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_21",
+    "text": "commercial",
+    "romanText": "commercial",
+    "devanagariText": "commercial",
+    "start": 7.8,
+    "end": 8.326,
+    "confidence": 0.99,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_22",
+    "text": "spaces,",
+    "romanText": "spaces,",
+    "devanagariText": "spaces,",
+    "start": 8.326,
+    "end": 8.653,
+    "confidence": 0.98,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_23",
+    "text": "parking",
+    "romanText": "parking",
+    "devanagariText": "parking",
+    "start": 8.653,
+    "end": 9.016,
+    "confidence": 0.83,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_24",
+    "text": "areas",
+    "romanText": "areas",
+    "devanagariText": "areas",
+    "start": 9.016,
+    "end": 9.305,
+    "confidence": 0.98,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_25",
+    "text": "and",
+    "romanText": "and",
+    "devanagariText": "and",
+    "start": 9.305,
+    "end": 9.468,
+    "confidence": 0.34,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_26",
+    "text": "underground",
+    "romanText": "underground",
+    "devanagariText": "underground",
+    "start": 9.468,
+    "end": 10.032,
+    "confidence": 0.99,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_27",
+    "text": "infrastructure.",
+    "romanText": "infrastructure.",
+    "devanagariText": "infrastructure.",
+    "start": 10.032,
+    "end": 10.81,
+    "confidence": 0.93,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_28",
+    "text": "Traditional",
+    "romanText": "Traditional",
+    "devanagariText": "Traditional",
+    "start": 11.21,
+    "end": 11.882,
+    "confidence": 0.92,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_29",
+    "text": "2D",
+    "romanText": "2D",
+    "devanagariText": "2D",
+    "start": 11.882,
+    "end": 11.963,
+    "confidence": 0.89,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_30",
+    "text": "records",
+    "romanText": "records",
+    "devanagariText": "records",
+    "start": 11.963,
+    "end": 12.36,
+    "confidence": 0.97,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_31",
+    "text": "cannot",
+    "romanText": "cannot",
+    "devanagariText": "cannot",
+    "start": 12.36,
+    "end": 12.716,
+    "confidence": 0.99,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_32",
+    "text": "completely",
+    "romanText": "completely",
+    "devanagariText": "completely",
+    "start": 12.716,
+    "end": 13.348,
+    "confidence": 0.99,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_33",
+    "text": "represent",
+    "romanText": "represent",
+    "devanagariText": "represent",
+    "start": 13.348,
+    "end": 13.882,
+    "confidence": 0.99,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_34",
+    "text": "this",
+    "romanText": "this",
+    "devanagariText": "this",
+    "start": 13.882,
+    "end": 14.101,
+    "confidence": 0.98,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_35",
+    "text": "vertical",
+    "romanText": "vertical",
+    "devanagariText": "vertical",
+    "start": 14.101,
+    "end": 14.595,
+    "confidence": 0.98,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_36",
+    "text": "and",
+    "romanText": "and",
+    "devanagariText": "and",
+    "start": 14.595,
+    "end": 14.773,
+    "confidence": 0.99,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_37",
+    "text": "underground",
+    "romanText": "underground",
+    "devanagariText": "underground",
+    "start": 14.773,
+    "end": 15.388,
+    "confidence": 0.99,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_38",
+    "text": "complexity.",
+    "romanText": "complexity.",
+    "devanagariText": "complexity.",
+    "start": 15.388,
+    "end": 16.02,
+    "confidence": 0.99,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_39",
+    "text": "Our",
+    "romanText": "Our",
+    "devanagariText": "Our",
+    "start": 16.5,
+    "end": 16.7,
+    "confidence": 0.91,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_40",
+    "text": "solution",
+    "romanText": "solution",
+    "devanagariText": "solution",
+    "start": 16.7,
+    "end": 17.255,
+    "confidence": 0.98,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_41",
+    "text": "is",
+    "romanText": "is",
+    "devanagariText": "is",
+    "start": 17.255,
+    "end": 17.41,
+    "confidence": 1,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_42",
+    "text": "a",
+    "romanText": "a",
+    "devanagariText": "a",
+    "start": 17.41,
+    "end": 17.519,
+    "confidence": 0.96,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_43",
+    "text": "3D",
+    "romanText": "3D",
+    "devanagariText": "3D",
+    "start": 17.519,
+    "end": 17.61,
+    "confidence": 0.97,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_44",
+    "text": "European",
+    "romanText": "European",
+    "devanagariText": "European",
+    "start": 17.61,
+    "end": 18.165,
+    "confidence": 0.1,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_45",
+    "text": "-based",
+    "romanText": "-based",
+    "devanagariText": "-based",
+    "start": 18.165,
+    "end": 18.52,
+    "confidence": 0.88,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_46",
+    "text": "digital",
+    "romanText": "digital",
+    "devanagariText": "digital",
+    "start": 18.52,
+    "end": 19.029,
+    "confidence": 0.92,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_47",
+    "text": "cadastral",
+    "romanText": "cadastral",
+    "devanagariText": "cadastral",
+    "start": 19.029,
+    "end": 19.63,
+    "confidence": 0.51,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_48",
+    "text": "system.",
+    "romanText": "system.",
+    "devanagariText": "system.",
+    "start": 19.63,
+    "end": 20.03,
+    "confidence": 0.99,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_49",
+    "text": "Our",
+    "romanText": "Our",
+    "devanagariText": "Our",
+    "start": 20.03,
+    "end": 20.209,
+    "confidence": 0.88,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_50",
+    "text": "solution",
+    "romanText": "solution",
+    "devanagariText": "solution",
+    "start": 20.209,
+    "end": 20.787,
+    "confidence": 0.97,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_51",
+    "text": "transform",
+    "romanText": "transform",
+    "devanagariText": "transform",
+    "start": 20.787,
+    "end": 21.347,
+    "confidence": 0.25,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_52",
+    "text": "traditional",
+    "romanText": "traditional",
+    "devanagariText": "traditional",
+    "start": 21.347,
+    "end": 22.134,
+    "confidence": 0.89,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_53",
+    "text": "2D",
+    "romanText": "2D",
+    "devanagariText": "2D",
+    "start": 22.134,
+    "end": 22.229,
+    "confidence": 0.98,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_54",
+    "text": "land",
+    "romanText": "land",
+    "devanagariText": "land",
+    "start": 22.229,
+    "end": 22.485,
+    "confidence": 0.96,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_55",
+    "text": "records",
+    "romanText": "records",
+    "devanagariText": "records",
+    "start": 22.485,
+    "end": 22.95,
+    "confidence": 0.84,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_56",
+    "text": "into",
+    "romanText": "into",
+    "devanagariText": "into",
+    "start": 22.95,
+    "end": 23.272,
+    "confidence": 0.99,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_57",
+    "text": "a",
+    "romanText": "a",
+    "devanagariText": "a",
+    "start": 23.272,
+    "end": 23.386,
+    "confidence": 0.98,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_58",
+    "text": "connected",
+    "romanText": "connected",
+    "devanagariText": "connected",
+    "start": 23.386,
+    "end": 24.012,
+    "confidence": 0.98,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_59",
+    "text": "3D",
+    "romanText": "3D",
+    "devanagariText": "3D",
+    "start": 24.012,
+    "end": 24.107,
+    "confidence": 0.99,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_60",
+    "text": "cadastral",
+    "romanText": "cadastral",
+    "devanagariText": "cadastral",
+    "start": 24.107,
+    "end": 24.733,
+    "confidence": 0.92,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_61",
+    "text": "system.",
+    "romanText": "system.",
+    "devanagariText": "system.",
+    "start": 24.733,
+    "end": 25.15,
+    "confidence": 1,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_62",
+    "text": "A",
+    "romanText": "A",
+    "devanagariText": "A",
+    "start": 25.65,
+    "end": 25.755,
+    "confidence": 0.98,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_63",
+    "text": "single",
+    "romanText": "single",
+    "devanagariText": "single",
+    "start": 25.755,
+    "end": 26.14,
+    "confidence": 1,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_64",
+    "text": "parcel",
+    "romanText": "parcel",
+    "devanagariText": "parcel",
+    "start": 26.14,
+    "end": 26.526,
+    "confidence": 0.98,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_65",
+    "text": "can",
+    "romanText": "can",
+    "devanagariText": "can",
+    "start": 26.526,
+    "end": 26.718,
+    "confidence": 1,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_66",
+    "text": "be",
+    "romanText": "be",
+    "devanagariText": "be",
+    "start": 26.718,
+    "end": 26.867,
+    "confidence": 1,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_67",
+    "text": "linked",
+    "romanText": "linked",
+    "devanagariText": "linked",
+    "start": 26.867,
+    "end": 27.252,
+    "confidence": 1,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_68",
+    "text": "to",
+    "romanText": "to",
+    "devanagariText": "to",
+    "start": 27.252,
+    "end": 27.401,
+    "confidence": 1,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_69",
+    "text": "its",
+    "romanText": "its",
+    "devanagariText": "its",
+    "start": 27.401,
+    "end": 27.594,
+    "confidence": 0.95,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_70",
+    "text": "building,",
+    "romanText": "building,",
+    "devanagariText": "building,",
+    "start": 27.594,
+    "end": 28.067,
+    "confidence": 0.94,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_71",
+    "text": "individual",
+    "romanText": "individual",
+    "devanagariText": "individual",
+    "start": 28.067,
+    "end": 28.75,
+    "confidence": 0.96,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_72",
+    "text": "vertical",
+    "romanText": "vertical",
+    "devanagariText": "vertical",
+    "start": 28.75,
+    "end": 29.284,
+    "confidence": 0.48,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_73",
+    "text": "unit",
+    "romanText": "unit",
+    "devanagariText": "unit",
+    "start": 29.284,
+    "end": 29.581,
+    "confidence": 0.9,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_74",
+    "text": "and",
+    "romanText": "and",
+    "devanagariText": "and",
+    "start": 29.581,
+    "end": 29.774,
+    "confidence": 0.75,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_75",
+    "text": "underground",
+    "romanText": "underground",
+    "devanagariText": "underground",
+    "start": 29.774,
+    "end": 30.44,
+    "confidence": 0.99,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_76",
+    "text": "infrastructure",
+    "romanText": "infrastructure",
+    "devanagariText": "infrastructure",
+    "start": 30.44,
+    "end": 31.359,
+    "confidence": 0.86,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_77",
+    "text": "through",
+    "romanText": "through",
+    "devanagariText": "through",
+    "start": 31.359,
+    "end": 31.727,
+    "confidence": 0.87,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_78",
+    "text": "a",
+    "romanText": "a",
+    "devanagariText": "a",
+    "start": 31.727,
+    "end": 31.832,
+    "confidence": 0.95,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_79",
+    "text": "unique",
+    "romanText": "unique",
+    "devanagariText": "unique",
+    "start": 31.832,
+    "end": 32.278,
+    "confidence": 0.98,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_80",
+    "text": "3D",
+    "romanText": "3D",
+    "devanagariText": "3D",
+    "start": 32.278,
+    "end": 32.366,
+    "confidence": 0.93,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_81",
+    "text": "European.",
+    "romanText": "European.",
+    "devanagariText": "European.",
+    "start": 32.366,
+    "end": 32.9,
+    "confidence": 0.02,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_82",
+    "text": "This",
+    "romanText": "This",
+    "devanagariText": "This",
+    "start": 33.56,
+    "end": 33.785,
+    "confidence": 0.97,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_83",
+    "text": "allows",
+    "romanText": "allows",
+    "devanagariText": "allows",
+    "start": 33.785,
+    "end": 34.153,
+    "confidence": 0.99,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_84",
+    "text": "every",
+    "romanText": "every",
+    "devanagariText": "every",
+    "start": 34.153,
+    "end": 34.537,
+    "confidence": 0.97,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_85",
+    "text": "property",
+    "romanText": "property",
+    "devanagariText": "property",
+    "start": 34.537,
+    "end": 35.046,
+    "confidence": 0.99,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_86",
+    "text": "space",
+    "romanText": "space",
+    "devanagariText": "space",
+    "start": 35.046,
+    "end": 35.372,
+    "confidence": 0.99,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_87",
+    "text": "within",
+    "romanText": "within",
+    "devanagariText": "within",
+    "start": 35.372,
+    "end": 35.739,
+    "confidence": 0.98,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_88",
+    "text": "a",
+    "romanText": "a",
+    "devanagariText": "a",
+    "start": 35.739,
+    "end": 35.839,
+    "confidence": 0.93,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_89",
+    "text": "building",
+    "romanText": "building",
+    "devanagariText": "building",
+    "start": 35.839,
+    "end": 36.29,
+    "confidence": 0.99,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_90",
+    "text": "to",
+    "romanText": "to",
+    "devanagariText": "to",
+    "start": 36.29,
+    "end": 36.432,
+    "confidence": 0.99,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_91",
+    "text": "be",
+    "romanText": "be",
+    "devanagariText": "be",
+    "start": 36.432,
+    "end": 36.574,
+    "confidence": 1,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_92",
+    "text": "identified",
+    "romanText": "identified",
+    "devanagariText": "identified",
+    "start": 36.574,
+    "end": 37.225,
+    "confidence": 0.99,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_93",
+    "text": "independently.",
+    "romanText": "independently.",
+    "devanagariText": "independently.",
+    "start": 37.225,
+    "end": 38.06,
+    "confidence": 0.99,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_94",
+    "text": "We",
+    "romanText": "We",
+    "devanagariText": "We",
+    "start": 38.78,
+    "end": 38.953,
+    "confidence": 0.48,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_95",
+    "text": "further",
+    "romanText": "further",
+    "devanagariText": "further",
+    "start": 38.953,
+    "end": 39.45,
+    "confidence": 0.96,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_96",
+    "text": "strengthen",
+    "romanText": "strengthen",
+    "devanagariText": "strengthen",
+    "start": 39.45,
+    "end": 40.099,
+    "confidence": 0.81,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_97",
+    "text": "the",
+    "romanText": "the",
+    "devanagariText": "the",
+    "start": 40.099,
+    "end": 40.323,
+    "confidence": 0.99,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_98",
+    "text": "system",
+    "romanText": "system",
+    "devanagariText": "system",
+    "start": 40.323,
+    "end": 40.769,
+    "confidence": 0.99,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_99",
+    "text": "with",
+    "romanText": "with",
+    "devanagariText": "with",
+    "start": 40.769,
+    "end": 41.043,
+    "confidence": 0.99,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_100",
+    "text": "blockchain,",
+    "romanText": "blockchain,",
+    "devanagariText": "blockchain,",
+    "start": 41.043,
+    "end": 41.693,
+    "confidence": 0.83,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_101",
+    "text": "maintaining",
+    "romanText": "maintaining",
+    "devanagariText": "maintaining",
+    "start": 41.693,
+    "end": 42.464,
+    "confidence": 0.99,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_102",
+    "text": "a",
+    "romanText": "a",
+    "devanagariText": "a",
+    "start": 42.464,
+    "end": 42.586,
+    "confidence": 0.95,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_103",
+    "text": "tamper",
+    "romanText": "tamper",
+    "devanagariText": "tamper",
+    "start": 42.586,
+    "end": 43.032,
+    "confidence": 0.97,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_104",
+    "text": "evident",
+    "romanText": "evident",
+    "devanagariText": "evident",
+    "start": 43.032,
+    "end": 43.6,
+    "confidence": 0.67,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_105",
+    "text": "and",
+    "romanText": "and",
+    "devanagariText": "and",
+    "start": 43.6,
+    "end": 43.824,
+    "confidence": 0.98,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_106",
+    "text": "verifiable",
+    "romanText": "verifiable",
+    "devanagariText": "verifiable",
+    "start": 43.824,
+    "end": 44.615,
+    "confidence": 0.99,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_107",
+    "text": "audit",
+    "romanText": "audit",
+    "devanagariText": "audit",
+    "start": 44.615,
+    "end": 45.011,
+    "confidence": 0.97,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_108",
+    "text": "trail",
+    "romanText": "trail",
+    "devanagariText": "trail",
+    "start": 45.011,
+    "end": 45.336,
+    "confidence": 0.96,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_109",
+    "text": "for",
+    "romanText": "for",
+    "devanagariText": "for",
+    "start": 45.336,
+    "end": 45.559,
+    "confidence": 0.95,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_110",
+    "text": "critical",
+    "romanText": "critical",
+    "devanagariText": "critical",
+    "start": 45.559,
+    "end": 46.178,
+    "confidence": 0.98,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_111",
+    "text": "cadastral",
+    "romanText": "cadastral",
+    "devanagariText": "cadastral",
+    "start": 46.178,
+    "end": 46.848,
+    "confidence": 0.55,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_112",
+    "text": "transactions,",
+    "romanText": "transactions,",
+    "devanagariText": "transactions,",
+    "start": 46.848,
+    "end": 47.67,
+    "confidence": 0.99,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_113",
+    "text": "ensuring",
+    "romanText": "ensuring",
+    "devanagariText": "ensuring",
+    "start": 48.18,
+    "end": 48.657,
+    "confidence": 0.98,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_114",
+    "text": "greater",
+    "romanText": "greater",
+    "devanagariText": "greater",
+    "start": 48.657,
+    "end": 49.04,
+    "confidence": 1,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_115",
+    "text": "trust,",
+    "romanText": "trust,",
+    "devanagariText": "trust,",
+    "start": 49.04,
+    "end": 49.29,
+    "confidence": 0.93,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_116",
+    "text": "transparency",
+    "romanText": "transparency",
+    "devanagariText": "transparency",
+    "start": 49.74,
+    "end": 50.504,
+    "confidence": 1,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_117",
+    "text": "and",
+    "romanText": "and",
+    "devanagariText": "and",
+    "start": 50.504,
+    "end": 50.695,
+    "confidence": 0.82,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_118",
+    "text": "traceability.",
+    "romanText": "traceability.",
+    "devanagariText": "traceability.",
+    "start": 50.695,
+    "end": 51.52,
+    "confidence": 0.89,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_119",
+    "text": "Our",
+    "romanText": "Our",
+    "devanagariText": "Our",
+    "start": 51.72,
+    "end": 51.908,
+    "confidence": 0.98,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_120",
+    "text": "system",
+    "romanText": "system",
+    "devanagariText": "system",
+    "start": 51.908,
+    "end": 52.285,
+    "confidence": 0.99,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_121",
+    "text": "also",
+    "romanText": "also",
+    "devanagariText": "also",
+    "start": 52.285,
+    "end": 52.575,
+    "confidence": 0.99,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_122",
+    "text": "provides",
+    "romanText": "provides",
+    "devanagariText": "provides",
+    "start": 52.575,
+    "end": 53.097,
+    "confidence": 0.99,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_123",
+    "text": "detailed",
+    "romanText": "detailed",
+    "devanagariText": "detailed",
+    "start": 53.097,
+    "end": 53.619,
+    "confidence": 1,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_124",
+    "text": "property",
+    "romanText": "property",
+    "devanagariText": "property",
+    "start": 53.619,
+    "end": 54.141,
+    "confidence": 0.98,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_125",
+    "text": "information",
+    "romanText": "information",
+    "devanagariText": "information",
+    "start": 54.141,
+    "end": 54.85,
+    "confidence": 1,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_126",
+    "text": "for",
+    "romanText": "for",
+    "devanagariText": "for",
+    "start": 54.85,
+    "end": 55.039,
+    "confidence": 1,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_127",
+    "text": "individual",
+    "romanText": "individual",
+    "devanagariText": "individual",
+    "start": 55.039,
+    "end": 55.706,
+    "confidence": 0.99,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_128",
+    "text": "flats",
+    "romanText": "flats",
+    "devanagariText": "flats",
+    "start": 55.706,
+    "end": 55.979,
+    "confidence": 0.93,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_129",
+    "text": "including",
+    "romanText": "including",
+    "devanagariText": "including",
+    "start": 55.979,
+    "end": 56.544,
+    "confidence": 0.57,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_130",
+    "text": "the",
+    "romanText": "the",
+    "devanagariText": "the",
+    "start": 56.544,
+    "end": 56.732,
+    "confidence": 0.72,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_131",
+    "text": "RERA,",
+    "romanText": "RERA,",
+    "devanagariText": "RERA,",
+    "start": 56.732,
+    "end": 57.023,
+    "confidence": 0.51,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_132",
+    "text": "registration",
+    "romanText": "registration",
+    "devanagariText": "registration",
+    "start": 57.023,
+    "end": 57.776,
+    "confidence": 0.94,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_133",
+    "text": "details",
+    "romanText": "details",
+    "devanagariText": "details",
+    "start": 57.776,
+    "end": 58.195,
+    "confidence": 0.98,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_134",
+    "text": "and",
+    "romanText": "and",
+    "devanagariText": "and",
+    "start": 58.195,
+    "end": 58.383,
+    "confidence": 0.79,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_135",
+    "text": "carpet",
+    "romanText": "carpet",
+    "devanagariText": "carpet",
+    "start": 58.383,
+    "end": 58.759,
+    "confidence": 0.92,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_136",
+    "text": "area.",
+    "romanText": "area.",
+    "devanagariText": "area.",
+    "start": 58.759,
+    "end": 59.05,
+    "confidence": 0.89,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_137",
+    "text": "This",
+    "romanText": "This",
+    "devanagariText": "This",
+    "start": 59.14,
+    "end": 59.355,
+    "confidence": 0.97,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_138",
+    "text": "gives",
+    "romanText": "gives",
+    "devanagariText": "gives",
+    "start": 59.355,
+    "end": 59.667,
+    "confidence": 0.99,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_139",
+    "text": "users",
+    "romanText": "users",
+    "devanagariText": "users",
+    "start": 59.667,
+    "end": 59.978,
+    "confidence": 0.46,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_140",
+    "text": "a",
+    "romanText": "a",
+    "devanagariText": "a",
+    "start": 59.978,
+    "end": 60.074,
+    "confidence": 0.45,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_141",
+    "text": "clear",
+    "romanText": "clear",
+    "devanagariText": "clear",
+    "start": 60.074,
+    "end": 60.329,
+    "confidence": 0.16,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_142",
+    "text": "and",
+    "romanText": "and",
+    "devanagariText": "and",
+    "start": 60.329,
+    "end": 60.505,
+    "confidence": 0.95,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_143",
+    "text": "standardized",
+    "romanText": "standardized",
+    "devanagariText": "standardized",
+    "start": 60.505,
+    "end": 61.207,
+    "confidence": 0.73,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_144",
+    "text": "view",
+    "romanText": "view",
+    "devanagariText": "view",
+    "start": 61.207,
+    "end": 61.422,
+    "confidence": 0.98,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_145",
+    "text": "of",
+    "romanText": "of",
+    "devanagariText": "of",
+    "start": 61.422,
+    "end": 61.558,
+    "confidence": 0.99,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_146",
+    "text": "the",
+    "romanText": "the",
+    "devanagariText": "the",
+    "start": 61.558,
+    "end": 61.733,
+    "confidence": 0.95,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_147",
+    "text": "actual",
+    "romanText": "actual",
+    "devanagariText": "actual",
+    "start": 61.733,
+    "end": 62.084,
+    "confidence": 0.99,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_148",
+    "text": "property",
+    "romanText": "property",
+    "devanagariText": "property",
+    "start": 62.084,
+    "end": 62.571,
+    "confidence": 0.9,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_149",
+    "text": "space",
+    "romanText": "space",
+    "devanagariText": "space",
+    "start": 62.571,
+    "end": 62.882,
+    "confidence": 1,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_150",
+    "text": "within",
+    "romanText": "within",
+    "devanagariText": "within",
+    "start": 62.882,
+    "end": 63.234,
+    "confidence": 0.98,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_151",
+    "text": "the",
+    "romanText": "the",
+    "devanagariText": "the",
+    "start": 63.234,
+    "end": 63.409,
+    "confidence": 0.98,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_152",
+    "text": "building.",
+    "romanText": "building.",
+    "devanagariText": "building.",
+    "start": 63.409,
+    "end": 63.84,
+    "confidence": 0.99,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_153",
+    "text": "One",
+    "romanText": "One",
+    "devanagariText": "One",
+    "start": 64.22,
+    "end": 64.395,
+    "confidence": 0.03,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_154",
+    "text": "is",
+    "romanText": "is",
+    "devanagariText": "is",
+    "start": 64.395,
+    "end": 64.498,
+    "confidence": 0.98,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_155",
+    "text": "designed",
+    "romanText": "designed",
+    "devanagariText": "designed",
+    "start": 64.498,
+    "end": 64.867,
+    "confidence": 0.98,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_156",
+    "text": "to",
+    "romanText": "to",
+    "devanagariText": "to",
+    "start": 64.867,
+    "end": 64.969,
+    "confidence": 1,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_157",
+    "text": "work",
+    "romanText": "work",
+    "devanagariText": "work",
+    "start": 64.969,
+    "end": 65.132,
+    "confidence": 1,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_158",
+    "text": "with",
+    "romanText": "with",
+    "devanagariText": "with",
+    "start": 65.132,
+    "end": 65.296,
+    "confidence": 0.99,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_159",
+    "text": "the",
+    "romanText": "the",
+    "devanagariText": "the",
+    "start": 65.296,
+    "end": 65.429,
+    "confidence": 0.97,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_160",
+    "text": "Maharashtra",
+    "romanText": "Maharashtra",
+    "devanagariText": "Maharashtra",
+    "start": 65.429,
+    "end": 65.93,
+    "confidence": 0.96,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_161",
+    "text": "cadastral",
+    "romanText": "cadastral",
+    "devanagariText": "cadastral",
+    "start": 65.93,
+    "end": 66.329,
+    "confidence": 0.39,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_162",
+    "text": "ecosystem,",
+    "romanText": "ecosystem,",
+    "devanagariText": "ecosystem,",
+    "start": 66.329,
+    "end": 66.77,
+    "confidence": 0.95,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_163",
+    "text": "connecting",
+    "romanText": "connecting",
+    "devanagariText": "connecting",
+    "start": 67.06,
+    "end": 67.495,
+    "confidence": 0.98,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_164",
+    "text": "property",
+    "romanText": "property",
+    "devanagariText": "property",
+    "start": 67.495,
+    "end": 67.869,
+    "confidence": 0.99,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_165",
+    "text": "information",
+    "romanText": "information",
+    "devanagariText": "information",
+    "start": 67.869,
+    "end": 68.378,
+    "confidence": 1,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_166",
+    "text": "across",
+    "romanText": "across",
+    "devanagariText": "across",
+    "start": 68.378,
+    "end": 68.647,
+    "confidence": 1,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_167",
+    "text": "districts,",
+    "romanText": "districts,",
+    "devanagariText": "districts,",
+    "start": 68.647,
+    "end": 69.009,
+    "confidence": 0.98,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_168",
+    "text": "alukas,",
+    "romanText": "alukas,",
+    "devanagariText": "alukas,",
+    "start": 69.009,
+    "end": 69.321,
+    "confidence": 0.47,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_169",
+    "text": "villages",
+    "romanText": "villages",
+    "devanagariText": "villages",
+    "start": 69.321,
+    "end": 69.695,
+    "confidence": 0.99,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_170",
+    "text": "and",
+    "romanText": "and",
+    "devanagariText": "and",
+    "start": 69.695,
+    "end": 69.83,
+    "confidence": 0.68,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_171",
+    "text": "survey",
+    "romanText": "survey",
+    "devanagariText": "survey",
+    "start": 69.83,
+    "end": 70.1,
+    "confidence": 0.72,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_172",
+    "text": "records.",
+    "romanText": "records.",
+    "devanagariText": "records.",
+    "start": 70.1,
+    "end": 70.4,
+    "confidence": 0.78,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_173",
+    "text": "Since",
+    "romanText": "Since",
+    "devanagariText": "Since",
+    "start": 70.93,
+    "end": 71.2,
+    "confidence": 0.98,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_174",
+    "text": "many",
+    "romanText": "many",
+    "devanagariText": "many",
+    "start": 71.2,
+    "end": 71.436,
+    "confidence": 0.99,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_175",
+    "text": "government",
+    "romanText": "government",
+    "devanagariText": "government",
+    "start": 71.436,
+    "end": 71.928,
+    "confidence": 0.96,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_176",
+    "text": "portals",
+    "romanText": "portals",
+    "devanagariText": "portals",
+    "start": 71.928,
+    "end": 72.268,
+    "confidence": 0.69,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_177",
+    "text": "rely",
+    "romanText": "rely",
+    "devanagariText": "rely",
+    "start": 72.268,
+    "end": 72.503,
+    "confidence": 1,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_178",
+    "text": "on",
+    "romanText": "on",
+    "devanagariText": "on",
+    "start": 72.503,
+    "end": 72.621,
+    "confidence": 1,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_179",
+    "text": "legacy",
+    "romanText": "legacy",
+    "devanagariText": "legacy",
+    "start": 72.621,
+    "end": 72.974,
+    "confidence": 0.97,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_180",
+    "text": "web",
+    "romanText": "web",
+    "devanagariText": "web",
+    "start": 72.974,
+    "end": 73.127,
+    "confidence": 0.98,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_181",
+    "text": "interfaces",
+    "romanText": "interfaces",
+    "devanagariText": "interfaces",
+    "start": 73.127,
+    "end": 73.667,
+    "confidence": 0.99,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_182",
+    "text": "rather",
+    "romanText": "rather",
+    "devanagariText": "rather",
+    "start": 73.667,
+    "end": 73.972,
+    "confidence": 0.96,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_183",
+    "text": "than",
+    "romanText": "than",
+    "devanagariText": "than",
+    "start": 73.972,
+    "end": 74.159,
+    "confidence": 0.99,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_184",
+    "text": "modern",
+    "romanText": "modern",
+    "devanagariText": "modern",
+    "start": 74.159,
+    "end": 74.464,
+    "confidence": 1,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_185",
+    "text": "APIs,",
+    "romanText": "APIs,",
+    "devanagariText": "APIs,",
+    "start": 74.464,
+    "end": 74.7,
+    "confidence": 0.98,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_186",
+    "text": "we",
+    "romanText": "we",
+    "devanagariText": "we",
+    "start": 75.19,
+    "end": 75.309,
+    "confidence": 0.98,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_187",
+    "text": "developed",
+    "romanText": "developed",
+    "devanagariText": "developed",
+    "start": 75.309,
+    "end": 75.821,
+    "confidence": 0.89,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_188",
+    "text": "a",
+    "romanText": "a",
+    "devanagariText": "a",
+    "start": 75.821,
+    "end": 75.905,
+    "confidence": 0.89,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_189",
+    "text": "dedicated",
+    "romanText": "dedicated",
+    "devanagariText": "dedicated",
+    "start": 75.905,
+    "end": 76.417,
+    "confidence": 1,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_190",
+    "text": "integrated",
+    "romanText": "integrated",
+    "devanagariText": "integrated",
+    "start": 76.417,
+    "end": 76.964,
+    "confidence": 0.55,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_191",
+    "text": "layer",
+    "romanText": "layer",
+    "devanagariText": "layer",
+    "start": 76.964,
+    "end": 77.189,
+    "confidence": 0.99,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_192",
+    "text": "with",
+    "romanText": "with",
+    "devanagariText": "with",
+    "start": 77.189,
+    "end": 77.378,
+    "confidence": 0.98,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_193",
+    "text": "scraping",
+    "romanText": "scraping",
+    "devanagariText": "scraping",
+    "start": 77.378,
+    "end": 77.757,
+    "confidence": 0.86,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_194",
+    "text": "and",
+    "romanText": "and",
+    "devanagariText": "and",
+    "start": 77.757,
+    "end": 77.911,
+    "confidence": 0.99,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_195",
+    "text": "adapter",
+    "romanText": "adapter",
+    "devanagariText": "adapter",
+    "start": 77.911,
+    "end": 78.304,
+    "confidence": 0.86,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_196",
+    "text": "capabilities.",
+    "romanText": "capabilities.",
+    "devanagariText": "capabilities.",
+    "start": 78.304,
+    "end": 78.97,
+    "confidence": 0.99,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_197",
+    "text": "This",
+    "romanText": "This",
+    "devanagariText": "This",
+    "start": 78.97,
+    "end": 79.108,
+    "confidence": 0.22,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_198",
+    "text": "allows",
+    "romanText": "allows",
+    "devanagariText": "allows",
+    "start": 79.108,
+    "end": 79.415,
+    "confidence": 0.98,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_199",
+    "text": "a",
+    "romanText": "a",
+    "devanagariText": "a",
+    "start": 79.415,
+    "end": 79.499,
+    "confidence": 0.35,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_200",
+    "text": "system",
+    "romanText": "system",
+    "devanagariText": "system",
+    "start": 79.499,
+    "end": 79.806,
+    "confidence": 0.99,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_201",
+    "text": "to",
+    "romanText": "to",
+    "devanagariText": "to",
+    "start": 79.806,
+    "end": 79.925,
+    "confidence": 0.99,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_202",
+    "text": "retrieve",
+    "romanText": "retrieve",
+    "devanagariText": "retrieve",
+    "start": 79.925,
+    "end": 80.35,
+    "confidence": 0.99,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_203",
+    "text": "and",
+    "romanText": "and",
+    "devanagariText": "and",
+    "start": 80.35,
+    "end": 80.504,
+    "confidence": 0.99,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_204",
+    "text": "process",
+    "romanText": "process",
+    "devanagariText": "process",
+    "start": 80.504,
+    "end": 80.846,
+    "confidence": 0.99,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_205",
+    "text": "cadastral",
+    "romanText": "cadastral",
+    "devanagariText": "cadastral",
+    "start": 80.846,
+    "end": 81.306,
+    "confidence": 0.46,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_206",
+    "text": "information",
+    "romanText": "information",
+    "devanagariText": "information",
+    "start": 81.306,
+    "end": 81.885,
+    "confidence": 0.99,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_207",
+    "text": "while",
+    "romanText": "while",
+    "devanagariText": "while",
+    "start": 81.885,
+    "end": 82.157,
+    "confidence": 0.86,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_208",
+    "text": "handling",
+    "romanText": "handling",
+    "devanagariText": "handling",
+    "start": 82.157,
+    "end": 82.534,
+    "confidence": 1,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_209",
+    "text": "unavailable",
+    "romanText": "unavailable",
+    "devanagariText": "unavailable",
+    "start": 82.534,
+    "end": 83.162,
+    "confidence": 0.82,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_210",
+    "text": "or",
+    "romanText": "or",
+    "devanagariText": "or",
+    "start": 83.162,
+    "end": 83.281,
+    "confidence": 0.98,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_211",
+    "text": "incomplete",
+    "romanText": "incomplete",
+    "devanagariText": "incomplete",
+    "start": 83.281,
+    "end": 83.825,
+    "confidence": 0.96,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_212",
+    "text": "government",
+    "romanText": "government",
+    "devanagariText": "government",
+    "start": 83.825,
+    "end": 84.32,
+    "confidence": 0.94,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_213",
+    "text": "response",
+    "romanText": "response",
+    "devanagariText": "response",
+    "start": 84.32,
+    "end": 84.746,
+    "confidence": 0.98,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_214",
+    "text": "gracefully.",
+    "romanText": "gracefully.",
+    "devanagariText": "gracefully.",
+    "start": 84.746,
+    "end": 85.29,
+    "confidence": 0.76,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_215",
+    "text": "We",
+    "romanText": "We",
+    "devanagariText": "We",
+    "start": 85.89,
+    "end": 86.016,
+    "confidence": 0.94,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_216",
+    "text": "also",
+    "romanText": "also",
+    "devanagariText": "also",
+    "start": 86.016,
+    "end": 86.268,
+    "confidence": 0.99,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_217",
+    "text": "introduce",
+    "romanText": "introduce",
+    "devanagariText": "introduce",
+    "start": 86.268,
+    "end": 86.809,
+    "confidence": 0.63,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_218",
+    "text": "a",
+    "romanText": "a",
+    "devanagariText": "a",
+    "start": 86.809,
+    "end": 86.898,
+    "confidence": 0.63,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_219",
+    "text": "time",
+    "romanText": "time",
+    "devanagariText": "time",
+    "start": 86.898,
+    "end": 87.149,
+    "confidence": 0.91,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_220",
+    "text": "dimension,",
+    "romanText": "dimension,",
+    "devanagariText": "dimension,",
+    "start": 87.149,
+    "end": 87.638,
+    "confidence": 0.83,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_221",
+    "text": "allows",
+    "romanText": "allows",
+    "devanagariText": "allows",
+    "start": 87.638,
+    "end": 87.964,
+    "confidence": 0.9,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_222",
+    "text": "us",
+    "romanText": "us",
+    "devanagariText": "us",
+    "start": 87.964,
+    "end": 88.09,
+    "confidence": 1,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_223",
+    "text": "to",
+    "romanText": "to",
+    "devanagariText": "to",
+    "start": 88.09,
+    "end": 88.216,
+    "confidence": 0.99,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_224",
+    "text": "track",
+    "romanText": "track",
+    "devanagariText": "track",
+    "start": 88.216,
+    "end": 88.453,
+    "confidence": 1,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_225",
+    "text": "how",
+    "romanText": "how",
+    "devanagariText": "how",
+    "start": 88.453,
+    "end": 88.616,
+    "confidence": 0.97,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_226",
+    "text": "buildings",
+    "romanText": "buildings",
+    "devanagariText": "buildings",
+    "start": 88.616,
+    "end": 89.053,
+    "confidence": 0.96,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_227",
+    "text": "and",
+    "romanText": "and",
+    "devanagariText": "and",
+    "start": 89.053,
+    "end": 89.216,
+    "confidence": 0.99,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_228",
+    "text": "urban",
+    "romanText": "urban",
+    "devanagariText": "urban",
+    "start": 89.216,
+    "end": 89.505,
+    "confidence": 0.99,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_229",
+    "text": "development",
+    "romanText": "development",
+    "devanagariText": "development",
+    "start": 89.505,
+    "end": 90.12,
+    "confidence": 0.99,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_230",
+    "text": "change",
+    "romanText": "change",
+    "devanagariText": "change",
+    "start": 90.12,
+    "end": 90.446,
+    "confidence": 0.89,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_231",
+    "text": "over",
+    "romanText": "over",
+    "devanagariText": "over",
+    "start": 90.446,
+    "end": 90.698,
+    "confidence": 1,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_232",
+    "text": "different",
+    "romanText": "different",
+    "devanagariText": "different",
+    "start": 90.698,
+    "end": 91.187,
+    "confidence": 0.99,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_233",
+    "text": "periods.",
+    "romanText": "periods.",
+    "devanagariText": "periods.",
+    "start": 91.187,
+    "end": 91.55,
+    "confidence": 1,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_234",
+    "text": "Separately,",
+    "romanText": "Separately,",
+    "devanagariText": "Separately,",
+    "start": 92.22,
+    "end": 92.844,
+    "confidence": 0.98,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_235",
+    "text": "our",
+    "romanText": "our",
+    "devanagariText": "our",
+    "start": 92.844,
+    "end": 93.005,
+    "confidence": 0.48,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_236",
+    "text": "flood",
+    "romanText": "flood",
+    "devanagariText": "flood",
+    "start": 93.005,
+    "end": 93.24,
+    "confidence": 0.96,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_237",
+    "text": "simulation",
+    "romanText": "simulation",
+    "devanagariText": "simulation",
+    "start": 93.24,
+    "end": 93.812,
+    "confidence": 0.98,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_238",
+    "text": "shows",
+    "romanText": "shows",
+    "devanagariText": "shows",
+    "start": 93.812,
+    "end": 94.047,
+    "confidence": 1,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_239",
+    "text": "how",
+    "romanText": "how",
+    "devanagariText": "how",
+    "start": 94.047,
+    "end": 94.208,
+    "confidence": 0.99,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_240",
+    "text": "rising",
+    "romanText": "rising",
+    "devanagariText": "rising",
+    "start": 94.208,
+    "end": 94.531,
+    "confidence": 0.92,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_241",
+    "text": "water",
+    "romanText": "water",
+    "devanagariText": "water",
+    "start": 94.531,
+    "end": 94.818,
+    "confidence": 1,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_242",
+    "text": "levels",
+    "romanText": "levels",
+    "devanagariText": "levels",
+    "start": 94.818,
+    "end": 95.14,
+    "confidence": 0.99,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_243",
+    "text": "could",
+    "romanText": "could",
+    "devanagariText": "could",
+    "start": 95.14,
+    "end": 95.375,
+    "confidence": 0.97,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_244",
+    "text": "impact",
+    "romanText": "impact",
+    "devanagariText": "impact",
+    "start": 95.375,
+    "end": 95.698,
+    "confidence": 0.99,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_245",
+    "text": "buildings,",
+    "romanText": "buildings,",
+    "devanagariText": "buildings,",
+    "start": 95.698,
+    "end": 96.131,
+    "confidence": 0.85,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_246",
+    "text": "parcels",
+    "romanText": "parcels",
+    "devanagariText": "parcels",
+    "start": 96.131,
+    "end": 96.49,
+    "confidence": 0.57,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_247",
+    "text": "and",
+    "romanText": "and",
+    "devanagariText": "and",
+    "start": 96.49,
+    "end": 96.652,
+    "confidence": 0.79,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_248",
+    "text": "surrounding",
+    "romanText": "surrounding",
+    "devanagariText": "surrounding",
+    "start": 96.652,
+    "end": 97.21,
+    "confidence": 0.98,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_249",
+    "text": "infrastructure.",
+    "romanText": "infrastructure.",
+    "devanagariText": "infrastructure.",
+    "start": 97.21,
+    "end": 97.98,
+    "confidence": 0.98,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_250",
+    "text": "To",
+    "romanText": "To",
+    "devanagariText": "To",
+    "start": 97.98,
+    "end": 98.168,
+    "confidence": 0.82,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_251",
+    "text": "conclude,",
+    "romanText": "conclude,",
+    "devanagariText": "conclude,",
+    "start": 98.168,
+    "end": 98.879,
+    "confidence": 1,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_252",
+    "text": "our",
+    "romanText": "our",
+    "devanagariText": "our",
+    "start": 98.879,
+    "end": 99.136,
+    "confidence": 0.31,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_253",
+    "text": "solution",
+    "romanText": "solution",
+    "devanagariText": "solution",
+    "start": 99.136,
+    "end": 99.847,
+    "confidence": 0.97,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_254",
+    "text": "goes",
+    "romanText": "goes",
+    "devanagariText": "goes",
+    "start": 99.847,
+    "end": 100.162,
+    "confidence": 0.99,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_255",
+    "text": "beyond",
+    "romanText": "beyond",
+    "devanagariText": "beyond",
+    "start": 100.162,
+    "end": 100.593,
+    "confidence": 0.99,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_256",
+    "text": "traditional",
+    "romanText": "traditional",
+    "devanagariText": "traditional",
+    "start": 100.593,
+    "end": 101.56,
+    "confidence": 0.99,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_257",
+    "text": "land",
+    "romanText": "land",
+    "devanagariText": "land",
+    "start": 101.56,
+    "end": 101.875,
+    "confidence": 0.87,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_258",
+    "text": "records",
+    "romanText": "records",
+    "devanagariText": "records",
+    "start": 101.875,
+    "end": 102.446,
+    "confidence": 0.98,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_259",
+    "text": "by",
+    "romanText": "by",
+    "devanagariText": "by",
+    "start": 102.446,
+    "end": 102.645,
+    "confidence": 0.93,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_260",
+    "text": "combining",
+    "romanText": "combining",
+    "devanagariText": "combining",
+    "start": 102.645,
+    "end": 103.414,
+    "confidence": 1,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_261",
+    "text": "3D",
+    "romanText": "3D",
+    "devanagariText": "3D",
+    "start": 103.414,
+    "end": 103.531,
+    "confidence": 0.93,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_262",
+    "text": "uelpings,",
+    "romanText": "uelpings,",
+    "devanagariText": "uelpings,",
+    "start": 103.531,
+    "end": 104.16,
+    "confidence": 0.26,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_263",
+    "text": "vertical",
+    "romanText": "vertical",
+    "devanagariText": "vertical",
+    "start": 104.72,
+    "end": 105.162,
+    "confidence": 0.95,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_264",
+    "text": "property",
+    "romanText": "property",
+    "devanagariText": "property",
+    "start": 105.162,
+    "end": 105.605,
+    "confidence": 0.98,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_265",
+    "text": "mapping,",
+    "romanText": "mapping,",
+    "devanagariText": "mapping,",
+    "start": 105.605,
+    "end": 105.96,
+    "confidence": 0.94,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_266",
+    "text": "underground",
+    "romanText": "underground",
+    "devanagariText": "underground",
+    "start": 106.46,
+    "end": 107.005,
+    "confidence": 0.97,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_267",
+    "text": "assets,",
+    "romanText": "assets,",
+    "devanagariText": "assets,",
+    "start": 107.005,
+    "end": 107.32,
+    "confidence": 0.99,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_268",
+    "text": "blockchain",
+    "romanText": "blockchain",
+    "devanagariText": "blockchain",
+    "start": 108.13,
+    "end": 108.605,
+    "confidence": 0.91,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_269",
+    "text": "-based",
+    "romanText": "-based",
+    "devanagariText": "-based",
+    "start": 108.605,
+    "end": 108.895,
+    "confidence": 0.81,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_270",
+    "text": "verification,",
+    "romanText": "verification,",
+    "devanagariText": "verification,",
+    "start": 108.895,
+    "end": 109.6,
+    "confidence": 0.99,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_271",
+    "text": "time",
+    "romanText": "time",
+    "devanagariText": "time",
+    "start": 109.95,
+    "end": 110.237,
+    "confidence": 0.97,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_272",
+    "text": "-based",
+    "romanText": "-based",
+    "devanagariText": "-based",
+    "start": 110.237,
+    "end": 110.567,
+    "confidence": 0.96,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_273",
+    "text": "development",
+    "romanText": "development",
+    "devanagariText": "development",
+    "start": 110.567,
+    "end": 111.269,
+    "confidence": 1,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_274",
+    "text": "tracking",
+    "romanText": "tracking",
+    "devanagariText": "tracking",
+    "start": 111.269,
+    "end": 111.725,
+    "confidence": 0.99,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_275",
+    "text": "and",
+    "romanText": "and",
+    "devanagariText": "and",
+    "start": 111.725,
+    "end": 111.911,
+    "confidence": 0.47,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_276",
+    "text": "flood",
+    "romanText": "flood",
+    "devanagariText": "flood",
+    "start": 111.911,
+    "end": 112.182,
+    "confidence": 0.95,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_277",
+    "text": "simulation",
+    "romanText": "simulation",
+    "devanagariText": "simulation",
+    "start": 112.182,
+    "end": 112.841,
+    "confidence": 0.97,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_278",
+    "text": "into",
+    "romanText": "into",
+    "devanagariText": "into",
+    "start": 112.841,
+    "end": 113.128,
+    "confidence": 0.99,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_279",
+    "text": "one",
+    "romanText": "one",
+    "devanagariText": "one",
+    "start": 113.128,
+    "end": 113.374,
+    "confidence": 0.94,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_280",
+    "text": "platform.",
+    "romanText": "platform.",
+    "devanagariText": "platform.",
+    "start": 113.374,
+    "end": 113.83,
+    "confidence": 0.99,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_281",
+    "text": "Together,",
+    "romanText": "Together,",
+    "devanagariText": "Together,",
+    "start": 114.47,
+    "end": 114.963,
+    "confidence": 0.99,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_282",
+    "text": "these",
+    "romanText": "these",
+    "devanagariText": "these",
+    "start": 114.963,
+    "end": 115.278,
+    "confidence": 0.95,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_283",
+    "text": "features",
+    "romanText": "features",
+    "devanagariText": "features",
+    "start": 115.278,
+    "end": 115.771,
+    "confidence": 0.99,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_284",
+    "text": "create",
+    "romanText": "create",
+    "devanagariText": "create",
+    "start": 115.771,
+    "end": 116.127,
+    "confidence": 0.8,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_285",
+    "text": "a",
+    "romanText": "a",
+    "devanagariText": "a",
+    "start": 116.127,
+    "end": 116.224,
+    "confidence": 0.96,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_286",
+    "text": "trusted,",
+    "romanText": "trusted,",
+    "devanagariText": "trusted,",
+    "start": 116.224,
+    "end": 116.62,
+    "confidence": 0.99,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_287",
+    "text": "intelligent",
+    "romanText": "intelligent",
+    "devanagariText": "intelligent",
+    "start": 116.98,
+    "end": 117.677,
+    "confidence": 1,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_288",
+    "text": "and",
+    "romanText": "and",
+    "devanagariText": "and",
+    "start": 117.677,
+    "end": 117.861,
+    "confidence": 0.77,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_289",
+    "text": "future",
+    "romanText": "future",
+    "devanagariText": "future",
+    "start": 117.861,
+    "end": 118.289,
+    "confidence": 0.99,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_290",
+    "text": "-ready",
+    "romanText": "-ready",
+    "devanagariText": "-ready",
+    "start": 118.289,
+    "end": 118.617,
+    "confidence": 0.95,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_291",
+    "text": "digital",
+    "romanText": "digital",
+    "devanagariText": "digital",
+    "start": 118.617,
+    "end": 119.087,
+    "confidence": 0.95,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_292",
+    "text": "cadastral",
+    "romanText": "cadastral",
+    "devanagariText": "cadastral",
+    "start": 119.087,
+    "end": 119.64,
+    "confidence": 0.51,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_293",
+    "text": "system",
+    "romanText": "system",
+    "devanagariText": "system",
+    "start": 119.64,
+    "end": 120.01,
+    "confidence": 0.98,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_294",
+    "text": "for",
+    "romanText": "for",
+    "devanagariText": "for",
+    "start": 120.01,
+    "end": 120.194,
+    "confidence": 0.96,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_295",
+    "text": "better",
+    "romanText": "better",
+    "devanagariText": "better",
+    "start": 120.194,
+    "end": 120.564,
+    "confidence": 0.98,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_296",
+    "text": "land",
+    "romanText": "land",
+    "devanagariText": "land",
+    "start": 120.564,
+    "end": 120.79,
+    "confidence": 0.97,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_297",
+    "text": "management",
+    "romanText": "management",
+    "devanagariText": "management",
+    "start": 120.79,
+    "end": 121.445,
+    "confidence": 1,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_298",
+    "text": "and",
+    "romanText": "and",
+    "devanagariText": "and",
+    "start": 121.445,
+    "end": 121.629,
+    "confidence": 0.99,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_299",
+    "text": "urban",
+    "romanText": "urban",
+    "devanagariText": "urban",
+    "start": 121.629,
+    "end": 121.957,
+    "confidence": 1,
+    "isCodeMixedEnglish": true
+  },
+  {
+    "id": "sih_300",
+    "text": "planning.",
+    "romanText": "planning.",
+    "devanagariText": "planning.",
+    "start": 121.957,
+    "end": 122.41,
+    "confidence": 1,
+    "isCodeMixedEnglish": true
+  }
+]
