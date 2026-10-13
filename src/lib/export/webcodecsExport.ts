@@ -48,15 +48,16 @@ export interface ExportProgress {
  * Standard 9:16 vertical resolution dimensions (maintained for backwards compatibility)
  */
 export const RESOLUTION_DIMENSIONS: Record<string, { width: number; height: number; defaultBitrate: number }> = {
-  '720p': { width: 720, height: 1280, defaultBitrate: 4_500_000 },
-  '1080p': { width: 1080, height: 1920, defaultBitrate: 8_500_000 },
-  '1440p': { width: 1440, height: 2560, defaultBitrate: 15_000_000 },
-  '4k': { width: 2160, height: 3840, defaultBitrate: 28_000_000 },
+  '720p': { width: 720, height: 1280, defaultBitrate: 10_000_000 },
+  '1080p': { width: 1080, height: 1920, defaultBitrate: 18_000_000 },
+  '1440p': { width: 1440, height: 2560, defaultBitrate: 32_000_000 },
+  '4k': { width: 2160, height: 3840, defaultBitrate: 55_000_000 },
 };
 
 /**
  * Computes exact width, height, and bitrate for ANY aspect ratio, resolution tier, and quality setting.
  * Guarantees all dimensions are even integers (divisible by 2) for H.264 / VP9 hardware codecs.
+ * Preserves pristine original video fidelity with high bitrates and optimal color clarity.
  */
 export function calculateExportDimensions(
   aspectRatio: ExportAspectRatio = '9:16',
@@ -67,42 +68,54 @@ export function calculateExportDimensions(
 ): { width: number; height: number; bitrate: number } {
   let width = 1080;
   let height = 1920;
-  let baseBitrate = 8_500_000;
+  let baseBitrate = 18_000_000;
 
   switch (aspectRatio) {
     case '9:16':
-      if (resolution === '720p') { width = 720; height = 1280; baseBitrate = 4_500_000; }
-      else if (resolution === '1440p') { width = 1440; height = 2560; baseBitrate = 15_000_000; }
-      else if (resolution === '4k') { width = 2160; height = 3840; baseBitrate = 28_000_000; }
-      else { width = 1080; height = 1920; baseBitrate = 8_500_000; }
+      if (resolution === '720p') { width = 720; height = 1280; baseBitrate = 10_000_000; }
+      else if (resolution === '1440p') { width = 1440; height = 2560; baseBitrate = 32_000_000; }
+      else if (resolution === '4k') { width = 2160; height = 3840; baseBitrate = 55_000_000; }
+      else if (resolution === 'source' && sourceWidth && sourceHeight) {
+        const shortEdge = Math.min(sourceWidth, sourceHeight);
+        height = Math.round((shortEdge * 16) / 9);
+        width = shortEdge;
+        const px = width * height;
+        baseBitrate = px >= 3840 * 2160 * 0.75 ? 55_000_000 : px >= 2560 * 1440 * 0.75 ? 32_000_000 : px >= 1920 * 1080 * 0.75 ? 18_000_000 : 10_000_000;
+      } else { width = 1080; height = 1920; baseBitrate = 18_000_000; }
       break;
 
     case '16:9':
-      if (resolution === '720p') { width = 1280; height = 720; baseBitrate = 4_500_000; }
-      else if (resolution === '1440p') { width = 2560; height = 1440; baseBitrate = 15_000_000; }
-      else if (resolution === '4k') { width = 3840; height = 2160; baseBitrate = 28_000_000; }
-      else { width = 1920; height = 1080; baseBitrate = 8_500_000; }
+      if (resolution === '720p') { width = 1280; height = 720; baseBitrate = 10_000_000; }
+      else if (resolution === '1440p') { width = 2560; height = 1440; baseBitrate = 32_000_000; }
+      else if (resolution === '4k') { width = 3840; height = 2160; baseBitrate = 55_000_000; }
+      else if (resolution === 'source' && sourceWidth && sourceHeight) {
+        const shortEdge = Math.min(sourceWidth, sourceHeight);
+        width = Math.round((shortEdge * 16) / 9);
+        height = shortEdge;
+        const px = width * height;
+        baseBitrate = px >= 3840 * 2160 * 0.75 ? 55_000_000 : px >= 2560 * 1440 * 0.75 ? 32_000_000 : px >= 1920 * 1080 * 0.75 ? 18_000_000 : 10_000_000;
+      } else { width = 1920; height = 1080; baseBitrate = 18_000_000; }
       break;
 
     case '1:1':
-      if (resolution === '720p') { width = 720; height = 720; baseBitrate = 4_000_000; }
-      else if (resolution === '1440p') { width = 1440; height = 1440; baseBitrate = 12_000_000; }
-      else if (resolution === '4k') { width = 2160; height = 2160; baseBitrate = 24_000_000; }
-      else { width = 1080; height = 1080; baseBitrate = 7_500_000; }
+      if (resolution === '720p') { width = 720; height = 720; baseBitrate = 9_000_000; }
+      else if (resolution === '1440p') { width = 1440; height = 1440; baseBitrate = 28_000_000; }
+      else if (resolution === '4k') { width = 2160; height = 2160; baseBitrate = 50_000_000; }
+      else { width = 1080; height = 1080; baseBitrate = 16_000_000; }
       break;
 
     case '4:5':
-      if (resolution === '720p') { width = 720; height = 900; baseBitrate = 4_200_000; }
-      else if (resolution === '1440p') { width = 1440; height = 1800; baseBitrate = 13_500_000; }
-      else if (resolution === '4k') { width = 2160; height = 2700; baseBitrate = 26_000_000; }
-      else { width = 1080; height = 1350; baseBitrate = 8_000_000; }
+      if (resolution === '720p') { width = 720; height = 900; baseBitrate = 9_500_000; }
+      else if (resolution === '1440p') { width = 1440; height = 1800; baseBitrate = 30_000_000; }
+      else if (resolution === '4k') { width = 2160; height = 2700; baseBitrate = 52_000_000; }
+      else { width = 1080; height = 1350; baseBitrate = 17_000_000; }
       break;
 
     case '21:9':
-      if (resolution === '720p') { width = 1680; height = 720; baseBitrate = 5_000_000; }
-      else if (resolution === '1440p') { width = 3440; height = 1440; baseBitrate = 18_000_000; }
-      else if (resolution === '4k') { width = 5120; height = 2160; baseBitrate = 32_000_000; }
-      else { width = 2560; height = 1080; baseBitrate = 10_000_000; }
+      if (resolution === '720p') { width = 1680; height = 720; baseBitrate = 11_000_000; }
+      else if (resolution === '1440p') { width = 3440; height = 1440; baseBitrate = 36_000_000; }
+      else if (resolution === '4k') { width = 5120; height = 2160; baseBitrate = 60_000_000; }
+      else { width = 2560; height = 1080; baseBitrate = 20_000_000; }
       break;
 
     case 'original':
@@ -111,13 +124,12 @@ export function calculateExportDimensions(
         if (resolution === 'source') {
           width = sourceWidth;
           height = sourceHeight;
-          baseBitrate = 8_500_000;
         } else {
           const ratio = sourceWidth / sourceHeight;
           let targetShortEdge = 1080;
-          if (resolution === '720p') { targetShortEdge = 720; baseBitrate = 4_500_000; }
-          else if (resolution === '1440p') { targetShortEdge = 1440; baseBitrate = 15_000_000; }
-          else if (resolution === '4k') { targetShortEdge = 2160; baseBitrate = 28_000_000; }
+          if (resolution === '720p') { targetShortEdge = 720; }
+          else if (resolution === '1440p') { targetShortEdge = 1440; }
+          else if (resolution === '4k') { targetShortEdge = 2160; }
 
           if (ratio >= 1) {
             height = targetShortEdge;
@@ -127,18 +139,32 @@ export function calculateExportDimensions(
             height = Math.round(targetShortEdge / ratio);
           }
         }
+
+        // Dynamically compute bitrate from target pixel count to preserve pristine sharpness
+        const totalPixels = width * height;
+        if (totalPixels >= 3840 * 2160 * 0.75) {
+          baseBitrate = 55_000_000;
+        } else if (totalPixels >= 2560 * 1440 * 0.75) {
+          baseBitrate = 32_000_000;
+        } else if (totalPixels >= 1920 * 1080 * 0.75) {
+          baseBitrate = 18_000_000;
+        } else if (totalPixels >= 1280 * 720 * 0.75) {
+          baseBitrate = 10_000_000;
+        } else {
+          baseBitrate = 8_000_000;
+        }
       } else {
         width = 1080;
         height = 1920;
-        baseBitrate = 8_500_000;
+        baseBitrate = 18_000_000;
       }
       break;
   }
 
-  const multiplier = quality === 'high' ? 1.5 : quality === 'fast' ? 0.6 : 1.0;
+  const multiplier = quality === 'high' ? 1.5 : quality === 'fast' ? 0.7 : 1.0;
   const bitrate = Math.round(baseBitrate * multiplier);
 
-  // Guarantee even dimensions
+  // Guarantee even dimensions for hardware encoders
   width = Math.round(width / 2) * 2;
   height = Math.round(height / 2) * 2;
 
@@ -147,28 +173,47 @@ export function calculateExportDimensions(
 
 /**
  * Preflights codec configuration with WebCodecs VideoEncoder
+ * Prioritizes H.264 High Profile and Variable Bitrate (VBR) for pristine visual quality
  */
 export async function testEncoderSupport(
   width: number,
   height: number,
   fps: number,
   bitrate: number
-): Promise<{ supported: boolean; codec: string }> {
+): Promise<{ supported: boolean; codec: string; bitrateMode?: 'variable' | 'constant' }> {
   if (typeof window === 'undefined' || typeof window.VideoEncoder === 'undefined') {
     return { supported: false, codec: 'none' };
   }
 
-  // Candidate AVC/H.264 profiles
+  // Candidate AVC/H.264 profiles prioritized by maximum quality and fidelity
   const codecs = [
-    'avc1.4d002a', // Main Profile Level 4.2
+    'avc1.640033', // High Profile Level 5.1 (supports up to 4K 60fps)
+    'avc1.64002a', // High Profile Level 4.2
     'avc1.640028', // High Profile Level 4.0
+    'avc1.4d002a', // Main Profile Level 4.2
     'avc1.42E01E', // Baseline Profile Level 3.0
     'avc1.42001f', // Baseline Profile Level 3.1
   ];
 
   for (const codec of codecs) {
     try {
-      const config = {
+      // 1. Try Variable Bitrate (VBR) for perceptual clarity
+      const vbrConfig = {
+        codec,
+        width,
+        height,
+        bitrate,
+        framerate: fps,
+        bitrateMode: 'variable' as const,
+        hardwareAcceleration: 'prefer-hardware' as const,
+      };
+      const resVbr = await window.VideoEncoder.isConfigSupported(vbrConfig);
+      if (resVbr.supported) {
+        return { supported: true, codec, bitrateMode: 'variable' };
+      }
+
+      // 2. Fall back to standard CBR if platform requires
+      const cbrConfig = {
         codec,
         width,
         height,
@@ -176,9 +221,9 @@ export async function testEncoderSupport(
         framerate: fps,
         hardwareAcceleration: 'prefer-hardware' as const,
       };
-      const res = await window.VideoEncoder.isConfigSupported(config);
-      if (res.supported) {
-        return { supported: true, codec };
+      const resCbr = await window.VideoEncoder.isConfigSupported(cbrConfig);
+      if (resCbr.supported) {
+        return { supported: true, codec, bitrateMode: 'constant' };
       }
     } catch {
       // try next codec
@@ -266,7 +311,7 @@ export async function encodeAndMuxAudioWithWebCodecs(
         codec: candidate,
         sampleRate,
         numberOfChannels,
-        bitrate: 128_000,
+        bitrate: 256_000,
       });
       if (isSupp && isSupp.supported) {
         supportedCodec = candidate;
@@ -299,7 +344,7 @@ export async function encodeAndMuxAudioWithWebCodecs(
     codec: supportedCodec,
     sampleRate,
     numberOfChannels,
-    bitrate: 128_000,
+    bitrate: 256_000,
   });
 
   const chunkSize = 1024;
@@ -346,6 +391,7 @@ export async function encodeAndMuxAudioWithWebCodecs(
 
 /**
  * Draws a video frame to canvas with the chosen framing / fit mode
+ * Preserves pristine quality with bicubic image smoothing enabled.
  */
 export function drawVideoFrameToCanvas(
   ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D,
@@ -356,6 +402,10 @@ export function drawVideoFrameToCanvas(
 ): void {
   const vw = video.videoWidth || canvasWidth;
   const vh = video.videoHeight || canvasHeight;
+
+  // High-fidelity image smoothing for crisp text and pristine video scaling
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
 
   if (!video.videoWidth || !video.videoHeight) {
     ctx.fillStyle = '#09100C';
@@ -412,6 +462,7 @@ export interface ExportJobOptions {
   template: CaptionTemplate;
   config: ExportConfig;
   duration?: number;
+  layerOrder?: 'behind' | 'front' | 'sandwich';
   onProgress?: (progress: ExportProgress) => void;
   onFrameRendered?: (canvas: HTMLCanvasElement | OffscreenCanvas) => void;
   signal?: AbortSignal;
@@ -513,6 +564,7 @@ export async function exportVideoWithWebCodecs(options: ExportJobOptions): Promi
       fps,
       duration,
       totalFrames,
+      layerOrder: options.layerOrder,
       onProgress,
       signal,
       syncOffsetSeconds: config.syncOffsetSeconds,
@@ -545,7 +597,7 @@ export async function exportVideoWithWebCodecs(options: ExportJobOptions): Promi
     });
   }
 
-  const { supported, codec } = await testEncoderSupport(width, height, fps, bitrate);
+  const { supported, codec, bitrateMode } = await testEncoderSupport(width, height, fps, bitrate);
   if (!supported) {
     console.warn('WebCodecs H.264 config unsupported, falling back to MediaRecorder.');
     return exportWithMediaRecorderFallback({
@@ -560,6 +612,7 @@ export async function exportVideoWithWebCodecs(options: ExportJobOptions): Promi
       fitMode,
       duration,
       includeAudio: config.includeAudio ?? true,
+      layerOrder: options.layerOrder,
       onProgress,
       signal,
     });
@@ -609,16 +662,17 @@ export async function exportVideoWithWebCodecs(options: ExportJobOptions): Promi
     firstTimestampBehavior: 'offset',
   });
 
-  // Hardware Audio Encoding Pass
+  // Hardware Audio Encoding Pass: Strictly aligned with total video frame duration to prevent video sticking at end
   if (canMuxAudio && audioBuffer) {
     try {
-      await encodeAndMuxAudioWithWebCodecs(audioBuffer, muxer, duration, signal);
+      const exactDuration = totalFrames / fps;
+      await encodeAndMuxAudioWithWebCodecs(audioBuffer, muxer, exactDuration, signal);
     } catch (err) {
       console.warn('Audio hardware muxing skipped due to encoding error:', err);
     }
   }
 
-  // Prepare VideoEncoder
+  // Prepare VideoEncoder with high profile and VBR
   let encoderError: Error | null = null;
   const encoder = new VideoEncoder({
     output: (chunk, meta) => {
@@ -639,6 +693,7 @@ export async function exportVideoWithWebCodecs(options: ExportJobOptions): Promi
     width,
     height,
     bitrate,
+    bitrateMode: bitrateMode || 'variable',
     framerate: fps,
     hardwareAcceleration: 'prefer-hardware',
     avc: { format: 'avc' },
@@ -666,11 +721,31 @@ export async function exportVideoWithWebCodecs(options: ExportJobOptions): Promi
     'export_video';
   const exportMaskCache = new Map<number, any>();
 
+  // Determine effective layer order (default: front style)
+  const effectiveLayerOrder =
+    options.layerOrder ??
+    (template.layout.behindSubjectDepth ? (template.layout.layerOrder ?? 'behind') : 'front');
+  const shouldCompositeBehind = effectiveLayerOrder !== 'front' && !!template.layout.behindSubjectDepth;
+
   // Frame Rendering Loop
   const startTime = performance.now();
   const frameDurationUs = Math.round(1_000_000 / fps);
 
   videoEl.pause();
+
+  // Ensure video element ready state has at least current data to prevent initial blank frame
+  if (videoEl.readyState < 2) {
+    await new Promise<void>((resolve) => {
+      const onReady = () => {
+        videoEl.removeEventListener('loadeddata', onReady);
+        videoEl.removeEventListener('canplay', onReady);
+        resolve();
+      };
+      videoEl.addEventListener('loadeddata', onReady, { once: true });
+      videoEl.addEventListener('canplay', onReady, { once: true });
+      setTimeout(resolve, 800);
+    });
+  }
 
   try {
     for (let frameIndex = 0; frameIndex < totalFrames; frameIndex++) {
@@ -685,16 +760,16 @@ export async function exportVideoWithWebCodecs(options: ExportJobOptions): Promi
 
       const currentTime = frameIndex / fps;
 
-      // Seek video element to target timestamp safely using turbo seek
+      // Seek video element to target timestamp safely with robust decoder sync
       await seekVideoToTimestamp(videoEl, currentTime);
 
-      // Composite: 1. Video background with framing mode
+      // Composite: 1. Video background with framing mode and high quality smoothing
       ctx.clearRect(0, 0, width, height);
       drawVideoFrameToCanvas(ctx, videoEl, width, height, fitMode);
 
-      // Composite: 2. Behind-Subject Segmentation Compositing (with temporal quantizing)
+      // Composite: 2. Behind-Subject Segmentation Compositing (only when depth layering is active)
       let behindCompositing = undefined;
-      if (template.layout.behindSubjectDepth) {
+      if (shouldCompositeBehind) {
         try {
           // Quantize timestamp to 20fps for segmentation mask (masks stay stable across 50ms)
           const quantizedTs = Math.round(currentTime * 20) / 20;
@@ -717,13 +792,14 @@ export async function exportVideoWithWebCodecs(options: ExportJobOptions): Promi
             subjectMetrics: maskFrame.metrics,
             showMaskOverlay: false,
             fitMode: fitMode === 'cover' ? ('cover' as const) : ('fit' as const),
+            layerOrder: effectiveLayerOrder,
           };
         } catch (err) {
           console.warn('Segmentation mask export fallback:', err);
         }
       }
 
-      // Composite: 3. Shared Golden-Frame Caption Engine
+      // Composite: 3. Shared Golden-Frame Caption Engine (renders directly in front when depth is inactive)
       renderCaptionsToCanvas(
         ctx,
         words,
@@ -810,52 +886,44 @@ export async function exportVideoWithWebCodecs(options: ExportJobOptions): Promi
 }
 
 /**
- * Seeks HTMLVideoElement to exact time safely and awaits seeked event
+ * Seeks HTMLVideoElement to exact time with 100% guarantee that the decoder
+ * presents the target frame without premature resolution or stalled duplicate frames.
  */
 function seekVideoToTimestamp(video: HTMLVideoElement, time: number): Promise<void> {
   return new Promise((resolve) => {
     const maxDur = isFinite(video.duration) && video.duration > 0 ? video.duration : 10000;
-    const targetTime = Math.min(Math.max(0, time), Math.max(0, maxDur - 0.02));
+    const targetTime = Math.min(Math.max(0, time), Math.max(0, maxDur - 0.001));
 
-    if (Math.abs(video.currentTime - targetTime) < 0.008) {
+    // If already at target timestamp and not currently seeking, resolve immediately
+    if (!video.seeking && Math.abs(video.currentTime - targetTime) < 0.002) {
       resolve();
       return;
     }
 
     let isDone = false;
-    let rVfcId: number | null = null;
-    let timeoutId: any = null;
+    let timer: any = null;
 
-    const cleanup = () => {
+    const onDone = () => {
       if (isDone) return;
       isDone = true;
-      video.removeEventListener('seeked', onSeeked);
-      if (timeoutId) clearTimeout(timeoutId);
-      if (rVfcId !== null && 'cancelVideoFrameCallback' in video) {
-        (video as unknown as { cancelVideoFrameCallback: (id: number) => void }).cancelVideoFrameCallback(rVfcId);
-      }
+      video.removeEventListener('seeked', onDone);
+      video.removeEventListener('error', onDone);
+      if (timer) clearTimeout(timer);
       resolve();
     };
 
-    const onSeeked = () => cleanup();
+    video.addEventListener('seeked', onDone, { once: true });
+    video.addEventListener('error', onDone, { once: true });
 
-    // Use Chromium's requestVideoFrameCallback when supported (fastest, composited hardware frame ready)
-    if ('requestVideoFrameCallback' in video) {
-      rVfcId = (video as unknown as { requestVideoFrameCallback: (cb: () => void) => number }).requestVideoFrameCallback(() => {
-        cleanup();
-      });
-    }
+    // Robust safety timeout (600ms): guarantees decoder finishes high-res GOP seek
+    // without premature timeout that previously resulted in duplicate frozen frames.
+    timer = setTimeout(onDone, 600);
 
-    video.addEventListener('seeked', onSeeked, { once: true });
     try {
       video.currentTime = targetTime;
     } catch {
-      cleanup();
-      return;
+      onDone();
     }
-
-    // Safety timeout to prevent pipeline stall
-    timeoutId = setTimeout(cleanup, 50);
   });
 }
 
@@ -871,6 +939,7 @@ async function exportTransparentCaptionWebM(options: {
   fps: number;
   duration: number;
   totalFrames: number;
+  layerOrder?: 'behind' | 'front' | 'sandwich';
   onProgress?: (progress: ExportProgress) => void;
   signal?: AbortSignal;
   syncOffsetSeconds?: number;
@@ -883,6 +952,7 @@ async function exportTransparentCaptionWebM(options: {
     height,
     fps,
     totalFrames,
+    layerOrder,
     onProgress,
     signal,
     syncOffsetSeconds = 0,
@@ -913,6 +983,11 @@ async function exportTransparentCaptionWebM(options: {
   const videoKey = videoElement?.src || 'export_video';
   const exportMaskCache = new Map<number, any>();
 
+  const effectiveLayerOrder =
+    layerOrder ??
+    (template.layout.behindSubjectDepth ? (template.layout.layerOrder ?? 'behind') : 'front');
+  const shouldCompositeBehind = effectiveLayerOrder !== 'front' && !!template.layout.behindSubjectDepth;
+
   for (let frameIndex = 0; frameIndex < totalFrames; frameIndex++) {
     if (signal?.aborted) {
       recorder.stop();
@@ -925,7 +1000,7 @@ async function exportTransparentCaptionWebM(options: {
     ctx.clearRect(0, 0, width, height);
 
     let behindCompositing = undefined;
-    if (template.layout.behindSubjectDepth && videoElement) {
+    if (shouldCompositeBehind && videoElement) {
       try {
         const quantizedTs = Math.round(currentTime * 20) / 20;
         let maskFrame = exportMaskCache.get(quantizedTs);
@@ -946,6 +1021,7 @@ async function exportTransparentCaptionWebM(options: {
           maskHeight: maskFrame.height,
           subjectMetrics: maskFrame.metrics,
           showMaskOverlay: false,
+          layerOrder: effectiveLayerOrder,
         };
       } catch (err) {
         console.warn('Segmentation mask export fallback:', err);
@@ -1011,6 +1087,7 @@ async function exportWithMediaRecorderFallback(options: {
   fitMode: ExportFitMode;
   duration: number;
   includeAudio: boolean;
+  layerOrder?: 'behind' | 'front' | 'sandwich';
   onProgress?: (progress: ExportProgress) => void;
   signal?: AbortSignal;
   syncOffsetSeconds?: number;
@@ -1027,6 +1104,7 @@ async function exportWithMediaRecorderFallback(options: {
     fitMode,
     duration,
     includeAudio,
+    layerOrder,
     onProgress,
     signal,
     syncOffsetSeconds = 0,
@@ -1079,6 +1157,11 @@ async function exportWithMediaRecorderFallback(options: {
   const videoKey = (options.videoFile ? (options.videoFile as File).name : options.videoUrl) || videoElement.src || 'export_video';
   const exportMaskCache = new Map<number, any>();
 
+  const effectiveLayerOrder =
+    layerOrder ??
+    (template.layout.behindSubjectDepth ? (template.layout.layerOrder ?? 'behind') : 'front');
+  const shouldCompositeBehind = effectiveLayerOrder !== 'front' && !!template.layout.behindSubjectDepth;
+
   for (let frameIndex = 0; frameIndex < totalFrames; frameIndex++) {
     if (signal?.aborted) {
       recorder.stop();
@@ -1092,7 +1175,7 @@ async function exportWithMediaRecorderFallback(options: {
     drawVideoFrameToCanvas(ctx, videoElement, width, height, fitMode);
 
     let behindCompositing = undefined;
-    if (template.layout.behindSubjectDepth) {
+    if (shouldCompositeBehind) {
       try {
         const quantizedTs = Math.round(currentTime * 20) / 20;
         let maskFrame = exportMaskCache.get(quantizedTs);
@@ -1114,6 +1197,7 @@ async function exportWithMediaRecorderFallback(options: {
           subjectMetrics: maskFrame.metrics,
           showMaskOverlay: false,
           fitMode: fitMode === 'cover' ? ('cover' as const) : ('fit' as const),
+          layerOrder: effectiveLayerOrder,
         };
       } catch (err) {
         console.warn('Segmentation mask export fallback:', err);

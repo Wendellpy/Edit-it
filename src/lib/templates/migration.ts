@@ -224,7 +224,7 @@ export function migrateProjectPayload(payload: {
   templateId?: string;
   [key: string]: any;
 }): { version: string; templateId: string; wasMigrated: boolean; [key: string]: any } {
-  const oldId = payload.templateId || "behind_you_white";
+  const oldId = payload.templateId || "alex_hormozi_punch";
   const newId = migrateTemplateId(oldId);
   return {
     ...payload,

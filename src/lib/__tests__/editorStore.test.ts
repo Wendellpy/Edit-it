@@ -11,9 +11,17 @@ describe("editorStore - Zustand Command Pattern & Token Editing", () => {
     ];
     useEditorStore.setState({
       tokens: initialTokens,
-      history: [{ tokens: initialTokens, templateId: "behind_you_white" }],
+      templateId: "alex_hormozi_punch",
+      layerOrder: "front",
+      history: [{ tokens: initialTokens, templateId: "alex_hormozi_punch" }],
       historyIndex: 0,
     });
+  });
+
+  it("should have default caption style in front (alex_hormozi_punch)", () => {
+    const store = useEditorStore.getState();
+    expect(store.templateId).toBe("alex_hormozi_punch");
+    expect(store.layerOrder).toBe("front");
   });
 
   it("should update word text and support undo", () => {

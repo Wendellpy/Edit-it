@@ -147,7 +147,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   tokens: [],
   selectedWordId: null,
   scriptMode: "roman",
-  templateId: "behind_you_white",
+  templateId: "alex_hormozi_punch",
   isReviewMode: false,
 
   timelineZoom: 1.0,
@@ -155,7 +155,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   showSafeZones: false,
   syncOffset: 0,
 
-  layerOrder: "behind",
+  layerOrder: "front",
   setLayerOrder: (layerOrder) => set({ layerOrder }),
   maskQualityTier: "balanced",
   setMaskQualityTier: (maskQualityTier) => set({ maskQualityTier }),
@@ -181,7 +181,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     });
   },
 
-  history: [{ tokens: [], templateId: "behind_you_white" }],
+  history: [{ tokens: [], templateId: "alex_hormozi_punch" }],
   historyIndex: 0,
 
   setVideo: (file) => {

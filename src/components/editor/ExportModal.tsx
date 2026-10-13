@@ -63,6 +63,7 @@ export function ExportModal({ isOpen, onClose, videoElement }: ExportModalProps)
     syncOffset,
     exportSettings,
     setExportSettings,
+    layerOrder,
   } = useEditorStore();
   const template = getTemplateById(templateId);
 
@@ -176,6 +177,7 @@ export function ExportModal({ isOpen, onClose, videoElement }: ExportModalProps)
         template,
         config,
         duration: duration || 5,
+        layerOrder,
         onProgress: (p) => setProgress(p),
         onFrameRendered: (canvasSource) => {
           frameCountRef.current++;

@@ -12,22 +12,22 @@ describe('webcodecsExport configuration & preflight', () => {
     expect(RESOLUTION_DIMENSIONS['720p']).toEqual({
       width: 720,
       height: 1280,
-      defaultBitrate: 4_500_000,
+      defaultBitrate: 10_000_000,
     });
     expect(RESOLUTION_DIMENSIONS['1080p']).toEqual({
       width: 1080,
       height: 1920,
-      defaultBitrate: 8_500_000,
+      defaultBitrate: 18_000_000,
     });
     expect(RESOLUTION_DIMENSIONS['1440p']).toEqual({
       width: 1440,
       height: 2560,
-      defaultBitrate: 15_000_000,
+      defaultBitrate: 32_000_000,
     });
     expect(RESOLUTION_DIMENSIONS['4k']).toEqual({
       width: 2160,
       height: 3840,
-      defaultBitrate: 28_000_000,
+      defaultBitrate: 55_000_000,
     });
   });
 
@@ -36,7 +36,7 @@ describe('webcodecsExport configuration & preflight', () => {
     const yt1080 = calculateExportDimensions('16:9', '1080p');
     expect(yt1080.width).toBe(1920);
     expect(yt1080.height).toBe(1080);
-    expect(yt1080.bitrate).toBe(8_500_000);
+    expect(yt1080.bitrate).toBe(18_000_000);
 
     const yt720 = calculateExportDimensions('16:9', '720p');
     expect(yt720.width).toBe(1280);
