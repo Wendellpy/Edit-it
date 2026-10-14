@@ -12,6 +12,7 @@ export interface RenderCaptionFrameOptions {
   template: CaptionTemplate;
   showBehindBadge?: boolean;
   syncOffsetSeconds?: number;
+  singleWordOnly?: boolean;
 
   // Behind-the-Subject 3D Depth Compositing
   videoSource?: CanvasImageSource | null;
@@ -204,7 +205,7 @@ export function drawSubjectCutout(
 
   // 3. Mask the cutout buffer using destination-in
   cutoutCtx.globalCompositeOperation = "destination-in";
-  cutoutCtx.drawImage(maskCanvas, dstX, dstY, dstW, dstH);
+  cutoutCtx.drawImage(maskCanvas, 0, 0, canvasWidth, canvasHeight);
 
   // 4. Composite subject cutout on top of caption text
   targetCtx.save();
@@ -273,7 +274,7 @@ export function renderCaptionFrame(options: RenderCaptionFrameOptions): void {
     currentTime,
     tokens,
     template,
-    showBehindBadge = true,
+    showBehindBadge = false,
     syncOffsetSeconds = 0,
     videoSource = null,
     segmentationMask = null,
@@ -283,18 +284,44 @@ export function renderCaptionFrame(options: RenderCaptionFrameOptions): void {
     showMaskOverlay = false,
     layerOrder,
     fitMode = "fit",
+    singleWordOnly,
   } = options;
 
   if (!tokens || tokens.length === 0) return;
 
   const effectiveTime = Math.max(0, currentTime + syncOffsetSeconds);
-  const isLandscape = canvasWidth > canvasHeight;
 
-  // 1. Group chunk into lines
-  const wordsPerLine = isLandscape
-    ? Math.max(template.layout.maxWordsPerLine || 2, 4)
+  // Aspect ratio auto-detection & responsive safe margins
+  const aspectRatio = canvasWidth / canvasHeight;
+  const isLandscape = aspectRatio > 1.0;
+  const isPortraitMobile = aspectRatio < 0.70;   // 9:16 vertical (Shorts / Reels / TikTok)
+  const isWidescreen = aspectRatio > 1.25;      // 16:9, 21:9 landscape
+
+  // Platform safe margins: avoids TikTok/Reels/Shorts bottom overlay & top search/header
+  const safeMarginX = Math.round(canvasWidth * (isPortraitMobile ? 0.08 : isWidescreen ? 0.10 : 0.08));
+  const safeMarginTop = Math.round(canvasHeight * (isPortraitMobile ? 0.14 : isWidescreen ? 0.08 : 0.10));
+  const safeMarginBottom = Math.round(canvasHeight * (isPortraitMobile ? 0.18 : isWidescreen ? 0.10 : 0.12));
+
+  const maxAllowedWidth = Math.max(120, canvasWidth - safeMarginX * 2);
+  const maxAllowedHeight = Math.max(80, canvasHeight - safeMarginTop - safeMarginBottom);
+
+  // Single-Word Flash & Smooth Flow Detection
+  const isSingleWordMode =
+    singleWordOnly !== undefined
+      ? singleWordOnly
+      : !!template.layout.singleWordOnly ||
+        template.animation?.perWordEffect === "single_word_flow" ||
+        (template.layout.maxWordsPerLine === 1 && template.layout.maxLines === 1);
+
+  // 1. Group chunk into lines adaptively based on aspect ratio
+  const wordsPerLine = isSingleWordMode
+    ? 1
+    : isPortraitMobile
+    ? Math.min(template.layout.maxWordsPerLine || 2, 2)
+    : isWidescreen
+    ? Math.max(template.layout.maxWordsPerLine || 3, 4)
     : template.layout.maxWordsPerLine || 2;
-  const maxLines = template.layout.maxLines || 2;
+  const maxLines = isSingleWordMode ? 1 : template.layout.maxLines || 2;
   const maxWords = wordsPerLine * maxLines;
 
   // 2. Build stable cue cards
@@ -314,21 +341,32 @@ export function renderCaptionFrame(options: RenderCaptionFrameOptions): void {
     (w) => effectiveTime >= w.start && effectiveTime <= w.end
   );
 
-  // 5. Typography metrics
+  // In single-word mode, only show if there is an active spoken word or within hold window
+  if (isSingleWordMode && !activeWord && effectiveTime > activeCue.end) return;
+
+  // 5. Typography metrics with aspect ratio scaling
   const baseScale = template.typography.fontSizeBasePercent || 0.05;
-  let fontSize = isLandscape
+  let fontSize = isPortraitMobile
+    ? Math.round(canvasHeight * Math.min(0.065, Math.max(0.045, baseScale)))
+    : isWidescreen
     ? Math.round(canvasHeight * Math.max(0.065, baseScale * 1.15))
     : Math.round(canvasHeight * baseScale);
 
   const primaryFontFamily = template.typography.primaryFont || "Impact, sans-serif";
   const secondaryFontFamily = template.typography.secondaryFont || "Playfair Display, serif";
-  let lineHeight = fontSize * 1.25;
+  let lineHeight = Math.round(fontSize * (isSingleWordMode ? 1.15 : 1.25));
 
   ctx.save();
 
   // 6. Split current chunk into stable visual lines
   const lines: WordToken[][] = [];
-  if (template.id === "behind_vertical_sidetext") {
+  if (isSingleWordMode) {
+    if (activeWord) {
+      lines.push([activeWord]);
+    } else if (currentChunk.length > 0) {
+      lines.push([currentChunk[0]]);
+    }
+  } else if (template.id === "behind_vertical_sidetext") {
     // Vertical side text: 1 word per line
     for (const w of currentChunk) {
       lines.push([w]);
@@ -339,17 +377,90 @@ export function renderCaptionFrame(options: RenderCaptionFrameOptions): void {
     }
   }
 
-  // Measure estimated text dimensions for layout planning
-  ctx.font = `${template.typography.primaryWeight} ${fontSize}px ${primaryFontFamily}`;
-  let estMaxLineWidth = 0;
-  for (const line of lines) {
-    const lineText = line
-      .map((w) => formatWordText(w.text, template.typography.textTransform))
-      .join(" ");
-    const m = ctx.measureText(lineText).width;
-    if (m > estMaxLineWidth) estMaxLineWidth = m;
+  if (lines.length === 0) {
+    ctx.restore();
+    return;
   }
-  const estBlockHeight = lines.length * lineHeight;
+
+  // 6b. Line width measurement helper with exact spacing and active box / pop clearance
+  const measureLineWidth = (testWords: WordToken[], testFontSize: number): number => {
+    ctx.font = `${template.typography.primaryWeight} ${testFontSize}px ${primaryFontFamily}`;
+    const spaceMeasure = ctx.measureText(" ");
+    const testSpaceWidth = Math.max(
+      spaceMeasure ? spaceMeasure.width : 0,
+      Math.round(testFontSize * 0.28)
+    );
+    const pillPadX = Math.round(testFontSize * 0.22);
+    const scaleFactor = template.animation?.scaleMagnitude || 1.15;
+
+    let lineWidth = 0;
+    testWords.forEach((w, idx) => {
+      const formatted = formatWordText(w.text, template.typography.textTransform);
+      const isWordActive = activeWord
+        ? w.id === activeWord.id
+        : effectiveTime >= w.start && effectiveTime <= w.end;
+      const hasBox =
+        isWordActive &&
+        (template.colors.activeWordBg || template.animation?.perWordEffect === "highlight_box");
+      const m = ctx.measureText(formatted);
+      const extraPad = (hasBox ? pillPadX : 0) + (isWordActive && scaleFactor > 1.0 ? Math.round(m.width * (scaleFactor - 1.0) * 0.5) : 0);
+
+      lineWidth += m.width + extraPad * 2;
+      if (idx < testWords.length - 1) {
+        lineWidth += testSpaceWidth;
+      }
+    });
+
+    return lineWidth;
+  };
+
+  // 6c. Adaptive line re-wrapping if line exceeds safe frame width
+  if (!isSingleWordMode && lines.length === 1 && currentChunk.length > 1 && maxLines > 1) {
+    const singleLineWidth = measureLineWidth(lines[0], fontSize);
+    if (singleLineWidth > maxAllowedWidth) {
+      lines.length = 0;
+      const smallerChunkSize = Math.max(1, Math.floor(wordsPerLine / 2));
+      for (let i = 0; i < currentChunk.length; i += smallerChunkSize) {
+        lines.push(currentChunk.slice(i, i + smallerChunkSize));
+      }
+    }
+  }
+
+  // 6d. Measure max line width across all lines
+  let maxLineWidth = 0;
+  for (const line of lines) {
+    const w = measureLineWidth(line, fontSize);
+    if (w > maxLineWidth) maxLineWidth = w;
+  }
+
+  // Additional margin for 3D extrusion, strokes, or box padding
+  let extraDecoration = 0;
+  if (template.colors.extrusion) {
+    extraDecoration += canvasHeight * template.colors.extrusion.depthPercent * 2;
+  }
+  if (template.colors.strokeWidthPercent) {
+    extraDecoration += canvasHeight * template.colors.strokeWidthPercent * 2;
+  }
+  if (template.box && template.box.enabled) {
+    extraDecoration += template.box.paddingX * 2;
+  }
+
+  // 6e. Horizontal Auto-Fit: If text exceeds safe width, auto-scale font down so it NEVER goes out of frame
+  const totalEffectiveWidth = maxLineWidth + extraDecoration;
+  if (totalEffectiveWidth > maxAllowedWidth && totalEffectiveWidth > 0) {
+    const hScale = maxAllowedWidth / totalEffectiveWidth;
+    fontSize = Math.max(16, Math.floor(fontSize * hScale));
+    lineHeight = Math.round(fontSize * (isSingleWordMode ? 1.15 : 1.25));
+  }
+
+  // 6f. Vertical Auto-Fit: If text height exceeds safe height, auto-scale font down
+  let totalBlockHeight = lines.length * lineHeight + (template.box?.enabled ? template.box.paddingY * 2 : 0);
+  if (totalBlockHeight > maxAllowedHeight && totalBlockHeight > 0) {
+    const vScale = maxAllowedHeight / totalBlockHeight;
+    fontSize = Math.max(16, Math.floor(fontSize * vScale));
+    lineHeight = Math.round(fontSize * (isSingleWordMode ? 1.15 : 1.25));
+    totalBlockHeight = lines.length * lineHeight + (template.box?.enabled ? template.box.paddingY * 2 : 0);
+  }
 
   // 7. Subject-Aware Layout Computation
   let adjustedLayout: AdjustedTextLayout;
@@ -365,18 +476,25 @@ export function renderCaptionFrame(options: RenderCaptionFrameOptions): void {
       canvasWidth,
       canvasHeight,
       fontSize,
-      estMaxLineWidth,
-      estBlockHeight
+      maxLineWidth,
+      totalBlockHeight
     );
     if (layerOrder === "sandwich") {
       adjustedLayout.layoutMode = "sandwich";
     }
     fontSize = adjustedLayout.fontSize;
-    lineHeight = fontSize * 1.25;
+    lineHeight = Math.round(fontSize * 1.25);
   } else {
-    const yPercent = isLandscape
-      ? Math.max(0.82, template.layout.yPositionPercent)
-      : template.layout.yPositionPercent;
+    // Aspect-ratio-aware vertical placement
+    let yPercent = template.layout.yPositionPercent || 0.72;
+    if (isPortraitMobile) {
+      // In 9:16 mobile, clamp between 0.22 (below header) and 0.75 (above TikTok description/buttons)
+      yPercent = Math.min(0.75, Math.max(0.22, yPercent));
+    } else if (isWidescreen) {
+      // In 16:9 widescreen, clamp between 0.78 and 0.86
+      yPercent = Math.max(0.78, Math.min(0.86, yPercent));
+    }
+
     adjustedLayout = {
       x: canvasWidth / 2,
       y: canvasHeight * yPercent,
@@ -388,12 +506,15 @@ export function renderCaptionFrame(options: RenderCaptionFrameOptions): void {
     };
   }
 
-  const totalBlockHeight = lines.length * lineHeight;
-  const centerY = adjustedLayout.y;
-  const startY = centerY - totalBlockHeight / 2;
+  // Clamped vertical position so captions NEVER leave the safe vertical frame
+  const blockHeight = lines.length * lineHeight;
+  const minY = safeMarginTop + blockHeight / 2;
+  const maxY = canvasHeight - safeMarginBottom - blockHeight / 2;
+  const centerY = Math.max(minY, Math.min(maxY, adjustedLayout.y));
+  const startY = centerY - blockHeight / 2;
 
-  // 8. Optional Depth Badge
-  if (template.badge && showBehindBadge) {
+  // 8. Optional Depth Badge (suppressed in singleWordMode so only the spoken word appears)
+  if (template.badge && showBehindBadge && !isSingleWordMode) {
     const badgeHeight = Math.round(fontSize * 0.45);
     const badgeWidth = Math.round(badgeHeight * 4.4);
     const badgeX = canvasWidth * 0.08;
@@ -416,17 +537,14 @@ export function renderCaptionFrame(options: RenderCaptionFrameOptions): void {
   if (template.box && template.box.enabled) {
     ctx.save();
     ctx.font = `${template.typography.primaryWeight} ${fontSize}px ${primaryFontFamily}`;
-    let maxLineWidth = 0;
+    let maxLineW = 0;
     for (const line of lines) {
-      const lineText = line
-        .map((w) => formatWordText(w.text, template.typography.textTransform))
-        .join(" ");
-      const width = ctx.measureText(lineText).width;
-      if (width > maxLineWidth) maxLineWidth = width;
+      const w = measureLineWidth(line, fontSize);
+      if (w > maxLineW) maxLineW = w;
     }
 
-    const boxW = maxLineWidth + template.box.paddingX * 2;
-    const boxH = totalBlockHeight + template.box.paddingY * 2;
+    const boxW = Math.min(canvasWidth - safeMarginX, maxLineW + template.box.paddingX * 2);
+    const boxH = Math.min(canvasHeight - safeMarginTop - safeMarginBottom, blockHeight + template.box.paddingY * 2);
     const boxX = (canvasWidth - boxW) / 2;
     const boxY = centerY - boxH / 2;
 
@@ -453,10 +571,16 @@ export function renderCaptionFrame(options: RenderCaptionFrameOptions): void {
     lines.forEach((line, lineIdx) => {
       const lineY = startY + lineIdx * lineHeight + lineHeight / 2;
 
-      let totalLineWidth = 0;
-      const wordMetrics: Array<{ width: number; isSecondary: boolean; text: string }> = [];
+      ctx.font = `${template.typography.primaryWeight} ${fontSize}px ${primaryFontFamily}`;
+      const spaceMeasure = ctx.measureText(" ");
+      const baseSpaceWidth = Math.max(
+        spaceMeasure ? spaceMeasure.width : 0,
+        Math.round(fontSize * 0.28)
+      );
+      const pillPadX = Math.round(fontSize * 0.22);
+      const scaleMagnitude = template.animation?.scaleMagnitude || 1.15;
 
-      line.forEach((word) => {
+      const wordMetrics = line.map((word) => {
         const isSecondary =
           !!template.typography.secondaryFont &&
           (word.script === "devanagari" ||
@@ -470,38 +594,86 @@ export function renderCaptionFrame(options: RenderCaptionFrameOptions): void {
         ctx.font = font;
         const formatted = formatWordText(word.text, template.typography.textTransform);
         const m = ctx.measureText(formatted);
-        wordMetrics.push({ width: m.width, isSecondary, text: formatted });
-        totalLineWidth += m.width;
+        const isCurrentlySpoken = effectiveTime >= word.start && effectiveTime <= word.end;
+        const isActive = activeWord ? word.id === activeWord.id : isCurrentlySpoken;
+        const isPastWord = effectiveTime > word.end;
+        const hasActiveBox =
+          isActive &&
+          (template.colors.activeWordBg || template.animation?.perWordEffect === "highlight_box");
+        const scaleDelta =
+          isActive && scaleMagnitude > 1.0 ? Math.round(m.width * (scaleMagnitude - 1.0) * 0.5) : 0;
+        const leftPad = (hasActiveBox ? pillPadX : 0) + scaleDelta;
+        const rightPad = (hasActiveBox ? pillPadX : 0) + scaleDelta;
+
+        return {
+          id: word.id,
+          text: formatted,
+          width: m.width,
+          isSecondary,
+          isActive,
+          isPastWord,
+          hasActiveBox,
+          pillPadX,
+          leftPad,
+          rightPad,
+        };
       });
 
-      const spaceWidth = fontSize * 0.28;
-      totalLineWidth += (line.length - 1) * spaceWidth;
+      let totalLineWidth = 0;
+      wordMetrics.forEach((metric, idx) => {
+        totalLineWidth += metric.leftPad + metric.width + metric.rightPad;
+        if (idx < wordMetrics.length - 1) {
+          totalLineWidth += baseSpaceWidth;
+        }
+      });
 
-      let currentX =
-        adjustedLayout.layoutMode === "vertical_flank"
+      let lineStartX =
+        isSingleWordMode
+          ? (canvasWidth - totalLineWidth) / 2
+          : adjustedLayout.layoutMode === "vertical_flank"
           ? adjustedLayout.x
           : (canvasWidth - totalLineWidth) / 2;
 
+      lineStartX = Math.max(safeMarginX, Math.min(canvasWidth - safeMarginX - totalLineWidth, lineStartX));
+      let currentX = lineStartX;
+
       line.forEach((word, wordIdx) => {
         const metric = wordMetrics[wordIdx];
-        const isCurrentlySpoken =
-          effectiveTime >= word.start && effectiveTime <= word.end;
-        const isActive = activeWord ? word.id === activeWord.id : isCurrentlySpoken;
-        const isPastWord = effectiveTime > word.end;
+        const { isActive, isPastWord, hasActiveBox, leftPad, rightPad } = metric;
+
+        // In Single-Word Mode: ONLY the currently spoken word is visible!
+        if (isSingleWordMode && !isActive) {
+          currentX += leftPad + metric.width + rightPad + baseSpaceWidth;
+          return;
+        }
 
         // In Sandwich mode:
-        // Behind pass draws ONLY the active keyword
-        // Front pass draws ONLY the surrounding context words
+        // Multi-line: Line 0 (top line) is behind the subject's neck/shoulders, Line 1 is in front of chest.
+        // Single-line: Active keyword is behind the subject (scaled wide to peek out), context words in front.
         if (adjustedLayout.layoutMode === "sandwich") {
-          if (!isFrontPass && !isActive) {
-            currentX += metric.width + spaceWidth;
-            return;
-          }
-          if (isFrontPass && isActive) {
-            currentX += metric.width + spaceWidth;
-            return;
+          if (lines.length > 1) {
+            if (!isFrontPass && lineIdx > 0) {
+              currentX += leftPad + metric.width + rightPad + baseSpaceWidth;
+              return;
+            }
+            if (isFrontPass && lineIdx === 0 && !isActive) {
+              currentX += leftPad + metric.width + rightPad + baseSpaceWidth;
+              return;
+            }
+          } else {
+            if (!isFrontPass && !isActive) {
+              currentX += leftPad + metric.width + rightPad + baseSpaceWidth;
+              return;
+            }
+            if (isFrontPass && isActive) {
+              currentX += leftPad + metric.width + rightPad + baseSpaceWidth;
+              return;
+            }
           }
         }
+
+        // Advance to word text starting X
+        currentX += leftPad;
 
         ctx.save();
 
@@ -540,19 +712,108 @@ export function renderCaptionFrame(options: RenderCaptionFrameOptions): void {
           ctx.translate(-wordCenterX, -wordCenterY);
         }
 
-        // Kinetic pop animations
+        // Kinetic pop & physics animations
+        const wordElapsed = Math.max(0, effectiveTime - word.start);
+        const wordDuration = Math.max(0.06, word.end - word.start);
+        const wordProgress = Math.min(1.0, Math.max(0.0, wordElapsed / wordDuration));
+
         if (isActive && template.animation) {
           const { perWordEffect, scaleMagnitude = 1.15 } = template.animation;
-          if (
+          if (perWordEffect === "single_word_flow" || isSingleWordMode) {
+            // Single-Word Smooth Flow Kinetics: Micro-glide float + spring ease + soft opacity ramp
+            const popDuration = 0.20;
+            let flowScale = scaleMagnitude;
+            if (wordElapsed < popDuration) {
+              const t = wordElapsed / popDuration;
+              flowScale = 1.0 + (scaleMagnitude - 1.0) * Math.sin(t * Math.PI * 1.5) * Math.exp(-t * 3.5);
+            }
+
+            // Smooth upward glide on entry (starts +5px below and glides smoothly into place)
+            const slideT = Math.min(1.0, wordElapsed / 0.10);
+            const slideY = (1.0 - Math.sin((slideT * Math.PI) / 2)) * (fontSize * 0.08);
+
+            ctx.translate(wordCenterX, wordCenterY + slideY);
+            ctx.scale(flowScale, flowScale);
+            ctx.translate(-wordCenterX, -wordCenterY);
+
+            // Smooth fade-in (first 50ms) and soft ease-out (last 40ms)
+            const fadeInT = Math.min(1.0, wordElapsed / 0.05);
+            const remaining = Math.max(0, word.end - effectiveTime);
+            const fadeOutT = Math.min(1.0, remaining / 0.04);
+            const smoothOpacity = Math.sin((fadeInT * Math.PI) / 2) * (0.85 + 0.15 * Math.sin((fadeOutT * Math.PI) / 2));
+            ctx.globalAlpha *= Math.max(0.0, Math.min(1.0, smoothOpacity));
+          } else if (
             perWordEffect === "scale_pop" ||
-            perWordEffect === "bounce" ||
+            perWordEffect === "highlight_box" ||
             perWordEffect === "brush_reveal" ||
             perWordEffect === "hollow_fill" ||
             perWordEffect === "extrusion_3d"
           ) {
+            // Elastic spring overshoot pop on entry (Remotion-grade spring physics)
+            const popDuration = 0.22;
+            let currentScale = scaleMagnitude;
+            if (wordElapsed < popDuration) {
+              const t = wordElapsed / popDuration;
+              const overshoot = 0.22 * Math.max(0.12, scaleMagnitude - 1.0);
+              currentScale = scaleMagnitude + overshoot * Math.sin(t * Math.PI * 1.8) * Math.exp(-t * 3.8);
+            }
             ctx.translate(wordCenterX, wordCenterY);
-            ctx.scale(scaleMagnitude, scaleMagnitude);
+            ctx.scale(currentScale, currentScale);
             ctx.translate(-wordCenterX, -wordCenterY);
+          } else if (perWordEffect === "bounce" || perWordEffect === "squash_bounce") {
+            // MrBeast / YouTube Viral Squash & Stretch Bounce Physics (Volume-Preserving)
+            const bounceDuration = 0.36;
+            const t = Math.min(1.0, wordElapsed / bounceDuration);
+            const decay = Math.exp(-4.2 * t);
+            const oscillation = Math.sin(t * Math.PI * 3.6);
+            const squashDelta = 0.24 * decay * oscillation;
+            const scaleY = scaleMagnitude + squashDelta;
+            const scaleX = scaleMagnitude - squashDelta * 0.75; // Preserves mass
+            const liftY = -Math.abs(Math.sin(t * Math.PI)) * (fontSize * 0.16) * decay;
+
+            ctx.translate(wordCenterX, wordCenterY + liftY);
+            ctx.scale(scaleX, scaleY);
+            ctx.translate(-wordCenterX, -wordCenterY);
+          } else if (perWordEffect === "kinetic_slam") {
+            // High-Energy Kinetic Slam Drop: rapid fall from above with elastic impact shake
+            const slamDuration = 0.22;
+            const t = Math.min(1.0, wordElapsed / slamDuration);
+            const easeOut = 1.0 - Math.pow(1.0 - t, 4);
+            const dropY = -(1.0 - easeOut) * (fontSize * 0.65);
+            const slamScale = 1.0 + (scaleMagnitude * 1.25 - 1.0) * (1.0 - easeOut);
+
+            // Elastic ground shake on impact
+            let impactShake = 0;
+            if (t > 0.45) {
+              const shakeT = (t - 0.45) / 0.55;
+              impactShake = Math.sin(shakeT * Math.PI * 6) * (fontSize * 0.04) * Math.exp(-shakeT * 4);
+            }
+
+            ctx.translate(wordCenterX, wordCenterY + dropY + impactShake);
+            ctx.scale(slamScale, slamScale);
+            ctx.translate(-wordCenterX, -wordCenterY);
+          } else if (perWordEffect === "smooth_glide") {
+            // Elegant Documentary / Ali Abdaal Smooth Kinetic Drift
+            const glideDuration = 0.24;
+            const t = Math.min(1.0, wordElapsed / glideDuration);
+            const ease = 1.0 - Math.pow(1.0 - t, 3);
+            const liftY = (1.0 - ease) * (fontSize * 0.14);
+            const glideScale = 1.0 + (scaleMagnitude - 1.0) * ease;
+
+            ctx.translate(wordCenterX, wordCenterY + liftY);
+            ctx.scale(glideScale, glideScale);
+            ctx.translate(-wordCenterX, -wordCenterY);
+
+            // Soft entry opacity dissolve
+            const fadeT = Math.min(1.0, wordElapsed / 0.06);
+            ctx.globalAlpha *= Math.sin((fadeT * Math.PI) / 2);
+          } else if (perWordEffect === "chromatic_strike") {
+            // Cyberpunk Analog Glitch Strike with dynamic convergence
+            const strikeDuration = 0.28;
+            const t = Math.min(1.0, wordElapsed / strikeDuration);
+            const decay = Math.exp(-4.5 * t);
+            const jitterX = Math.sin(wordElapsed * 48) * (template.animation?.glitchOffsetPx || 5) * decay;
+            ctx.translate(jitterX, 0);
           } else if (perWordEffect === "glitch_jitter") {
             const jitterX =
               Math.sin((effectiveTime - word.start) * 40) *
@@ -561,18 +822,47 @@ export function renderCaptionFrame(options: RenderCaptionFrameOptions): void {
           } else if (perWordEffect === "flicker") {
             const flickerFreq = template.animation.flickerFrequency || 28;
             const flickerAlpha =
-              0.8 + 0.2 * Math.sin((effectiveTime - word.start) * flickerFreq);
-            ctx.globalAlpha *= flickerAlpha;
+              0.78 +
+              0.15 * Math.sin((effectiveTime - word.start) * flickerFreq) +
+              0.07 * Math.cos((effectiveTime - word.start) * (flickerFreq * 2.1));
+            ctx.globalAlpha *= Math.min(1.0, Math.max(0.35, flickerAlpha));
           }
         }
 
-        // Shadows / Glow
-        if (isActive && template.colors.glowColor) {
+        // Shadows / Dynamic Breathing Glow / Neon Pulse
+        if (isActive && (template.animation?.perWordEffect === "glow" || template.animation?.perWordEffect === "neon_pulse")) {
+          const pulseSpeed = template.animation?.flickerFrequency || 10;
+          const breathe = 0.55 + 0.35 * Math.sin(effectiveTime * pulseSpeed) + 0.10 * Math.cos(effectiveTime * pulseSpeed * 2.2);
+          ctx.shadowColor = template.colors.glowColor || template.colors.activeWordText;
+          ctx.shadowBlur = Math.round((template.colors.shadowBlur || 22) * (0.8 + 0.45 * breathe));
+        } else if (isActive && template.colors.glowColor) {
           ctx.shadowColor = template.colors.glowColor;
           ctx.shadowBlur = template.colors.shadowBlur || 20;
         } else if (template.colors.shadowColor) {
           ctx.shadowColor = template.colors.shadowColor;
           ctx.shadowBlur = template.colors.shadowBlur || 10;
+        }
+
+        // Active Word Highlighter Box / Pill (Hormozi & Iman Gadzhi Box Style)
+        if (hasActiveBox) {
+          const pillBg = template.colors.activeWordBg || template.colors.activeWordText || "#FFE600";
+          const pillPadX = Math.round(fontSize * 0.22);
+          const pillPadY = Math.round(fontSize * 0.12);
+          const pillW = metric.width + pillPadX * 2;
+          const pillH = Math.round(fontSize + pillPadY * 2);
+          const pillX = currentX - pillPadX;
+          const pillY = lineY - pillH / 2;
+          const pillRadius = Math.min(pillH / 2, Math.round(fontSize * 0.22));
+
+          ctx.save();
+          ctx.fillStyle = pillBg;
+          if (template.colors.shadowColor) {
+            ctx.shadowColor = template.colors.shadowColor;
+            ctx.shadowBlur = Math.round((template.colors.shadowBlur || 12) * 0.6);
+          }
+          roundRect(ctx, pillX, pillY, pillW, pillH, pillRadius);
+          ctx.fill();
+          ctx.restore();
         }
 
         // 3D Extrusion
@@ -612,22 +902,29 @@ export function renderCaptionFrame(options: RenderCaptionFrameOptions): void {
           ctx.strokeText(metric.text, currentX, lineY);
         }
 
-        // Glitch chromatic split
-        if (isActive && template.animation?.perWordEffect === "glitch_jitter") {
-          const splitPx = template.animation.glitchOffsetPx || 4;
+        // Glitch chromatic split & Chromatic Strike
+        if (isActive && (template.animation?.perWordEffect === "glitch_jitter" || template.animation?.perWordEffect === "chromatic_strike")) {
+          const isStrike = template.animation?.perWordEffect === "chromatic_strike";
+          const strikeT = isStrike ? Math.min(1.0, wordElapsed / 0.28) : 0;
+          const strikeDecay = isStrike ? Math.exp(-4.5 * strikeT) : 1.0;
+          const baseOffset = template.animation.glitchOffsetPx || (isStrike ? 6 : 4);
+          const splitPx = Math.max(1, Math.round(baseOffset * strikeDecay));
+
           ctx.save();
-          ctx.fillStyle = "rgba(239, 68, 68, 0.75)";
+          ctx.fillStyle = "rgba(239, 68, 68, 0.85)";
           ctx.fillText(metric.text, currentX - splitPx, lineY);
-          ctx.fillStyle = "rgba(6, 182, 212, 0.75)";
+          ctx.fillStyle = "rgba(6, 182, 212, 0.85)";
           ctx.fillText(metric.text, currentX + splitPx, lineY);
           ctx.restore();
         }
 
-        // Dim upcoming words
-        if (!isActive && !isPastWord) {
-          ctx.globalAlpha = 0.40;
-        } else {
-          ctx.globalAlpha = 1.0;
+        // Dim upcoming words (only when in multi-word chunk mode)
+        if (!isSingleWordMode) {
+          if (!isActive && !isPastWord) {
+            ctx.globalAlpha = 0.40;
+          } else {
+            ctx.globalAlpha = 1.0;
+          }
         }
 
         const activeColor =
@@ -635,7 +932,7 @@ export function renderCaptionFrame(options: RenderCaptionFrameOptions): void {
             ? template.colors.activeWordText
             : "#F59E0B";
 
-        let fillStyle: string | CanvasGradient = isActive
+        let fillStyle: string | CanvasGradient = (isActive || isSingleWordMode)
           ? activeColor
           : isPastWord
           ? template.colors.primaryText
@@ -664,13 +961,67 @@ export function renderCaptionFrame(options: RenderCaptionFrameOptions): void {
           fillStyle = "transparent";
         }
 
-        ctx.fillStyle = fillStyle;
-        ctx.fillText(metric.text, currentX, lineY);
+        // Render main text or specialized word animations
+        const isKaraoke = template.animation?.perWordEffect === "karaoke_fill";
+        const isTypewriter = isActive && template.animation?.perWordEffect === "typewriter";
+
+        if (isKaraoke) {
+          // Ali Abdaal / Submagic Frame-Accurate Progressive Karaoke Wipe
+          if (isActive) {
+            // Draw base dim text first
+            ctx.fillStyle = template.colors.primaryText;
+            ctx.fillText(metric.text, currentX, lineY);
+
+            // Progressive wipe from left to right as the word is pronounced
+            const optCtx = ctx as unknown as {
+              clip?: () => void;
+              rect?: (x: number, y: number, w: number, h: number) => void;
+            };
+            if (typeof optCtx.clip === "function" && typeof optCtx.rect === "function") {
+              ctx.save();
+              ctx.beginPath();
+              optCtx.rect(
+                currentX - 2,
+                lineY - fontSize * 0.8,
+                (metric.width + 4) * wordProgress,
+                fontSize * 1.6
+              );
+              optCtx.clip();
+              ctx.fillStyle = activeColor;
+              ctx.fillText(metric.text, currentX, lineY);
+              ctx.restore();
+            } else {
+              // Mock fallback for test contexts without clip()
+              ctx.fillStyle = activeColor;
+              ctx.fillText(metric.text, currentX, lineY);
+            }
+          } else if (isPastWord) {
+            ctx.fillStyle = activeColor;
+            ctx.fillText(metric.text, currentX, lineY);
+          } else {
+            ctx.fillStyle = template.colors.primaryText;
+            ctx.fillText(metric.text, currentX, lineY);
+          }
+        } else if (isTypewriter) {
+          // Dynamic typewriter character reveal
+          const charCount = Math.max(
+            1,
+            Math.min(metric.text.length, Math.ceil(wordProgress * metric.text.length))
+          );
+          const visibleText = metric.text.slice(0, charCount);
+          ctx.fillStyle = fillStyle;
+          ctx.fillText(visibleText, currentX, lineY);
+        } else {
+          ctx.fillStyle = fillStyle;
+          ctx.fillText(metric.text, currentX, lineY);
+        }
 
         // Animated Swash Underline
         if (isActive && template.animation?.underline?.enabled) {
           const u = template.animation.underline;
           const uY = lineY + fontSize * 0.52;
+          const swashProgress = u.animated ? Math.min(1.0, Math.max(0.15, wordProgress * 1.3)) : 1.0;
+          const drawWidth = metric.width * swashProgress;
           ctx.save();
           ctx.strokeStyle = u.color;
           ctx.lineWidth = Math.round(canvasHeight * u.thicknessPercent);
@@ -678,17 +1029,20 @@ export function renderCaptionFrame(options: RenderCaptionFrameOptions): void {
           ctx.beginPath();
           ctx.moveTo(currentX - 2, uY);
           ctx.quadraticCurveTo(
-            currentX + metric.width / 2,
+            currentX + drawWidth / 2,
             uY + Math.round(fontSize * 0.12),
-            currentX + metric.width + 4,
+            currentX + drawWidth + 4,
             uY - 1
           );
-          ctx.stroke();
+          const optStrokeCtx = ctx as unknown as { stroke?: () => void };
+          if (typeof optStrokeCtx.stroke === "function") {
+            optStrokeCtx.stroke();
+          }
           ctx.restore();
         }
 
         ctx.restore();
-        currentX += metric.width + spaceWidth;
+        currentX += metric.width + metric.rightPad + baseSpaceWidth;
       });
     });
   };
@@ -749,6 +1103,7 @@ export function renderCaptionsToCanvas(
     showMaskOverlay?: boolean;
     layerOrder?: "behind" | "front" | "sandwich";
     fitMode?: "fit" | "cover" | "stretch";
+    singleWordOnly?: boolean;
   }
 ): void {
   const tokens: WordToken[] = words.map((w, idx) => ({
@@ -768,6 +1123,8 @@ export function renderCaptionsToCanvas(
     tokens,
     template,
     syncOffsetSeconds,
+    showBehindBadge: false,
+    singleWordOnly: behindCompositing?.singleWordOnly,
     videoSource: behindCompositing?.videoSource,
     segmentationMask: behindCompositing?.segmentationMask,
     maskWidth: behindCompositing?.maskWidth,

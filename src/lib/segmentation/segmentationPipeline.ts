@@ -86,7 +86,7 @@ export class SegmentationPipeline {
     sourceHeight: number
   ): Promise<SegmentationMaskFrame> {
     // 1. Check cache first (instant hit)
-    const versionedHash = `${videoHash}_dyn_v2`;
+    const versionedHash = `${videoHash}_accurate_v3`;
     const cached = await opfsMaskCache.getMask(versionedHash, timestamp, 0.04);
     if (cached) {
       return cached;
@@ -113,10 +113,38 @@ export class SegmentationPipeline {
         this.reusableCtx = this.reusableCanvas.getContext("2d", { willReadFrequently: true });
       }
 
+      // Compute exact aspect-ratio fit rectangle inside procW x procH
+      let fitX = 0;
+      let fitY = 0;
+      let fitW = procW;
+      let fitH = procH;
+
+      const vW = (frameSource as HTMLVideoElement)?.videoWidth || (frameSource as any)?.width || sourceWidth;
+      const vH = (frameSource as HTMLVideoElement)?.videoHeight || (frameSource as any)?.height || sourceHeight;
+
+      if (vW && vH && sourceWidth && sourceHeight) {
+        const vAspect = vW / vH;
+        const targetAspect = sourceWidth / sourceHeight;
+        if (Math.abs(vAspect - targetAspect) > 0.01) {
+          if (vAspect > targetAspect) {
+            fitW = procW;
+            fitH = Math.round(procW / vAspect);
+            fitX = 0;
+            fitY = Math.round((procH - fitH) / 2);
+          } else {
+            fitH = procH;
+            fitW = Math.round(procH * vAspect);
+            fitX = Math.round((procW - fitW) / 2);
+            fitY = 0;
+          }
+        }
+      }
+
       const ctx = this.reusableCtx;
       if (ctx) {
         try {
-          ctx.drawImage(frameSource, 0, 0, procW, procH);
+          ctx.clearRect(0, 0, procW, procH);
+          ctx.drawImage(frameSource, fitX, fitY, fitW, fitH);
           const imgData = ctx.getImageData(0, 0, procW, procH);
           const analysis = dynamicSubjectAnalyzer.analyzeFrame(
             imgData.data,

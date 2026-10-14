@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { renderCaptionFrame } from "../captionRenderer";
+import { renderCaptionFrame, renderCaptionsToCanvas } from "../captionRenderer";
 import { CAPTION_PRESETS } from "../../templates/presets";
 import { validateTemplate } from "../../templates/schema";
 import type { WordToken } from "@/lib/timestampRefiner";
@@ -233,5 +233,45 @@ describe("Golden-Frame Consistency & Template Schema Suite", () => {
     expect(textFillIndex).toBeGreaterThanOrEqual(0);
     expect(cutoutIndex).toBeGreaterThan(textFillIndex);
   });
+
+  it("should never render template pill badges (such as 'BEHIND YOU' or 'SQUASH BOUNCE') on the video overlay by default", () => {
+    const ctxDefault = createMockCanvasContext();
+    const ctxCanvasWrapper = createMockCanvasContext();
+    const testTokens: WordToken[] = [
+      { id: "1", text: "Test", start: 0.1, end: 0.5, confidence: 1.0 },
+      { id: "2", text: "overlay", start: 0.5, end: 1.0, confidence: 1.0 },
+    ];
+    const templateWithBadge = CAPTION_PRESETS.find((t) => t.badge) || CAPTION_PRESETS[0];
+
+    // 1. Direct renderCaptionFrame without showBehindBadge specified
+    renderCaptionFrame({
+      ctx: ctxDefault as unknown as CanvasRenderingContext2D,
+      canvasWidth: 1080,
+      canvasHeight: 1920,
+      currentTime: 0.3,
+      tokens: testTokens,
+      template: templateWithBadge,
+    });
+
+    const defaultLog = ctxDefault.getLog();
+    const hasBadgeInDefault = defaultLog.some((cmd) => cmd.includes(`fillText("${templateWithBadge.badge}"`));
+    expect(hasBadgeInDefault).toBe(false);
+
+    // 2. Via renderCaptionsToCanvas (used in editor and export)
+    renderCaptionsToCanvas(
+      ctxCanvasWrapper as unknown as CanvasRenderingContext2D,
+      testTokens,
+      templateWithBadge,
+      0.3,
+      1080,
+      1920,
+      0
+    );
+
+    const canvasWrapperLog = ctxCanvasWrapper.getLog();
+    const hasBadgeInWrapper = canvasWrapperLog.some((cmd) => cmd.includes(`fillText("${templateWithBadge.badge}"`));
+    expect(hasBadgeInWrapper).toBe(false);
+  });
 });
+
 

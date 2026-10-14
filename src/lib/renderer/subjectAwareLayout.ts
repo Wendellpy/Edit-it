@@ -110,15 +110,22 @@ export function computeSubjectAwareLayout(
     layoutMode = "sandwich";
     targetX = headRegion.centerX * canvasWidth;
     targetY = canvasHeight * template.layout.yPositionPercent;
+
+    // Scale font size dynamically according to the actual object size so text peeks out proportionately
+    const torsoWidthPx = boundingBox.width * canvasWidth;
+    const minPeekingWidth = Math.max(torsoWidthPx * 1.35, canvasWidth * 0.18);
+    if (estimatedTextWidth < minPeekingWidth && estimatedTextWidth > 0) {
+      targetFontSize = Math.round(rawFontSize * (minPeekingWidth / estimatedTextWidth));
+    }
   } else if (template.layout.behindSubjectDepth) {
     // General behind-the-subject styles (Behind You White, Neon Halo, Cinema Letterbox, etc.)
     // Anchor horizontally behind the detected subject
     targetX = headRegion.centerX * canvasWidth;
     targetY = canvasHeight * template.layout.yPositionPercent;
 
-    // Scale font size up if text is narrower than the subject's torso so it peeks out on both sides
+    // Scale font size dynamically according to the actual object size so text peeks out proportionately
     const torsoWidthPx = boundingBox.width * canvasWidth;
-    const minPeekingWidth = Math.max(torsoWidthPx * 1.35, canvasWidth * 0.42);
+    const minPeekingWidth = Math.max(torsoWidthPx * 1.35, canvasWidth * 0.18);
     if (estimatedTextWidth < minPeekingWidth && estimatedTextWidth > 0) {
       targetFontSize = Math.round(rawFontSize * (minPeekingWidth / estimatedTextWidth));
     }
@@ -143,25 +150,15 @@ export function computeSubjectAwareLayout(
 
   // If more than 50% of the text area is occluded by the subject:
   if (occlusionRatio > 0.50 && layoutMode !== "vertical_flank" && layoutMode !== "behind_head") {
-    // Step A: Scale up text by up to 25% so wings peek out further
-    targetFontSize = Math.round(targetFontSize * 1.25);
-    const newTextW = effectiveTextW * 1.25;
+    isOccludedWarning = true;
+    // Scale up text width so wings peek out further into open space on both sides
+    const scaleFactor = Math.min(1.30, Math.max(1.15, 0.85 / Math.max(0.2, 1.01 - occlusionRatio)));
+    targetFontSize = Math.round(targetFontSize * scaleFactor);
+    const newTextW = effectiveTextW * scaleFactor;
     const newTextLeft = targetX - newTextW / 2;
     const newTextRight = targetX + newTextW / 2;
     const newOverlapW = Math.max(0, Math.min(newTextRight, subRight) - Math.max(newTextLeft, subLeft));
     occlusionRatio = Math.round(((newOverlapW * overlapH) / (newTextW * effectiveTextH)) * 100) / 100;
-
-    // Step B: If still >50% occluded, adjust vertical position toward negative space
-    if (occlusionRatio > 0.50) {
-      if (headRegion.centerY > 0.4) {
-        // Nudge upward
-        targetY = Math.max(canvasHeight * 0.18, targetY - canvasHeight * 0.1);
-      } else {
-        // Nudge downward
-        targetY = Math.min(canvasHeight * 0.85, targetY + canvasHeight * 0.1);
-      }
-      isOccludedWarning = true;
-    }
   }
 
   return {

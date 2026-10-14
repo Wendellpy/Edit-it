@@ -771,9 +771,7 @@ export async function exportVideoWithWebCodecs(options: ExportJobOptions): Promi
   const exportMaskCache = new Map<number, any>();
 
   // Determine effective layer order (default: front style)
-  const effectiveLayerOrder =
-    options.layerOrder ??
-    (template.layout.behindSubjectDepth ? (template.layout.layerOrder ?? 'behind') : 'front');
+  const effectiveLayerOrder = options.layerOrder ?? 'front';
   const shouldCompositeBehind = effectiveLayerOrder !== 'front' && !!template.layout.behindSubjectDepth;
 
   // Frame Rendering Loop
@@ -1032,9 +1030,7 @@ async function exportTransparentCaptionWebM(options: {
   const videoKey = videoElement?.src || 'export_video';
   const exportMaskCache = new Map<number, any>();
 
-  const effectiveLayerOrder =
-    layerOrder ??
-    (template.layout.behindSubjectDepth ? (template.layout.layerOrder ?? 'behind') : 'front');
+  const effectiveLayerOrder = layerOrder ?? 'front';
   const shouldCompositeBehind = effectiveLayerOrder !== 'front' && !!template.layout.behindSubjectDepth;
 
   for (let frameIndex = 0; frameIndex < totalFrames; frameIndex++) {
@@ -1206,9 +1202,7 @@ async function exportWithMediaRecorderFallback(options: {
   const videoKey = (options.videoFile ? (options.videoFile as File).name : options.videoUrl) || videoElement.src || 'export_video';
   const exportMaskCache = new Map<number, any>();
 
-  const effectiveLayerOrder =
-    layerOrder ??
-    (template.layout.behindSubjectDepth ? (template.layout.layerOrder ?? 'behind') : 'front');
+  const effectiveLayerOrder = layerOrder ?? 'front';
   const shouldCompositeBehind = effectiveLayerOrder !== 'front' && !!template.layout.behindSubjectDepth;
 
   for (let frameIndex = 0; frameIndex < totalFrames; frameIndex++) {

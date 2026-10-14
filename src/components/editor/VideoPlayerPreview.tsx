@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef, useState, useCallback } from "react";
+import React, { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { useEditorStore } from "@/lib/editorStore";
 import { renderCaptionsToCanvas, buildCaptionCues } from "@/lib/renderer/captionRenderer";
 import { getTemplateById } from "@/lib/templates";
@@ -56,9 +56,24 @@ export function VideoPlayerPreview({ onOpenTranscribe }: VideoPlayerPreviewProps
     showMaskOverlay,
     exportSettings,
     setExportSettings,
+    isAudioMuted,
+    setIsAudioMuted,
+    isCaptionsVisible,
+    isVideoVisible,
+    animationEffectOverride,
   } = useEditorStore();
 
-  const template = getTemplateById(templateId);
+  const baseTemplate = getTemplateById(templateId);
+  const template = useMemo(() => {
+    if (!animationEffectOverride) return baseTemplate;
+    return {
+      ...baseTemplate,
+      animation: {
+        ...baseTemplate.animation,
+        perWordEffect: animationEffectOverride,
+      },
+    };
+  }, [baseTemplate, animationEffectOverride]);
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -84,7 +99,8 @@ export function VideoPlayerPreview({ onOpenTranscribe }: VideoPlayerPreviewProps
   };
   const [detectedSpecs, setDetectedSpecs] = useState<string>("1920×1080 · 24fps");
   const [zoomLevel, setZoomLevel] = useState<"fit" | "100%" | "75%" | "50%">("fit");
-  const [isMuted, setIsMuted] = useState(false);
+  const isMuted = isAudioMuted;
+  const setIsMuted = setIsAudioMuted;
   const [volume, setVolume] = useState(1.0);
   const [isDraggingFile, setIsDraggingFile] = useState(false);
 
@@ -107,8 +123,7 @@ export function VideoPlayerPreview({ onOpenTranscribe }: VideoPlayerPreviewProps
   const isInferencingRef = useRef<boolean>(false);
   const lastInferenceTimeRef = useRef<number>(-1);
 
-  const isDepthActive =
-    (layerOrder ? layerOrder !== "front" : !!template.layout.behindSubjectDepth);
+  const isDepthActive = (layerOrder ? layerOrder !== "front" : false);
 
   // Synchronize segmentation pipeline config with user settings
   useEffect(() => {
@@ -168,7 +183,8 @@ export function VideoPlayerPreview({ onOpenTranscribe }: VideoPlayerPreviewProps
 
         if (isCancelled) return;
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-        renderCaptionsToCanvas(
+        if (isCaptionsVisible) {
+          renderCaptionsToCanvas(
           ctx,
           tokens,
           template,
@@ -187,7 +203,8 @@ export function VideoPlayerPreview({ onOpenTranscribe }: VideoPlayerPreviewProps
                 layerOrder,
               }
             : undefined
-        );
+          );
+        }
       };
 
       render();
@@ -566,6 +583,10 @@ export function VideoPlayerPreview({ onOpenTranscribe }: VideoPlayerPreviewProps
               id="preview-video-element"
               ref={videoRef}
               src={videoUrl}
+              muted={isAudioMuted}
+              className={`absolute inset-0 w-full h-full object-contain z-0 transition-opacity duration-200 ${
+                isVideoVisible === false ? "opacity-0" : "opacity-100"
+              }`}
               onLoadedMetadata={() => {
                 if (videoRef.current) {
                   const { videoWidth, videoHeight, duration: vidDur } = videoRef.current;
@@ -656,9 +677,7 @@ export function VideoPlayerPreview({ onOpenTranscribe }: VideoPlayerPreviewProps
                   }).catch(() => {});
                 }
               }}
-              className="absolute inset-0 w-full h-full object-contain z-0"
               playsInline
-              muted={isMuted}
               onEnded={() => useEditorStore.getState().setIsPlaying(false)}
             />
           ) : (
@@ -853,7 +872,7 @@ export function VideoPlayerPreview({ onOpenTranscribe }: VideoPlayerPreviewProps
           {/* Volume Control */}
           <div className="flex items-center gap-1.5">
             <button
-              onClick={() => setIsMuted((m) => !m)}
+              onClick={() => setIsAudioMuted(!isAudioMuted)}
               className="text-[var(--text-muted)] hover:text-[var(--text-main)] transition-colors cursor-pointer"
             >
               {isMuted || volume === 0 ? (

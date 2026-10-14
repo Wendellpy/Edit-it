@@ -14,10 +14,58 @@ interface TemplateStyle {
     keyword: string;
     suffix?: string;
   };
-  styleType: "behind_you" | "neon_sticker" | "sunshine_impact" | "editorial_dual" | "crimson_glow" | "chrome_3d";
+  styleType: "behind_you" | "neon_sticker" | "sunshine_impact" | "editorial_dual" | "crimson_glow" | "chrome_3d" | "hormozi_highlighter" | "ali_abdaal_karaoke" | "mr_beast_squash" | "single_word_flow";
 }
 
 const TEMPLATES: TemplateStyle[] = [
+  {
+    id: "creator_fuel_cyan",
+    name: "Single-Word Smooth Flow",
+    category: "Bold Viral",
+    badge: "1-WORD FLOW",
+    previewWords: {
+      prefix: "",
+      keyword: "DYNAMIC",
+      suffix: "",
+    },
+    styleType: "single_word_flow",
+  },
+  {
+    id: "alex_hormozi_punch",
+    name: "Hormozi Viral Highlighter Box",
+    category: "Bold Viral",
+    badge: "VIRAL BOX",
+    previewWords: {
+      prefix: "make captions",
+      keyword: "UNMISSABLE",
+      suffix: "today",
+    },
+    styleType: "hormozi_highlighter",
+  },
+  {
+    id: "whisper_simple",
+    name: "Ali Abdaal — Fluid Karaoke Wipe",
+    category: "Minimal",
+    badge: "KARAOKE WIPE",
+    previewWords: {
+      prefix: "productive",
+      keyword: "WORKFLOW",
+      suffix: "built-in",
+    },
+    styleType: "ali_abdaal_karaoke",
+  },
+  {
+    id: "mr_beast_bold",
+    name: "MrBeast High-Energy Squash",
+    category: "Bold Viral",
+    badge: "SQUASH BOUNCE",
+    previewWords: {
+      prefix: "50 MILLION",
+      keyword: "CREATORS",
+      suffix: "",
+    },
+    styleType: "mr_beast_squash",
+  },
   {
     id: "behind_you_white",
     name: "Behind You — Clean White",
@@ -65,18 +113,6 @@ const TEMPLATES: TemplateStyle[] = [
       suffix: "kiya,",
     },
     styleType: "editorial_dual",
-  },
-  {
-    id: "crimson_glow_serif",
-    name: "Crimson Neon Glow (Jetty)",
-    category: "Bollywood",
-    badge: "BEHIND YOU",
-    previewWords: {
-      prefix: "",
-      keyword: "UPLOAD",
-      suffix: "kiya,",
-    },
-    styleType: "crimson_glow",
   },
   {
     id: "chrome_3d_metal",
@@ -236,6 +272,88 @@ export function CreatorTemplatePreview() {
 
             {/* Dynamic Center/Upper Caption Rendering based on Template Type */}
             <div className="relative z-20 flex flex-col items-center justify-center text-center my-auto px-2">
+              {/* 0. Single-Word Smooth Flow */}
+              {selectedTemplate.styleType === "single_word_flow" && (
+                <div className="flex flex-col items-center justify-center text-center py-4">
+                  <div
+                    className={`text-4xl sm:text-6xl font-black uppercase tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-sky-400 via-teal-300 to-indigo-400 drop-shadow-[0_4px_20px_rgba(56,189,248,0.55)] transition-all duration-300 transform ${
+                      animatingWord ? "scale-110 -translate-y-1.5 opacity-100" : "scale-95 translate-y-1 opacity-70"
+                    }`}
+                    style={{
+                      fontFamily: "Montserrat, 'Arial Black', sans-serif",
+                      WebkitTextStroke: "2px #000000",
+                    }}
+                  >
+                    {selectedTemplate.previewWords.keyword}
+                  </div>
+                  <div className="mt-3 px-2.5 py-1 rounded-full bg-sky-500/10 border border-sky-400/30 text-[10px] text-sky-300 font-mono tracking-widest uppercase flex items-center gap-1.5 shadow-sm">
+                    <span className="w-1.5 h-1.5 rounded-full bg-sky-400 animate-pulse"></span>
+                    Only active spoken word visible
+                  </div>
+                </div>
+              )}
+
+              {/* 0. Hormozi Viral Highlighter Box */}
+              {selectedTemplate.styleType === "hormozi_highlighter" && (
+                <div className="space-y-2 text-center">
+                  <div className="text-white text-xs font-bold uppercase tracking-wider drop-shadow">
+                    {selectedTemplate.previewWords.prefix}
+                  </div>
+                  <div
+                    className={`inline-block px-3.5 py-1.5 rounded-lg bg-[#FFE600] text-black font-black uppercase text-3xl sm:text-4xl shadow-xl transition-all ${
+                      animatingWord ? "scale-110 -rotate-1" : "scale-100 rotate-0"
+                    }`}
+                    style={{ fontFamily: "Impact, sans-serif" }}
+                  >
+                    {selectedTemplate.previewWords.keyword}
+                  </div>
+                  <div className="text-white text-xs font-bold uppercase tracking-wider drop-shadow">
+                    {selectedTemplate.previewWords.suffix}
+                  </div>
+                </div>
+              )}
+
+              {/* 0.1 Ali Abdaal Fluid Karaoke Wipe */}
+              {selectedTemplate.styleType === "ali_abdaal_karaoke" && (
+                <div className="space-y-1 text-center">
+                  <div className="text-zinc-300 text-xs font-medium">
+                    {selectedTemplate.previewWords.prefix}
+                  </div>
+                  <div className="text-2xl sm:text-3xl font-extrabold tracking-tight font-sans">
+                    <span
+                      className={`inline-block transition-colors duration-300 ${
+                        animatingWord ? "text-[#FBBF24]" : "text-white"
+                      }`}
+                    >
+                      {selectedTemplate.previewWords.keyword}
+                    </span>
+                  </div>
+                  <div className="text-zinc-400 text-xs font-medium">
+                    {selectedTemplate.previewWords.suffix}
+                  </div>
+                </div>
+              )}
+
+              {/* 0.2 MrBeast High-Energy Squash */}
+              {selectedTemplate.styleType === "mr_beast_squash" && (
+                <div className="space-y-1 text-center">
+                  <div className="text-white text-sm font-black uppercase tracking-tight drop-shadow-[0_2px_4px_black]">
+                    {selectedTemplate.previewWords.prefix}
+                  </div>
+                  <div
+                    className={`text-4xl sm:text-5xl font-black uppercase tracking-tight text-[#FFE600] drop-shadow-[0_4px_10px_black] transition-all duration-300 ${
+                      animatingWord ? "scale-x-90 scale-y-125 -translate-y-2" : "scale-100 translate-y-0"
+                    }`}
+                    style={{
+                      fontFamily: "Arial Black, sans-serif",
+                      WebkitTextStroke: "2px black",
+                    }}
+                  >
+                    {selectedTemplate.previewWords.keyword}
+                  </div>
+                </div>
+              )}
+
               {/* 1. Behind You White */}
               {selectedTemplate.styleType === "behind_you" && (
                 <div className="space-y-1">

@@ -23,7 +23,7 @@ import {
   Info,
 } from "lucide-react";
 import { CAPTION_PRESETS, getTemplateById } from "@/lib/templates";
-import { type TemplateVibe } from "@/lib/templates/schema";
+import { type TemplateVibe, type WordAnimationEffect } from "@/lib/templates/schema";
 import { generateSrt, generateVtt, generateAss } from "@/lib/export/subtitleFormatters";
 import { saveBlobToDisk } from "@/lib/export/fileSaver";
 
@@ -53,6 +53,8 @@ export function TemplateStyleDock({ onOpenExportModal }: TemplateStyleDockProps)
     hasDismissedMaskNotice,
     dismissMaskNotice,
     exportSettings,
+    animationEffectOverride,
+    setAnimationEffectOverride,
   } = useEditorStore();
 
   const currentTemplate = getTemplateById(templateId);
@@ -332,19 +334,48 @@ export function TemplateStyleDock({ onOpenExportModal }: TemplateStyleDockProps)
                           <div className="w-10 h-10 rounded-full bg-[var(--accent-lime)] blur-sm" />
                         </div>
                       )}
-                      <span
-                        style={{
-                          color: preset.colors.primaryText === "transparent" ? "#38BDF8" : preset.colors.primaryText,
-                          fontFamily: preset.typography.primaryFont,
-                          textTransform: preset.typography.textTransform,
-                          fontWeight: preset.typography.primaryWeight === "900" ? 900 : 700,
-                          letterSpacing: preset.typography.wordTransform?.letterSpacingEm ? `${preset.typography.wordTransform.letterSpacingEm}em` : undefined,
-                          textShadow: preset.colors.shadowColor ? `0 2px 4px ${preset.colors.shadowColor}` : undefined,
-                        }}
-                        className="text-xs font-bold leading-tight px-1 line-clamp-2 z-10"
-                      >
-                        {userFirstLine}
-                      </span>
+                      {(() => {
+                        const words = userFirstLine.split(" ");
+                        const lastWord = words[words.length - 1];
+                        const prefix = words.slice(0, -1).join(" ");
+                        const hasBox = preset.colors.activeWordBg || preset.animation?.perWordEffect === "highlight_box";
+
+                        return (
+                          <span
+                            style={{
+                              color: preset.colors.primaryText === "transparent" ? "#38BDF8" : preset.colors.primaryText,
+                              fontFamily: preset.typography.primaryFont,
+                              textTransform: preset.typography.textTransform,
+                              fontWeight: preset.typography.primaryWeight === "900" ? 900 : 700,
+                              letterSpacing: preset.typography.wordTransform?.letterSpacingEm ? `${preset.typography.wordTransform.letterSpacingEm}em` : undefined,
+                              textShadow: preset.colors.shadowColor ? `0 2px 4px ${preset.colors.shadowColor}` : undefined,
+                            }}
+                            className="text-xs font-bold leading-tight px-1 line-clamp-2 z-10 flex items-center justify-center gap-1 flex-wrap"
+                          >
+                            {prefix && <span>{prefix}</span>}
+                            {hasBox ? (
+                              <span
+                                className="px-1.5 py-0.5 rounded text-[11px] font-black inline-block shadow-sm"
+                                style={{
+                                  backgroundColor: preset.colors.activeWordBg || preset.colors.activeWordText,
+                                  color: preset.colors.activeWordText,
+                                }}
+                              >
+                                {lastWord}
+                              </span>
+                            ) : (
+                              <span
+                                style={{
+                                  color: preset.colors.activeWordText,
+                                  textShadow: preset.colors.glowColor ? `0 0 8px ${preset.colors.glowColor}` : undefined,
+                                }}
+                              >
+                                {lastWord}
+                              </span>
+                            )}
+                          </span>
+                        );
+                      })()}
                     </div>
 
                     {/* Preset Name (multi-line supported) */}
@@ -383,33 +414,33 @@ export function TemplateStyleDock({ onOpenExportModal }: TemplateStyleDockProps)
             </span>
           </div>
 
-          {/* Layer Control (Behind / Front / Sandwich) */}
-          {currentTemplate.layout.behindSubjectDepth && (
-            <div className="space-y-2 p-3 rounded-xl bg-purple-950/30 border border-purple-800/40">
-              <div className="flex items-center justify-between">
-                <span className="text-[11px] font-bold text-purple-300 uppercase tracking-wider block">
-                  Depth Layering
-                </span>
-                <span className="text-[9px] text-zinc-400">Subject Cutout Active</span>
-              </div>
-
-              <div className="grid grid-cols-3 gap-1.5 pt-1">
-                {(["behind", "front", "sandwich"] as const).map((mode) => (
-                  <button
-                    key={mode}
-                    onClick={() => setLayerOrder(mode)}
-                    className={`py-1.5 px-2 rounded-lg text-[10px] font-extrabold capitalize transition-all ${
-                      layerOrder === mode
-                        ? "bg-purple-600 text-white shadow-md shadow-purple-600/30"
-                        : "bg-[#18191e] text-zinc-400 border border-zinc-800 hover:text-white"
-                    }`}
-                  >
-                    {mode}
-                  </button>
-                ))}
-              </div>
+          {/* Layer Depth Control (Front Default / Behind / Sandwich) */}
+          <div className="space-y-2 p-3 rounded-xl bg-purple-950/20 border border-purple-800/30">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-bold text-purple-300 uppercase tracking-wider block">
+                Depth Layering
+              </span>
+              <span className="text-[9px] text-zinc-400">
+                {layerOrder === "front" ? "In Front (Default)" : "Behind Subject Active"}
+              </span>
             </div>
-          )}
+
+            <div className="grid grid-cols-3 gap-1.5 pt-1">
+              {(["front", "behind", "sandwich"] as const).map((mode) => (
+                <button
+                  key={mode}
+                  onClick={() => setLayerOrder(mode)}
+                  className={`py-1.5 px-2 rounded-lg text-[10px] font-extrabold capitalize transition-all ${
+                    layerOrder === mode
+                      ? "bg-purple-600 text-white shadow-md shadow-purple-600/30 ring-1 ring-purple-400"
+                      : "bg-[#18191e] text-zinc-400 border border-zinc-800 hover:text-white"
+                  }`}
+                >
+                  {mode === "front" ? "Front (Def)" : mode}
+                </button>
+              ))}
+            </div>
+          </div>
 
           {/* Typography Controls */}
           <div className="space-y-2">
@@ -489,14 +520,133 @@ export function TemplateStyleDock({ onOpenExportModal }: TemplateStyleDockProps)
       {/* 5. TAB 3: Motion & FX */}
       {activeTab === "motion" && (
         <div className="flex-1 overflow-y-auto p-3 space-y-4 text-xs">
-          <div className="p-3 rounded-xl bg-[#14151a] border border-zinc-800 space-y-1">
-            <span className="text-[10px] text-zinc-500 uppercase font-semibold">Kinetic Engine</span>
-            <h4 className="text-xs font-bold text-white capitalize">
-              {currentTemplate.animation.perWordEffect.replace("_", " ")}
-            </h4>
-            <p className="text-[11px] text-zinc-400 mt-1">
-              Synchronized to word start and end timestamps at 60 frames per second.
+          {/* Kinetic Engine Header */}
+          <div className="p-3 rounded-xl bg-[#14151a] border border-zinc-800 space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] text-zinc-500 uppercase font-semibold">Kinetic Engine</span>
+              {animationEffectOverride && (
+                <button
+                  onClick={() => setAnimationEffectOverride(null)}
+                  className="text-[10px] font-mono text-amber-400 hover:text-amber-300 underline cursor-pointer"
+                >
+                  Reset to Default
+                </button>
+              )}
+            </div>
+            <div className="flex items-center justify-between">
+              <h4 className="text-xs font-bold text-white capitalize flex items-center gap-1.5">
+                <Zap className="w-3.5 h-3.5 text-amber-400" />
+                {(animationEffectOverride || currentTemplate.animation.perWordEffect).replace("_", " ")}
+              </h4>
+              <span className="px-1.5 py-0.5 rounded text-[9px] font-mono font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                {animationEffectOverride ? "CUSTOM" : "PRESET"}
+              </span>
+            </div>
+            <p className="text-[11px] text-zinc-400 leading-relaxed">
+              Real-time Canvas2D / WebGL kinetic typography synchronized with speech timestamps.
             </p>
+          </div>
+
+          {/* Kinetic Typography Animation Styles Grid */}
+          <div className="space-y-2">
+            <span className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider block">
+              Animation Styles
+            </span>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {[
+                {
+                  id: "scale_pop" as WordAnimationEffect,
+                  title: "Hormozi Spring Pop",
+                  tag: "VIRAL",
+                  desc: "Elastic spring pop with dynamic overshoot",
+                },
+                {
+                  id: "squash_bounce" as WordAnimationEffect,
+                  title: "MrBeast Squash Bounce",
+                  tag: "PUNCHY",
+                  desc: "Volume-preserving bounce with mass stretch",
+                },
+                {
+                  id: "kinetic_slam" as WordAnimationEffect,
+                  title: "Kinetic Slam Drop",
+                  tag: "HIGH ENERGY",
+                  desc: "Aggressive drop from above with impact shake",
+                },
+                {
+                  id: "karaoke_fill" as WordAnimationEffect,
+                  title: "Ali Abdaal Wipe",
+                  tag: "SMOOTH",
+                  desc: "Progressive left-to-right syllable clip fill",
+                },
+                {
+                  id: "chromatic_strike" as WordAnimationEffect,
+                  title: "Cyberpunk RGB Strike",
+                  tag: "GLITCH",
+                  desc: "Analog chromatic aberration RGB split",
+                },
+                {
+                  id: "neon_pulse" as WordAnimationEffect,
+                  title: "Neon Tube Pulse",
+                  tag: "GLOW",
+                  desc: "Dual-harmonic breathing luminous glow",
+                },
+                {
+                  id: "smooth_glide" as WordAnimationEffect,
+                  title: "Smooth Glide Float",
+                  tag: "ELEGANT",
+                  desc: "Gentle upward floating kinetic ease",
+                },
+                {
+                  id: "highlight_box" as WordAnimationEffect,
+                  title: "Highlighter Pill Pop",
+                  tag: "BOX",
+                  desc: "Dynamic background pill spring expansion",
+                },
+                {
+                  id: "typewriter" as WordAnimationEffect,
+                  title: "Typewriter Reveal",
+                  tag: "RETRO",
+                  desc: "Character-by-character synchronized reveal",
+                },
+                {
+                  id: "single_word_flow" as WordAnimationEffect,
+                  title: "Single-Word Flow",
+                  tag: "FOCUS",
+                  desc: "Only active spoken word visible at that time",
+                },
+              ].map((anim) => {
+                const isActive = (animationEffectOverride || currentTemplate.animation.perWordEffect) === anim.id;
+                return (
+                  <button
+                    key={anim.id}
+                    onClick={() => setAnimationEffectOverride(anim.id)}
+                    className={`p-2.5 rounded-xl text-left border transition-all cursor-pointer flex flex-col justify-between ${
+                      isActive
+                        ? "bg-amber-500/15 border-amber-500/60 shadow-[0_0_12px_rgba(245,158,11,0.15)]"
+                        : "bg-[#14151a] border-zinc-800/80 hover:border-zinc-700 hover:bg-[#181920]"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between w-full mb-1">
+                      <span className={`text-[11px] font-bold ${isActive ? "text-amber-400" : "text-zinc-200"}`}>
+                        {anim.title}
+                      </span>
+                      <span
+                        className={`text-[8px] font-mono px-1 py-0.2 rounded font-bold ${
+                          isActive
+                            ? "bg-amber-400 text-black"
+                            : "bg-zinc-800 text-zinc-400"
+                        }`}
+                      >
+                        {anim.tag}
+                      </span>
+                    </div>
+                    <p className="text-[10px] text-zinc-500 leading-tight">
+                      {anim.desc}
+                    </p>
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
           {/* Audio Synchronization Offset */}
@@ -561,6 +711,33 @@ export function TemplateStyleDock({ onOpenExportModal }: TemplateStyleDockProps)
             <p className="text-[11px] text-zinc-300 leading-relaxed">
               Real-time WebGPU person segmentation with temporal smoothing and edge refinement.
             </p>
+          </div>
+
+          {/* Depth Layering Control (Front Default / Behind / Sandwich) */}
+          <div className="space-y-2 p-3 rounded-xl bg-purple-950/20 border border-purple-800/30">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-bold text-purple-300 uppercase tracking-wider block">
+                Caption Depth Placement
+              </span>
+              <span className="text-[9px] text-zinc-400 font-mono">
+                {layerOrder === "front" ? "In Front (Default)" : "Depth Matting Active"}
+              </span>
+            </div>
+            <div className="grid grid-cols-3 gap-1.5 pt-1">
+              {(["front", "behind", "sandwich"] as const).map((mode) => (
+                <button
+                  key={mode}
+                  onClick={() => setLayerOrder(mode)}
+                  className={`py-1.5 px-2 rounded-lg text-[10px] font-extrabold capitalize transition-all cursor-pointer ${
+                    layerOrder === mode
+                      ? "bg-purple-600 text-white shadow-md shadow-purple-600/30 ring-1 ring-purple-400"
+                      : "bg-[#18191e] text-zinc-400 border border-zinc-800 hover:text-white"
+                  }`}
+                >
+                  {mode === "front" ? "Front (Def)" : mode}
+                </button>
+              ))}
+            </div>
           </div>
 
           {/* Quality Tier */}

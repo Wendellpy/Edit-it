@@ -12,12 +12,7 @@ import {
   EyeOff,
   Lock,
   Unlock,
-  Volume2,
-  VolumeX,
-  Layers,
-  Sparkles,
   Maximize2,
-  Plus,
   Trash2,
 } from "lucide-react";
 
@@ -38,12 +33,18 @@ export function WaveformTimeline() {
     setTimelineZoom,
     isPlaying,
     waveformPeaks,
-    syncOffset,
+    isAudioMuted,
+    setIsAudioMuted,
+    isCaptionsVisible,
+    setIsCaptionsVisible,
+    isVideoVisible,
+    setIsVideoVisible,
   } = useEditorStore();
 
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [activeTool, setActiveTool] = useState<"select" | "razor">("select");
   const [isSnapping, setIsSnapping] = useState(true);
+  const [isLocked, setIsLocked] = useState(false);
   const [isDraggingPlayhead, setIsDraggingPlayhead] = useState(false);
   const [draggingWordEdge, setDraggingWordEdge] = useState<{
     id: string;
@@ -51,11 +52,14 @@ export function WaveformTimeline() {
     initialX: number;
     initialTime: number;
   } | null>(null);
-
-  const [v2Visible, setV2Visible] = useState(true);
-  const [v1Visible, setV1Visible] = useState(true);
-  const [a1Muted, setA1Muted] = useState(false);
-  const [isLocked, setIsLocked] = useState(false);
+  const [draggingWordBody, setDraggingWordBody] = useState<{
+    id: string;
+    initialStart: number;
+    duration: number;
+    mouseStartX: number;
+  } | null>(null);
+  const hasMovedBodyRef = useRef(false);
+  const [snapIndicator, setSnapIndicator] = useState<number | null>(null);
 
   // Pixels per second based on timeline zoom (base: 100px/s)
   const pxPerSecond = 100 * timelineZoom;
@@ -69,42 +73,174 @@ export function WaveformTimeline() {
     [duration, pxPerSecond]
   );
 
-  // Mouse scrubbing handler
-  const handleTimelineMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!containerRef.current || isLocked) return;
-    const rect = containerRef.current.getBoundingClientRect();
-    const clickX = e.clientX - rect.left + containerRef.current.scrollLeft;
-    const time = pxToTime(clickX);
-    setCurrentTime(time);
-    setIsDraggingPlayhead(true);
-  };
+  // Calculate magnetic snapped time
+  const getSnappedTime = useCallback(
+    (rawTime: number, excludeWordId?: string): number => {
+      if (!isSnapping) {
+        setSnapIndicator(null);
+        return rawTime;
+      }
+      const snapThresholdPx = 10;
+      const snapThresholdSec = snapThresholdPx / pxPerSecond;
 
-  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!containerRef.current) return;
-    const rect = containerRef.current.getBoundingClientRect();
-    const currentX = e.clientX - rect.left + containerRef.current.scrollLeft;
-    const time = pxToTime(currentX);
+      const targets: number[] = [0, duration || 5, currentTime];
+      tokens.forEach((t) => {
+        if (t.id !== excludeWordId) {
+          targets.push(t.start);
+          targets.push(t.end);
+        }
+      });
 
-    if (isDraggingPlayhead) {
-      setCurrentTime(time);
-    } else if (draggingWordEdge) {
-      const word = tokens.find((t) => t.id === draggingWordEdge.id);
-      if (word) {
-        if (draggingWordEdge.edge === "start") {
-          const newStart = Math.min(word.end - 0.1, Math.max(0, time));
-          updateWordTimings(word.id, Math.round(newStart * 1000) / 1000, word.end);
-        } else {
-          const newEnd = Math.max(word.start + 0.1, Math.min(duration || 5, time));
-          updateWordTimings(word.id, word.start, Math.round(newEnd * 1000) / 1000);
+      let closestDist = snapThresholdSec;
+      let snappedTime = rawTime;
+      let didSnap = false;
+
+      for (const target of targets) {
+        const dist = Math.abs(rawTime - target);
+        if (dist < closestDist) {
+          closestDist = dist;
+          snappedTime = target;
+          didSnap = true;
         }
       }
-    }
-  };
 
-  const handleMouseUp = () => {
-    setIsDraggingPlayhead(false);
-    setDraggingWordEdge(null);
-  };
+      if (didSnap) {
+        setSnapIndicator(snappedTime);
+      } else {
+        setSnapIndicator(null);
+      }
+
+      return snappedTime;
+    },
+    [isSnapping, pxPerSecond, duration, currentTime, tokens]
+  );
+
+  // Window-level dragging event listeners to prevent dropped clicks when mouse leaves container
+  useEffect(() => {
+    if (!isDraggingPlayhead && !draggingWordEdge && !draggingWordBody) return;
+
+    const handleGlobalMouseMove = (e: MouseEvent) => {
+      if (!containerRef.current) return;
+      const rect = containerRef.current.getBoundingClientRect();
+      const currentX = e.clientX - rect.left + containerRef.current.scrollLeft;
+      const rawTime = pxToTime(currentX);
+
+      if (isDraggingPlayhead) {
+        const snapped = getSnappedTime(rawTime);
+        setCurrentTime(snapped);
+      } else if (draggingWordEdge) {
+        const word = tokens.find((t) => t.id === draggingWordEdge.id);
+        if (word) {
+          if (draggingWordEdge.edge === "start") {
+            const snapped = getSnappedTime(rawTime, word.id);
+            const newStart = Math.min(word.end - 0.05, Math.max(0, snapped));
+            updateWordTimings(word.id, Math.round(newStart * 1000) / 1000, word.end);
+            setCurrentTime(newStart);
+          } else {
+            const snapped = getSnappedTime(rawTime, word.id);
+            const newEnd = Math.max(word.start + 0.05, Math.min(duration || 5, snapped));
+            updateWordTimings(word.id, word.start, Math.round(newEnd * 1000) / 1000);
+            setCurrentTime(newEnd);
+          }
+        }
+      } else if (draggingWordBody) {
+        const deltaX = e.clientX - draggingWordBody.mouseStartX;
+        if (Math.abs(deltaX) > 4) {
+          hasMovedBodyRef.current = true;
+        }
+        const deltaTime = deltaX / pxPerSecond;
+        const rawStart = Math.max(0, draggingWordBody.initialStart + deltaTime);
+        const snappedStart = getSnappedTime(rawStart, draggingWordBody.id);
+        const maxStart = Math.max(0, (duration || 5) - draggingWordBody.duration);
+        const newStart = Math.min(maxStart, Math.max(0, snappedStart));
+        const newEnd = newStart + draggingWordBody.duration;
+        updateWordTimings(
+          draggingWordBody.id,
+          Math.round(newStart * 1000) / 1000,
+          Math.round(newEnd * 1000) / 1000
+        );
+        setCurrentTime(newStart);
+      }
+    };
+
+    const handleGlobalMouseUp = () => {
+      setIsDraggingPlayhead(false);
+      setDraggingWordEdge(null);
+      setDraggingWordBody(null);
+      setSnapIndicator(null);
+    };
+
+    window.addEventListener("mousemove", handleGlobalMouseMove);
+    window.addEventListener("mouseup", handleGlobalMouseUp);
+    return () => {
+      window.removeEventListener("mousemove", handleGlobalMouseMove);
+      window.removeEventListener("mouseup", handleGlobalMouseUp);
+    };
+  }, [
+    isDraggingPlayhead,
+    draggingWordEdge,
+    draggingWordBody,
+    pxToTime,
+    getSnappedTime,
+    tokens,
+    duration,
+    pxPerSecond,
+    updateWordTimings,
+    setCurrentTime,
+  ]);
+
+  // Keyboard Shortcuts (V=Select, C=Razor, S=Snap, L=Lock, +/-=Zoom, Delete=Remove)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const activeEl = document.activeElement;
+      if (
+        activeEl &&
+        (activeEl.tagName === "INPUT" ||
+          activeEl.tagName === "TEXTAREA" ||
+          (activeEl as HTMLElement).isContentEditable)
+      ) {
+        return;
+      }
+
+      if (e.key === "v" || e.key === "V") {
+        setActiveTool("select");
+      } else if (e.key === "c" || e.key === "C") {
+        setActiveTool("razor");
+      } else if (e.key === "s" || e.key === "S") {
+        setIsSnapping((prev) => !prev);
+      } else if (e.key === "l" || e.key === "L") {
+        setIsLocked((prev) => !prev);
+      } else if (e.key === "=" || e.key === "+") {
+        setTimelineZoom(Math.min(3, Math.round((timelineZoom + 0.2) * 100) / 100));
+      } else if (e.key === "-" || e.key === "_") {
+        setTimelineZoom(Math.max(0.1, Math.round((timelineZoom - 0.2) * 100) / 100));
+      } else if (e.key === "Delete" || e.key === "Backspace") {
+        if (selectedWordId && !isLocked) {
+          deleteWord(selectedWordId);
+        }
+      } else if (e.key === "ArrowLeft") {
+        e.preventDefault();
+        const step = e.shiftKey ? 1.0 : 0.1;
+        setCurrentTime(Math.max(0, Math.round((currentTime - step) * 1000) / 1000));
+      } else if (e.key === "ArrowRight") {
+        e.preventDefault();
+        const step = e.shiftKey ? 1.0 : 0.1;
+        setCurrentTime(Math.min(duration || 5, Math.round((currentTime + step) * 1000) / 1000));
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [
+    selectedWordId,
+    isLocked,
+    deleteWord,
+    timelineZoom,
+    setTimelineZoom,
+    currentTime,
+    setCurrentTime,
+    duration,
+  ]);
 
   // Keep playhead scrolled into view when playing
   useEffect(() => {
@@ -119,6 +255,30 @@ export function WaveformTimeline() {
     }
   }, [currentTime, isPlaying, timeToPx]);
 
+  // Mouse wheel zoom (Alt/Ctrl + Wheel) and horizontal scroll (Shift + Wheel)
+  const handleWheel = (e: React.WheelEvent<HTMLDivElement>) => {
+    if (e.altKey || e.ctrlKey || e.metaKey) {
+      e.preventDefault();
+      const zoomDelta = e.deltaY < 0 ? 0.15 : -0.15;
+      setTimelineZoom(Math.max(0.1, Math.min(3.0, Math.round((timelineZoom + zoomDelta) * 100) / 100)));
+    } else if (e.shiftKey) {
+      if (containerRef.current) {
+        containerRef.current.scrollLeft += e.deltaY;
+      }
+    }
+  };
+
+  // Timeline mouse down handler for seeking and scrubbing
+  const handleTimelineMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!containerRef.current || isLocked) return;
+    const rect = containerRef.current.getBoundingClientRect();
+    const clickX = e.clientX - rect.left + containerRef.current.scrollLeft;
+    const rawTime = pxToTime(clickX);
+    const snapped = getSnappedTime(rawTime);
+    setCurrentTime(snapped);
+    setIsDraggingPlayhead(true);
+  };
+
   const formatRulerTime = (sec: number) => {
     const mins = Math.floor(sec / 60);
     const s = Math.floor(sec % 60);
@@ -126,12 +286,20 @@ export function WaveformTimeline() {
     return `${String(mins).padStart(2, "0")}:${String(s).padStart(2, "0")}.${ms}`;
   };
 
+  // Adaptive ruler interval calculation to avoid overlapping numbers at low zoom
+  const rulerStep =
+    pxPerSecond >= 100
+      ? 1
+      : pxPerSecond >= 50
+      ? 2
+      : pxPerSecond >= 25
+      ? 5
+      : pxPerSecond >= 10
+      ? 10
+      : 30;
+
   return (
-    <div
-      onMouseUp={handleMouseUp}
-      onMouseLeave={handleMouseUp}
-      className="h-48 sm:h-52 shrink-0 flex flex-col bg-[var(--bg-panel)] rounded-2xl border-2 border-[var(--border-main)] overflow-hidden select-none shadow-[3px_3px_0px_var(--border-main)] transition-colors"
-    >
+    <div className="h-48 sm:h-52 shrink-0 flex flex-col bg-[var(--bg-panel)] rounded-2xl border-2 border-[var(--border-main)] overflow-hidden select-none shadow-[3px_3px_0px_var(--border-main)] transition-colors">
       {/* 1. NLE Timeline Toolbar */}
       <div className="h-11 px-3 bg-[var(--bg-card)] border-b-2 border-[var(--border-main)] flex items-center justify-between text-xs">
         {/* Tools Palette */}
@@ -143,7 +311,7 @@ export function WaveformTimeline() {
                 ? "bg-[var(--accent-lime)] text-[#142218] font-bold"
                 : "bg-[var(--bg-panel)] text-[var(--text-muted)] hover:text-[var(--text-main)]"
             }`}
-            title="Selection Tool (V)"
+            title="Selection Tool (V) - Click & drag words or edges"
           >
             <MousePointer className="w-3.5 h-3.5" />
           </button>
@@ -155,9 +323,26 @@ export function WaveformTimeline() {
                 ? "bg-[var(--accent-lime)] text-[#142218] font-bold"
                 : "bg-[var(--bg-panel)] text-[var(--text-muted)] hover:text-[var(--text-main)]"
             }`}
-            title="Razor Tool / Split Word (C)"
+            title="Razor Tool (C) - Click directly on word to split at timestamp"
           >
             <Scissors className="w-3.5 h-3.5" />
+          </button>
+
+          <button
+            onClick={() => {
+              if (selectedWordId && !isLocked) {
+                deleteWord(selectedWordId);
+              }
+            }}
+            disabled={!selectedWordId || isLocked}
+            className={`p-1.5 rounded-full border-2 border-[var(--border-main)] transition-all shadow-[2px_2px_0px_var(--border-main)] ${
+              selectedWordId && !isLocked
+                ? "bg-rose-500 text-white font-bold cursor-pointer hover:bg-rose-600"
+                : "bg-[var(--bg-panel)] text-[var(--text-muted)] opacity-40 cursor-not-allowed"
+            }`}
+            title="Delete Selected Word (Delete / Backspace)"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
           </button>
 
           <div className="h-4 w-px bg-[var(--border-main)] opacity-30 mx-1" />
@@ -170,7 +355,7 @@ export function WaveformTimeline() {
                 ? "bg-[var(--accent-lime)] text-[#142218] font-bold"
                 : "bg-[var(--bg-panel)] text-[var(--text-muted)] hover:text-[var(--text-main)]"
             }`}
-            title="Snap to Word Edges (S)"
+            title={`Snap to Word Edges & Playhead (S) - ${isSnapping ? "Enabled" : "Disabled"}`}
           >
             <Magnet className="w-3.5 h-3.5" />
           </button>
@@ -183,7 +368,7 @@ export function WaveformTimeline() {
                 ? "bg-rose-500 text-white font-bold"
                 : "bg-[var(--bg-panel)] text-[var(--text-muted)] hover:text-[var(--text-main)]"
             }`}
-            title="Lock Timeline Edits"
+            title={`Lock Timeline Edits (L) - ${isLocked ? "Locked" : "Unlocked"}`}
           >
             {isLocked ? <Lock className="w-3.5 h-3.5" /> : <Unlock className="w-3.5 h-3.5" />}
           </button>
@@ -215,7 +400,7 @@ export function WaveformTimeline() {
           </button>
 
           <button
-            onClick={() => setTimelineZoom(Math.max(0.1, timelineZoom - 0.15))}
+            onClick={() => setTimelineZoom(Math.max(0.1, Math.round((timelineZoom - 0.15) * 100) / 100))}
             className="neo-btn-secondary p-1 rounded-full cursor-pointer"
             title="Zoom Out (-)"
           >
@@ -233,7 +418,7 @@ export function WaveformTimeline() {
           />
 
           <button
-            onClick={() => setTimelineZoom(Math.min(3, timelineZoom + 0.15))}
+            onClick={() => setTimelineZoom(Math.min(3, Math.round((timelineZoom + 0.15) * 100) / 100))}
             className="neo-btn-secondary p-1 rounded-full cursor-pointer"
             title="Zoom In (+)"
           >
@@ -261,11 +446,15 @@ export function WaveformTimeline() {
             </div>
             <div className="flex items-center gap-1">
               <button
-                onClick={() => setV2Visible((v) => !v)}
+                onClick={() => setIsCaptionsVisible(!isCaptionsVisible)}
                 className="neo-btn-secondary p-1 rounded-full cursor-pointer"
-                title="Toggle Track Visibility"
+                title={isCaptionsVisible ? "Hide Caption Overlay" : "Show Caption Overlay"}
               >
-                {v2Visible ? <Eye className="w-3 h-3 text-[var(--accent-forest)] dark:text-[var(--accent-lime)]" /> : <EyeOff className="w-3 h-3 text-[var(--text-muted)]" />}
+                {isCaptionsVisible ? (
+                  <Eye className="w-3 h-3 text-[var(--accent-forest)] dark:text-[var(--accent-lime)]" />
+                ) : (
+                  <EyeOff className="w-3 h-3 text-[var(--text-muted)]" />
+                )}
               </button>
             </div>
           </div>
@@ -280,11 +469,15 @@ export function WaveformTimeline() {
             </div>
             <div className="flex items-center gap-1">
               <button
-                onClick={() => setV1Visible((v) => !v)}
+                onClick={() => setIsVideoVisible(!isVideoVisible)}
                 className="neo-btn-secondary p-1 rounded-full cursor-pointer"
-                title="Toggle Track Visibility"
+                title={isVideoVisible ? "Hide Video Track" : "Show Video Track"}
               >
-                {v1Visible ? <Eye className="w-3 h-3 text-[var(--accent-forest)] dark:text-[var(--accent-lime)]" /> : <EyeOff className="w-3 h-3 text-[var(--text-muted)]" />}
+                {isVideoVisible ? (
+                  <Eye className="w-3 h-3 text-[var(--accent-forest)] dark:text-[var(--accent-lime)]" />
+                ) : (
+                  <EyeOff className="w-3 h-3 text-[var(--text-muted)]" />
+                )}
               </button>
             </div>
           </div>
@@ -299,11 +492,13 @@ export function WaveformTimeline() {
             </div>
             <div className="flex items-center gap-1">
               <button
-                onClick={() => setA1Muted((m) => !m)}
+                onClick={() => setIsAudioMuted(!isAudioMuted)}
                 className={`px-2 py-0.5 rounded-full font-mono text-[10px] font-black border border-[var(--border-main)] transition-colors cursor-pointer ${
-                  a1Muted ? "bg-rose-500 text-white shadow-[1px_1px_0px_var(--border-main)]" : "bg-[var(--bg-card)] text-[var(--text-main)] hover:bg-[var(--accent-lime)] hover:text-[#142218]"
+                  isAudioMuted
+                    ? "bg-rose-500 text-white shadow-[1px_1px_0px_var(--border-main)]"
+                    : "bg-[var(--bg-card)] text-[var(--text-main)] hover:bg-[var(--accent-lime)] hover:text-[#142218]"
                 }`}
-                title="Mute Track A1"
+                title={isAudioMuted ? "Unmute Dialogue Track" : "Mute Dialogue Track"}
               >
                 M
               </button>
@@ -315,31 +510,44 @@ export function WaveformTimeline() {
         <div
           ref={containerRef}
           onMouseDown={handleTimelineMouseDown}
-          onMouseMove={handleMouseMove}
-          className="flex-1 relative overflow-x-auto overflow-y-hidden cursor-crosshair bg-[var(--bg-canvas)]"
+          onWheel={handleWheel}
+          className={`flex-1 relative overflow-x-auto overflow-y-hidden bg-[var(--bg-canvas)] ${
+            activeTool === "razor" ? "cursor-crosshair" : "cursor-pointer"
+          }`}
         >
           <div style={{ width: `${timelineWidth}px` }} className="relative h-full">
+            {/* Snap Indicator Guideline */}
+            {snapIndicator !== null && (
+              <div
+                style={{ left: `${timeToPx(snapIndicator)}px` }}
+                className="absolute top-0 bottom-0 w-0.5 bg-sky-400 z-40 pointer-events-none shadow-[0_0_8px_rgba(56,189,248,0.9)]"
+              />
+            )}
+
             {/* 1. Timecode Ruler Header */}
             <div className="h-7 border-b-2 border-[var(--border-main)] bg-[var(--bg-panel)] relative flex items-center text-[10px] font-mono font-bold text-[var(--text-muted)] select-none">
-              {Array.from({ length: Math.ceil(duration || 5) + 1 }).map((_, sec) => (
-                <div
-                  key={sec}
-                  style={{ left: `${sec * pxPerSecond}px` }}
-                  className="absolute top-0 bottom-0 pl-1.5 border-l border-[var(--border-main)]/40 flex items-center"
-                >
-                  <span className="text-[var(--text-muted)]">{sec}s</span>
-                </div>
-              ))}
+              {Array.from({ length: Math.ceil((duration || 5) / rulerStep) + 1 }).map((_, idx) => {
+                const sec = idx * rulerStep;
+                return (
+                  <div
+                    key={sec}
+                    style={{ left: `${sec * pxPerSecond}px` }}
+                    className="absolute top-0 bottom-0 pl-1.5 border-l-2 border-[var(--border-main)]/50 flex items-center"
+                  >
+                    <span className="text-[var(--text-muted)]">{sec}s</span>
+                  </div>
+                );
+              })}
             </div>
 
             {/* 2. Track V2: Captions Lane */}
             <div className="h-16 border-b-2 border-[var(--border-main)]/30 relative bg-[var(--bg-card)]/80 flex items-center">
-              {v2Visible && tokens.length === 0 && (
+              {isCaptionsVisible && tokens.length === 0 && (
                 <span className="text-[11px] text-[var(--text-muted)] font-mono italic px-3 select-none">
                   No captions on sequence
                 </span>
               )}
-              {v2Visible &&
+              {isCaptionsVisible &&
                 tokens.map((token) => {
                   const left = timeToPx(token.start);
                   const width = Math.max(28, timeToPx(token.end) - left);
@@ -349,17 +557,43 @@ export function WaveformTimeline() {
                   return (
                     <div
                       key={token.id}
+                      onMouseDown={(e) => {
+                        e.stopPropagation();
+                        if (isLocked) return;
+
+                        if (activeTool === "razor") {
+                          const rect = containerRef.current?.getBoundingClientRect();
+                          if (rect && containerRef.current) {
+                            const clickX = e.clientX - rect.left + containerRef.current.scrollLeft;
+                            const clickTime = pxToTime(clickX);
+                            if (clickTime > token.start && clickTime < token.end) {
+                              const splitRatio = (clickTime - token.start) / (token.end - token.start);
+                              splitWord(token.id, splitRatio);
+                            } else {
+                              splitWord(token.id, 0.5);
+                            }
+                          }
+                        } else {
+                          hasMovedBodyRef.current = false;
+                          setDraggingWordBody({
+                            id: token.id,
+                            initialStart: token.start,
+                            duration: token.end - token.start,
+                            mouseStartX: e.clientX,
+                          });
+                        }
+                      }}
                       onClick={(e) => {
                         e.stopPropagation();
-                        if (activeTool === "razor") {
-                          splitWord(token.id);
-                        } else {
+                        if (!hasMovedBodyRef.current && activeTool === "select") {
                           selectWord(token.id);
                           setCurrentTime(token.start);
                         }
                       }}
                       style={{ left: `${left}px`, width: `${width}px` }}
-                      className={`absolute top-2 bottom-2 rounded-xl px-2 flex items-center justify-between text-xs font-semibold border-2 transition-all cursor-pointer group shadow-sm ${
+                      className={`absolute top-2 bottom-2 rounded-xl px-2 flex items-center justify-between text-xs font-semibold border-2 transition-all group shadow-sm select-none ${
+                        activeTool === "razor" ? "cursor-crosshair hover:border-rose-500 hover:bg-rose-500/20" : "cursor-grab active:cursor-grabbing"
+                      } ${
                         isActive
                           ? "bg-[var(--accent-lime)] text-[#142218] border-[var(--border-main)] font-black shadow-[2px_2px_0px_var(--border-main)] scale-[1.02] z-10"
                           : isSelected
@@ -372,38 +606,42 @@ export function WaveformTimeline() {
                       }`}
                     >
                       {/* Left Resizer Handle */}
-                      <div
-                        onMouseDown={(e) => {
-                          e.stopPropagation();
-                          setDraggingWordEdge({
-                            id: token.id,
-                            edge: "start",
-                            initialX: e.clientX,
-                            initialTime: token.start,
-                          });
-                        }}
-                        className="w-1.5 h-full -ml-1 cursor-ew-resize opacity-0 group-hover:opacity-100 hover:bg-[var(--accent-lime)] rounded transition-opacity"
-                        title="Drag to trim start time"
-                      />
+                      {!isLocked && activeTool === "select" && (
+                        <div
+                          onMouseDown={(e) => {
+                            e.stopPropagation();
+                            setDraggingWordEdge({
+                              id: token.id,
+                              edge: "start",
+                              initialX: e.clientX,
+                              initialTime: token.start,
+                            });
+                          }}
+                          className="w-2 h-full -ml-1.5 cursor-ew-resize opacity-0 group-hover:opacity-100 hover:bg-[var(--accent-lime)] rounded transition-opacity"
+                          title="Drag to trim start time"
+                        />
+                      )}
 
-                      <span className="truncate mx-1 text-[11px] leading-tight font-bold">
+                      <span className="truncate mx-1 text-[11px] leading-tight font-bold pointer-events-none">
                         {token.text}
                       </span>
 
                       {/* Right Resizer Handle */}
-                      <div
-                        onMouseDown={(e) => {
-                          e.stopPropagation();
-                          setDraggingWordEdge({
-                            id: token.id,
-                            edge: "end",
-                            initialX: e.clientX,
-                            initialTime: token.end,
-                          });
-                        }}
-                        className="w-1.5 h-full -mr-1 cursor-ew-resize opacity-0 group-hover:opacity-100 hover:bg-[var(--accent-lime)] rounded transition-opacity"
-                        title="Drag to trim end time"
-                      />
+                      {!isLocked && activeTool === "select" && (
+                        <div
+                          onMouseDown={(e) => {
+                            e.stopPropagation();
+                            setDraggingWordEdge({
+                              id: token.id,
+                              edge: "end",
+                              initialX: e.clientX,
+                              initialTime: token.end,
+                            });
+                          }}
+                          className="w-2 h-full -mr-1.5 cursor-ew-resize opacity-0 group-hover:opacity-100 hover:bg-[var(--accent-lime)] rounded transition-opacity"
+                          title="Drag to trim end time"
+                        />
+                      )}
                     </div>
                   );
                 })}
@@ -411,7 +649,7 @@ export function WaveformTimeline() {
 
             {/* 3. Track V1: Video Clip Filmstrip Lane */}
             <div className="h-14 border-b-2 border-[var(--border-main)]/30 relative bg-[var(--bg-card)]/50 flex items-center px-1">
-              {v1Visible && videoUrl ? (
+              {isVideoVisible && videoUrl ? (
                 <div
                   style={{ width: `${timeToPx(duration || 5)}px` }}
                   className="h-10 rounded-xl bg-[var(--accent-lime)]/15 border-2 border-[var(--border-main)] px-3 flex items-center justify-between text-[11px] text-[var(--text-main)] shadow-[2px_2px_0px_var(--border-main)]"
@@ -420,10 +658,12 @@ export function WaveformTimeline() {
                     <span className="w-2 h-2 rounded-full bg-[var(--accent-lime)] border border-[var(--border-main)] shrink-0" />
                     {videoTitle || "Imported Clip"}
                   </span>
-                  <span className="font-mono text-[var(--text-muted)] font-bold shrink-0 ml-2">{formatRulerTime(duration || 5)}</span>
+                  <span className="font-mono text-[var(--text-muted)] font-bold shrink-0 ml-2">
+                    {formatRulerTime(duration || 5)}
+                  </span>
                 </div>
               ) : (
-                v1Visible && (
+                isVideoVisible && (
                   <span className="text-[11px] text-[var(--text-muted)] font-mono italic px-3 select-none">
                     No video clip on timeline
                   </span>
@@ -442,8 +682,13 @@ export function WaveformTimeline() {
                     let h = 12;
                     const timeAtBar = (i * 4) / pxPerSecond;
                     if (waveformPeaks && waveformPeaks.length > 0) {
-                      const peakIdx = Math.floor((timeAtBar / Math.max(1, duration || 5)) * waveformPeaks.length);
-                      const p = waveformPeaks[Math.min(waveformPeaks.length - 1, Math.max(0, peakIdx))] || 0;
+                      const peakIdx = Math.floor(
+                        (timeAtBar / Math.max(1, duration || 5)) * waveformPeaks.length
+                      );
+                      const p =
+                        waveformPeaks[
+                          Math.min(waveformPeaks.length - 1, Math.max(0, peakIdx))
+                        ] || 0;
                       h = Math.round(10 + Math.min(88, p * 88));
                     } else {
                       // Estimate speech energy from word tokens
@@ -460,7 +705,11 @@ export function WaveformTimeline() {
                         key={i}
                         style={{ height: `${h}%` }}
                         className={`w-0.5 rounded-full transition-all ${
-                          a1Muted ? "bg-[var(--border-main)]/30" : h > 18 ? "bg-[var(--accent-forest)] dark:bg-[var(--accent-lime)]" : "bg-[var(--border-main)]/20"
+                          isAudioMuted
+                            ? "bg-[var(--border-main)]/30"
+                            : h > 18
+                            ? "bg-[var(--accent-forest)] dark:bg-[var(--accent-lime)]"
+                            : "bg-[var(--border-main)]/20"
                         }`}
                       />
                     );

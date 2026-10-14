@@ -13,6 +13,11 @@ export type WordAnimationEffect =
   | "color_pop"
   | "karaoke_fill"
   | "bounce"
+  | "squash_bounce"
+  | "kinetic_slam"
+  | "chromatic_strike"
+  | "neon_pulse"
+  | "smooth_glide"
   | "typewriter"
   | "glow"
   | "glitch_jitter"
@@ -21,6 +26,8 @@ export type WordAnimationEffect =
   | "flicker"
   | "hollow_fill"
   | "extrusion_3d"
+  | "highlight_box"
+  | "single_word_flow"
   | "none";
 
 export interface ColorGradientStop {
@@ -116,6 +123,7 @@ export interface CaptionTemplate {
     maxLines: number;
     behindSubjectDepth: boolean;
     layerOrder?: "front" | "behind" | "sandwich"; // Depth layering control
+    singleWordOnly?: boolean; // When true, only the currently spoken word is visible at that time
   };
 
   animation: {

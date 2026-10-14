@@ -2,6 +2,8 @@ import { create } from "zustand";
 import type { HinglishWordToken, CaptionScriptMode } from "./hinglish/postProcessor";
 import { normalizeTokenToHinglish, toggleTranscriptScript } from "./hinglish/postProcessor";
 import { migrateProjectPayload, TEMPLATE_SCHEMA_VERSION } from "./templates/migration";
+import type { WordAnimationEffect } from "./templates/schema";
+import { getTemplateById } from "./templates";
 
 interface EditorHistorySnapshot {
   tokens: HinglishWordToken[];
@@ -62,12 +64,17 @@ export interface EditorState {
   selectedWordId: string | null;
   scriptMode: CaptionScriptMode;
   templateId: string;
+  animationEffectOverride: WordAnimationEffect | null;
+  setAnimationEffectOverride: (effect: WordAnimationEffect | null) => void;
   isReviewMode: boolean;
 
   // Timeline
   timelineZoom: number;
   waveformPeaks: Float32Array | null;
   showSafeZones: boolean;
+  isAudioMuted: boolean;
+  isCaptionsVisible: boolean;
+  isVideoVisible: boolean;
 
   // Undo / Redo (Command Pattern)
   history: EditorHistorySnapshot[];
@@ -101,6 +108,9 @@ export interface EditorState {
   setWaveformPeaks: (peaks: Float32Array) => void;
   toggleSafeZones: () => void;
   toggleReviewMode: () => void;
+  setIsAudioMuted: (isAudioMuted: boolean) => void;
+  setIsCaptionsVisible: (isCaptionsVisible: boolean) => void;
+  setIsVideoVisible: (isVideoVisible: boolean) => void;
 
   // Timing & Audio Sync
   syncOffset: number; // Global caption timing offset in seconds (-0.5s to +0.5s)
@@ -148,12 +158,20 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   selectedWordId: null,
   scriptMode: "roman",
   templateId: "alex_hormozi_punch",
+  animationEffectOverride: null,
+  setAnimationEffectOverride: (animationEffectOverride) => set({ animationEffectOverride }),
   isReviewMode: false,
 
   timelineZoom: 1.0,
   waveformPeaks: null,
   showSafeZones: false,
   syncOffset: 0,
+  isAudioMuted: false,
+  isCaptionsVisible: true,
+  isVideoVisible: true,
+  setIsAudioMuted: (isAudioMuted) => set({ isAudioMuted }),
+  setIsCaptionsVisible: (isCaptionsVisible) => set({ isCaptionsVisible }),
+  setIsVideoVisible: (isVideoVisible) => set({ isVideoVisible }),
 
   layerOrder: "front",
   setLayerOrder: (layerOrder) => set({ layerOrder }),
@@ -275,21 +293,44 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     const originalDuration = original.end - original.start;
     const splitPoint = original.start + originalDuration * splitRatio;
 
+    let text1 = original.text;
+    let text2 = original.text;
+    if (original.text.includes(" ")) {
+      const words = original.text.trim().split(/\s+/);
+      const mid = Math.max(1, Math.round(words.length * splitRatio));
+      text1 = words.slice(0, mid).join(" ");
+      text2 = words.slice(mid).join(" ") || text1;
+    } else if (original.text.length > 3) {
+      const charMid = Math.max(1, Math.round(original.text.length * splitRatio));
+      text1 = original.text.slice(0, charMid);
+      text2 = original.text.slice(charMid);
+    }
+
+    const norm1 = normalizeTokenToHinglish(text1);
+    const norm2 = normalizeTokenToHinglish(text2);
+
     const part1: HinglishWordToken = {
       ...original,
       id: `${original.id}_1`,
+      text: text1,
+      romanText: norm1.roman,
+      devanagariText: norm1.devanagari,
       end: parseFloat(splitPoint.toFixed(3)),
     };
 
     const part2: HinglishWordToken = {
       ...original,
       id: `${original.id}_2`,
+      text: text2,
+      romanText: norm2.roman,
+      devanagariText: norm2.devanagari,
       start: parseFloat(splitPoint.toFixed(3)),
       end: original.end,
     };
 
     const nextTokens = [...tokens.slice(0, index), part1, part2, ...tokens.slice(index + 1)];
     get().setTokens(nextTokens);
+    set({ selectedWordId: part2.id });
   },
 
   mergeWords: (firstId, secondId) => {
@@ -376,7 +417,11 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     const { history, historyIndex, tokens } = get();
     const nextHistory = history.slice(0, historyIndex + 1);
     nextHistory.push({ tokens, templateId });
-    set({ templateId, history: nextHistory, historyIndex: nextHistory.length - 1 });
+    set({
+      templateId,
+      history: nextHistory,
+      historyIndex: nextHistory.length - 1,
+    });
   },
 
   setTimelineZoom: (zoom) => set({ timelineZoom: Math.max(0.5, Math.min(5.0, zoom)) }),
