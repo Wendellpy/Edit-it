@@ -8,12 +8,12 @@ import {
   migrateProjectPayload,
 } from "../migration";
 
-const EXPECTED_TOTAL_TEMPLATES = 72;
+const EXPECTED_TOTAL_TEMPLATES = 73;
 
 const EXPECTED_CATEGORY_COUNTS: Record<string, number> = {
   bold_viral: 10,
   neon: 10,
-  aesthetic: 10,
+  aesthetic: 11,
   bollywood: 10,
   minimal: 8,
   podcast: 8,
@@ -22,7 +22,7 @@ const EXPECTED_CATEGORY_COUNTS: Record<string, number> = {
 };
 
 describe("Template Collection Invariants & Migration Suite (Full Catalog)", () => {
-  it("MUST preserve the exact total template count invariant of 72 presets", () => {
+  it("MUST preserve the exact total template count invariant of 73 presets", () => {
     expect(CAPTION_PRESETS.length).toBe(EXPECTED_TOTAL_TEMPLATES);
   });
 
@@ -33,6 +33,17 @@ describe("Template Collection Invariants & Migration Suite (Full Catalog)", () =
     }
 
     expect(counts).toEqual(EXPECTED_CATEGORY_COUNTS);
+  });
+
+  it("MUST include the viral 'aura' template with dual-font typography and gold pop styling", () => {
+    const aura = CAPTION_PRESETS.find((p) => p.id === "aura");
+    expect(aura, "Aura template must exist in CAPTION_PRESETS").toBeDefined();
+    expect(aura?.name).toBe("Aura");
+    expect(aura?.vibe).toBe("aesthetic");
+    expect(aura?.typography.primaryFont).toContain("Montserrat");
+    expect(aura?.typography.secondaryFont).toContain("Playfair Display");
+    expect(aura?.colors.activeWordText).toBe("#FFE600");
+    expect(aura?.layout.yPositionPercent).toBe(0.62);
   });
 
   it("MUST ensure every preset passes strict schema validation", () => {

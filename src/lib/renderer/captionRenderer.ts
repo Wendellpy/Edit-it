@@ -89,6 +89,119 @@ export function buildCaptionCues(tokens: WordToken[], maxWords: number): Caption
 }
 
 /**
+ * Aura Typographic Classification
+ * Replicating Video Project 1.mp4 styling:
+ * 1. Punch words (Montserrat 900 Black, uppercase, tight tracking -0.02em):
+ *    e.g. MAINE, VIDEO, LITERALLY, MINUTE, MEIN, READY., KIYA,, TEMPLATE. Active word lights up in #FFE600.
+ * 2. Editorial accent words (Playfair Display, italic 700, lowercase):
+ *    e.g. choose, upload, captions, ✦ kiya,. Crisp white #FFFFFF with drop shadow.
+ * 3. Minor connecting words (Montserrat 700 Bold, lowercase, 88% font size):
+ *    e.g. ek, aur, bas, mein, and, the, in, to, for. Crisp white #FFFFFF with drop shadow.
+ */
+export const AURA_MINOR_WORDS = new Set([
+  // Hinglish / Hindi
+  "ek", "aur", "bas", "me", "mein", "ka", "ki", "ke", "ko", "se", "pe", "par",
+  "to", "toh", "ya", "ye", "yeh", "wo", "woh", "bhi", "na", "ne", "ab", "tha",
+  "thi", "the", "ho", "hai", "hain", "kuch", "apna", "apne", "apni", "mera", "meri",
+  // English
+  "a", "an", "the", "and", "or", "in", "on", "at", "to", "of", "for", "is", "it",
+  "with", "by", "my", "your", "this", "that", "from", "as", "so", "but", "just",
+  "its", "are", "was", "were", "be", "has", "have", "had", "do", "does", "did"
+]);
+
+export const AURA_ACCENT_WORDS = new Set([
+  "choose", "upload", "captions", "caption", "select", "style", "aesthetic",
+  "luxury", "vibes", "vibe", "design", "click", "magic", "secret", "filter",
+  "look", "feel", "kiya", "karo", "batao", "suno", "dekh", "created", "making",
+  "stories", "story", "smooth", "glow", "clean", "fresh", "edit", "editing",
+  "commercial", "simply", "contain", "multiple", "details", "watch", "check"
+]);
+
+export const AURA_PUNCH_WORDS = new Set([
+  "video", "template", "minute", "literally", "maine", "ready", "results",
+  "reels", "viral", "crazy", "insane", "fast", "super", "easy", "best", "level",
+  "views", "money", "hack", "pro", "ai", "today", "urban", "properties",
+  "infrastructure", "plots", "parcel", "floors", "apartments", "dimensional",
+  "speed", "tool", "app", "now", "stop", "power", "space"
+]);
+
+export function classifyAuraWord(wordText: string, isTaggedKeyword?: boolean): {
+  isPunch: boolean;
+  isItalicAccent: boolean;
+  isMinorStopword: boolean;
+} {
+  const hasSparkle = wordText.includes("✦") || wordText.includes("✧");
+  const clean = wordText.toLowerCase().replace(/[^a-z0-9]/g, "");
+  const isExplicitUpper = /^[A-Z0-9\W]+$/.test(wordText) && /[A-Z]/.test(wordText) && wordText.length > 1;
+
+  if (hasSparkle) {
+    return { isPunch: false, isItalicAccent: true, isMinorStopword: false };
+  }
+
+  if (AURA_ACCENT_WORDS.has(clean) || (wordText.includes(",") && !isExplicitUpper && clean.length >= 3)) {
+    return { isPunch: false, isItalicAccent: true, isMinorStopword: false };
+  }
+
+  if (AURA_MINOR_WORDS.has(clean) && !isExplicitUpper) {
+    return { isPunch: false, isItalicAccent: false, isMinorStopword: true };
+  }
+
+  if (isExplicitUpper || isTaggedKeyword || AURA_PUNCH_WORDS.has(clean)) {
+    return { isPunch: true, isItalicAccent: false, isMinorStopword: false };
+  }
+
+  // Heuristic: Content words with length >= 5 default to punch; shorter to accent
+  if (clean.length >= 5) {
+    return { isPunch: true, isItalicAccent: false, isMinorStopword: false };
+  }
+
+  return { isPunch: false, isItalicAccent: true, isMinorStopword: false };
+}
+
+export function splitAuraLines(currentChunk: WordToken[]): WordToken[][] {
+  const lines: WordToken[][] = [];
+  if (currentChunk.length <= 1) {
+    if (currentChunk.length === 1) lines.push([currentChunk[0]]);
+  } else if (currentChunk.length === 2) {
+    lines.push([currentChunk[0]]);
+    lines.push([currentChunk[1]]);
+  } else if (currentChunk.length === 3) {
+    lines.push([currentChunk[0]]);
+    lines.push([currentChunk[1]]);
+    lines.push([currentChunk[2]]);
+  } else if (currentChunk.length === 4) {
+    const w3Class = classifyAuraWord(currentChunk[3].text, (currentChunk[3] as any).isKeyword);
+    const w2Class = classifyAuraWord(currentChunk[2].text, (currentChunk[2] as any).isKeyword);
+    if (w3Class.isPunch && w2Class.isItalicAccent) {
+      // e.g. "MINUTE" / "MEIN" / "captions READY." (1 / 1 / 2)
+      lines.push([currentChunk[0]]);
+      lines.push([currentChunk[1]]);
+      lines.push([currentChunk[2], currentChunk[3]]);
+    } else {
+      // e.g. "KIYA," / "ek TEMPLATE" / "choose" or "✦ kiya," / "aur LITERALLY" / "ek" or "MAINE" / "bas VIDEO" / "upload" (1 / 2 / 1)
+      lines.push([currentChunk[0]]);
+      lines.push([currentChunk[1], currentChunk[2]]);
+      lines.push([currentChunk[3]]);
+    }
+  } else if (currentChunk.length === 5) {
+    // 5 words: 2 / 1 / 2
+    lines.push([currentChunk[0], currentChunk[1]]);
+    lines.push([currentChunk[2]]);
+    lines.push([currentChunk[3], currentChunk[4]]);
+  } else if (currentChunk.length === 6) {
+    // 6 words: 2 / 2 / 2
+    lines.push([currentChunk[0], currentChunk[1]]);
+    lines.push([currentChunk[2], currentChunk[3]]);
+    lines.push([currentChunk[4], currentChunk[5]]);
+  } else {
+    for (let i = 0; i < currentChunk.length; i += 2) {
+      lines.push(currentChunk.slice(i, i + 2));
+    }
+  }
+  return lines;
+}
+
+/**
  * Draws the masked cutout of the subject over the background canvas.
  * Draw order: 1. Video frame -> 2. Behind-subject caption -> 3. Subject cutout -> 4. Foreground text
  */
@@ -354,7 +467,7 @@ export function renderCaptionFrame(options: RenderCaptionFrameOptions): void {
 
   const primaryFontFamily = template.typography.primaryFont || "Impact, sans-serif";
   const secondaryFontFamily = template.typography.secondaryFont || "Playfair Display, serif";
-  let lineHeight = Math.round(fontSize * (isSingleWordMode ? 1.15 : 1.25));
+  let lineHeight = Math.round(fontSize * (template.id === "aura" ? 1.06 : isSingleWordMode ? 1.15 : 1.25));
 
   ctx.save();
 
@@ -371,6 +484,9 @@ export function renderCaptionFrame(options: RenderCaptionFrameOptions): void {
     for (const w of currentChunk) {
       lines.push([w]);
     }
+  } else if (template.id === "aura") {
+    // Aura signature 3-line editorial layout from Video Project 1
+    lines.push(...splitAuraLines(currentChunk));
   } else {
     for (let i = 0; i < currentChunk.length; i += wordsPerLine) {
       lines.push(currentChunk.slice(i, i + wordsPerLine));
@@ -386,16 +502,37 @@ export function renderCaptionFrame(options: RenderCaptionFrameOptions): void {
   const measureLineWidth = (testWords: WordToken[], testFontSize: number): number => {
     ctx.font = `${template.typography.primaryWeight} ${testFontSize}px ${primaryFontFamily}`;
     const spaceMeasure = ctx.measureText(" ");
-    const testSpaceWidth = Math.max(
-      spaceMeasure ? spaceMeasure.width : 0,
-      Math.round(testFontSize * 0.28)
-    );
+    const testSpaceWidth = template.id === "aura"
+      ? Math.round(testFontSize * 0.20)
+      : Math.max(
+          spaceMeasure ? spaceMeasure.width : 0,
+          Math.round(testFontSize * 0.28)
+        );
     const pillPadX = Math.round(testFontSize * 0.22);
     const scaleFactor = template.animation?.scaleMagnitude || 1.15;
 
     let lineWidth = 0;
     testWords.forEach((w, idx) => {
-      const formatted = formatWordText(w.text, template.typography.textTransform);
+      let formatted = formatWordText(w.text, template.typography.textTransform);
+      if (template.id === "aura") {
+        const cls = classifyAuraWord(w.text, (w as any).isKeyword);
+        if (cls.isPunch) {
+          formatted = formatted.toUpperCase();
+          ctx.font = `900 ${testFontSize}px ${primaryFontFamily}`;
+          if ("letterSpacing" in ctx) (ctx as any).letterSpacing = "-0.02em";
+        } else if (cls.isItalicAccent) {
+          formatted = formatted.toLowerCase();
+          ctx.font = `italic 700 ${testFontSize}px ${secondaryFontFamily}`;
+          if ("letterSpacing" in ctx) (ctx as any).letterSpacing = "0px";
+        } else {
+          formatted = formatted.toLowerCase();
+          ctx.font = `700 ${Math.round(testFontSize * 0.88)}px ${primaryFontFamily}`;
+          if ("letterSpacing" in ctx) (ctx as any).letterSpacing = "0px";
+        }
+      } else {
+        ctx.font = `${template.typography.primaryWeight} ${testFontSize}px ${primaryFontFamily}`;
+      }
+
       const isWordActive = activeWord
         ? w.id === activeWord.id
         : effectiveTime >= w.start && effectiveTime <= w.end;
@@ -450,7 +587,7 @@ export function renderCaptionFrame(options: RenderCaptionFrameOptions): void {
   if (totalEffectiveWidth > maxAllowedWidth && totalEffectiveWidth > 0) {
     const hScale = maxAllowedWidth / totalEffectiveWidth;
     fontSize = Math.max(16, Math.floor(fontSize * hScale));
-    lineHeight = Math.round(fontSize * (isSingleWordMode ? 1.15 : 1.25));
+    lineHeight = Math.round(fontSize * (template.id === "aura" ? 1.08 : isSingleWordMode ? 1.15 : 1.25));
   }
 
   // 6f. Vertical Auto-Fit: If text height exceeds safe height, auto-scale font down
@@ -458,7 +595,7 @@ export function renderCaptionFrame(options: RenderCaptionFrameOptions): void {
   if (totalBlockHeight > maxAllowedHeight && totalBlockHeight > 0) {
     const vScale = maxAllowedHeight / totalBlockHeight;
     fontSize = Math.max(16, Math.floor(fontSize * vScale));
-    lineHeight = Math.round(fontSize * (isSingleWordMode ? 1.15 : 1.25));
+    lineHeight = Math.round(fontSize * (template.id === "aura" ? 1.08 : isSingleWordMode ? 1.15 : 1.25));
     totalBlockHeight = lines.length * lineHeight + (template.box?.enabled ? template.box.paddingY * 2 : 0);
   }
 
@@ -573,26 +710,52 @@ export function renderCaptionFrame(options: RenderCaptionFrameOptions): void {
 
       ctx.font = `${template.typography.primaryWeight} ${fontSize}px ${primaryFontFamily}`;
       const spaceMeasure = ctx.measureText(" ");
-      const baseSpaceWidth = Math.max(
-        spaceMeasure ? spaceMeasure.width : 0,
-        Math.round(fontSize * 0.28)
-      );
+      const baseSpaceWidth = template.id === "aura"
+        ? Math.round(fontSize * 0.20)
+        : Math.max(
+            spaceMeasure ? spaceMeasure.width : 0,
+            Math.round(fontSize * 0.28)
+          );
       const pillPadX = Math.round(fontSize * 0.22);
       const scaleMagnitude = template.animation?.scaleMagnitude || 1.15;
 
       const wordMetrics = line.map((word) => {
+        const isAuraTemplate = template.id === "aura";
+        const cls = isAuraTemplate
+          ? classifyAuraWord(word.text, (word as any).isKeyword)
+          : { isPunch: false, isItalicAccent: false, isMinorStopword: false };
+
         const isSecondary =
           !!template.typography.secondaryFont &&
-          (word.script === "devanagari" ||
-            word.text.includes(",") ||
-            (lineIdx === 0 && lines.length > 1));
+          (isAuraTemplate
+            ? cls.isItalicAccent
+            : word.script === "devanagari" ||
+              word.text.includes(",") ||
+              (lineIdx === 0 && lines.length > 1));
 
-        const font = isSecondary
+        let formatted = formatWordText(word.text, template.typography.textTransform);
+        if (isAuraTemplate) {
+          if (cls.isPunch) {
+            formatted = formatted.toUpperCase();
+          } else {
+            formatted = formatted.toLowerCase();
+          }
+        }
+
+        const font = isAuraTemplate
+          ? cls.isPunch
+            ? `900 ${fontSize}px ${primaryFontFamily}`
+            : cls.isItalicAccent
+            ? `italic 700 ${fontSize}px ${secondaryFontFamily}`
+            : `700 ${Math.round(fontSize * 0.88)}px ${primaryFontFamily}`
+          : isSecondary
           ? `italic ${fontSize}px ${secondaryFontFamily}`
           : `${template.typography.primaryWeight} ${fontSize}px ${primaryFontFamily}`;
 
         ctx.font = font;
-        const formatted = formatWordText(word.text, template.typography.textTransform);
+        if ("letterSpacing" in ctx) {
+          (ctx as any).letterSpacing = isAuraTemplate && cls.isPunch ? "-0.02em" : "0px";
+        }
         const m = ctx.measureText(formatted);
         const isCurrentlySpoken = effectiveTime >= word.start && effectiveTime <= word.end;
         const isActive = activeWord ? word.id === activeWord.id : isCurrentlySpoken;
@@ -609,6 +772,9 @@ export function renderCaptionFrame(options: RenderCaptionFrameOptions): void {
           id: word.id,
           text: formatted,
           width: m.width,
+          font,
+          isPunch: cls.isPunch,
+          isItalicAccent: cls.isItalicAccent,
           isSecondary,
           isActive,
           isPastWord,
@@ -647,6 +813,14 @@ export function renderCaptionFrame(options: RenderCaptionFrameOptions): void {
           return;
         }
 
+        const isAuraTemplate = template.id === "aura";
+
+        // Aura Cumulative Entrance: Words that have not started yet are hidden with stable layout
+        if (isAuraTemplate && effectiveTime < word.start) {
+          currentX += leftPad + metric.width + rightPad + baseSpaceWidth;
+          return;
+        }
+
         // In Sandwich mode:
         // Multi-line: Line 0 (top line) is behind the subject's neck/shoulders, Line 1 is in front of chest.
         // Single-line: Active keyword is behind the subject (scaled wide to peek out), context words in front.
@@ -680,11 +854,15 @@ export function renderCaptionFrame(options: RenderCaptionFrameOptions): void {
         const isItalicKeyword =
           isActive && template.typography.wordTransform?.italicKeyword;
 
-        ctx.font = isItalicKeyword
+        ctx.font = metric.font || (isItalicKeyword
           ? `italic ${template.typography.primaryWeight} ${fontSize}px ${primaryFontFamily}`
           : metric.isSecondary
           ? `italic ${fontSize}px ${secondaryFontFamily}`
-          : `${template.typography.primaryWeight} ${fontSize}px ${primaryFontFamily}`;
+          : `${template.typography.primaryWeight} ${fontSize}px ${primaryFontFamily}`);
+
+        if ("letterSpacing" in ctx) {
+          (ctx as any).letterSpacing = isAuraTemplate && metric.isPunch ? "-0.02em" : "0px";
+        }
 
         ctx.textBaseline = "middle";
 
@@ -717,7 +895,21 @@ export function renderCaptionFrame(options: RenderCaptionFrameOptions): void {
         const wordDuration = Math.max(0.06, word.end - word.start);
         const wordProgress = Math.min(1.0, Math.max(0.0, wordElapsed / wordDuration));
 
-        if (isActive && template.animation) {
+        if (isAuraTemplate) {
+          // Aura micro-motion: smooth upward slide + snappy spring pop on arrival + fade-in
+          const entranceDuration = 0.14;
+          const entranceT = Math.min(1.0, wordElapsed / entranceDuration);
+          const easeT = 1.0 - Math.pow(1.0 - entranceT, 3);
+
+          const slideY = (1.0 - easeT) * Math.round(fontSize * 0.20);
+          const popSpring = 1.0 + 0.12 * Math.sin(entranceT * Math.PI);
+
+          ctx.translate(wordCenterX, wordCenterY + slideY);
+          ctx.scale(popSpring, popSpring);
+          ctx.translate(-wordCenterX, -(wordCenterY + slideY));
+
+          ctx.globalAlpha *= Math.min(1.0, entranceT * 1.6);
+        } else if (isActive && template.animation) {
           const { perWordEffect, scaleMagnitude = 1.15 } = template.animation;
           if (perWordEffect === "single_word_flow" || isSingleWordMode) {
             // Single-Word Smooth Flow Kinetics: Micro-glide float + spring ease + soft opacity ramp
@@ -830,7 +1022,17 @@ export function renderCaptionFrame(options: RenderCaptionFrameOptions): void {
         }
 
         // Shadows / Dynamic Breathing Glow / Neon Pulse
-        if (isActive && (template.animation?.perWordEffect === "glow" || template.animation?.perWordEffect === "neon_pulse")) {
+        if (isAuraTemplate) {
+          if (isActive && metric.isPunch) {
+            ctx.shadowColor = template.colors.glowColor || "rgba(255, 230, 0, 0.45)";
+            ctx.shadowBlur = template.colors.shadowBlur || 14;
+            ctx.shadowOffsetY = Math.round(fontSize * 0.08);
+          } else {
+            ctx.shadowColor = template.colors.shadowColor || "rgba(0, 0, 0, 0.95)";
+            ctx.shadowBlur = template.colors.shadowBlur || 12;
+            ctx.shadowOffsetY = Math.round(fontSize * 0.08);
+          }
+        } else if (isActive && (template.animation?.perWordEffect === "glow" || template.animation?.perWordEffect === "neon_pulse")) {
           const pulseSpeed = template.animation?.flickerFrequency || 10;
           const breathe = 0.55 + 0.35 * Math.sin(effectiveTime * pulseSpeed) + 0.10 * Math.cos(effectiveTime * pulseSpeed * 2.2);
           ctx.shadowColor = template.colors.glowColor || template.colors.activeWordText;
@@ -918,8 +1120,8 @@ export function renderCaptionFrame(options: RenderCaptionFrameOptions): void {
           ctx.restore();
         }
 
-        // Dim upcoming words (only when in multi-word chunk mode)
-        if (!isSingleWordMode) {
+        // Dim upcoming words (only when in multi-word chunk mode, skipped for Aura cumulative reveal)
+        if (!isSingleWordMode && !isAuraTemplate) {
           if (!isActive && !isPastWord) {
             ctx.globalAlpha = 0.40;
           } else {
@@ -930,15 +1132,15 @@ export function renderCaptionFrame(options: RenderCaptionFrameOptions): void {
         const activeColor =
           template.colors.activeWordText && template.colors.activeWordText !== template.colors.primaryText
             ? template.colors.activeWordText
-            : "#F59E0B";
+            : "#FFE600";
 
         let fillStyle: string | CanvasGradient = (isActive || isSingleWordMode)
-          ? activeColor
+          ? (isAuraTemplate && !metric.isPunch ? template.colors.primaryText : activeColor)
           : isPastWord
           ? template.colors.primaryText
           : metric.isSecondary && template.colors.secondaryText
           ? template.colors.secondaryText
-          : template.colors.secondaryText || "rgba(255, 255, 255, 0.45)";
+          : template.colors.primaryText;
 
         // Gradient Fill
         const gradConfig =

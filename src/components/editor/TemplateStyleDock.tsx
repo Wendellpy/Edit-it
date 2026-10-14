@@ -247,7 +247,7 @@ export function TemplateStyleDock({ onOpenExportModal }: TemplateStyleDockProps)
                   : "bg-[var(--bg-panel)] text-[var(--text-muted)] hover:text-[var(--text-main)] shadow-[1px_1px_0px_var(--border-main)]"
               }`}
             >
-              All (72)
+              All ({CAPTION_PRESETS.length})
             </button>
             <button
               onClick={() => setPrimaryFilter("text_styles")}
@@ -339,6 +339,36 @@ export function TemplateStyleDock({ onOpenExportModal }: TemplateStyleDockProps)
                         const lastWord = words[words.length - 1];
                         const prefix = words.slice(0, -1).join(" ");
                         const hasBox = preset.colors.activeWordBg || preset.animation?.perWordEffect === "highlight_box";
+
+                        if (preset.id === "aura" && userFirstLine === "VIRAL CAPTION") {
+                          return (
+                            <span
+                              className="text-xs font-bold leading-tight px-1 line-clamp-2 z-10 flex items-center justify-center gap-1.5 flex-wrap"
+                              style={{ textShadow: "0 2px 4px rgba(0,0,0,0.9)" }}
+                            >
+                              <span
+                                style={{
+                                  fontFamily: "Playfair Display, serif",
+                                  fontStyle: "italic",
+                                  fontWeight: 500,
+                                  color: "#FFFFFF",
+                                }}
+                              >
+                                ✦ kiya,
+                              </span>
+                              <span
+                                style={{
+                                  fontFamily: "Montserrat, sans-serif",
+                                  fontWeight: 900,
+                                  color: "#FFE600",
+                                  textShadow: "0 0 8px rgba(255,230,0,0.5)",
+                                }}
+                              >
+                                TEMPLATE
+                              </span>
+                            </span>
+                          );
+                        }
 
                         return (
                           <span

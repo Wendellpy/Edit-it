@@ -668,8 +668,46 @@ export const CAPTION_PRESETS: CaptionTemplate[] = [
   },
 
   // ==========================================
-  // 3. AESTHETIC & EDITORIAL (10 Presets)
+  // 3. AESTHETIC & EDITORIAL (11 Presets)
   // ==========================================
+  {
+    id: "aura",
+    name: "Aura",
+    vibe: "aesthetic",
+    badge: "VIRAL AURA",
+    typography: {
+      primaryFont: "Montserrat, sans-serif",
+      secondaryFont: "Playfair Display, serif",
+      primaryWeight: "900",
+      textTransform: "none",
+      fontSizeBasePercent: 0.052,
+      wordTransform: {
+        letterSpacingEm: -0.02,
+      },
+    },
+    colors: {
+      primaryText: "#FFFFFF",
+      secondaryText: "#FFFFFF",
+      activeWordText: "#FFE600",
+      glowColor: "rgba(255, 230, 0, 0.45)",
+      shadowColor: "rgba(0, 0, 0, 0.9)",
+      shadowBlur: 14,
+    },
+    layout: {
+      yPositionPercent: 0.62,
+      maxWordsPerLine: 2,
+      maxLines: 3,
+      behindSubjectDepth: false,
+      layerOrder: "front",
+    },
+    animation: {
+      perWordEffect: "scale_pop",
+      scaleMagnitude: 1.14,
+    },
+    accessibility: {
+      contrastFallback: "backdrop_shadow",
+    },
+  },
   {
     id: "editorial_dual_cyan",
     name: "Editorial Dual-Font (Mirza)",
