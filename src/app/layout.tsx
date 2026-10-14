@@ -19,7 +19,11 @@ export const metadata: Metadata = {
   authors: [{ name: "BolSub Studio" }],
   creator: "BolSub Studio",
   icons: {
-    icon: "/favicon.ico",
+    icon: [
+      { url: "/favicon.ico", sizes: "any" },
+      { url: "/favicon.svg", type: "image/svg+xml" },
+    ],
+    apple: "/apple-icon.png",
   },
   manifest: "/manifest.json",
   openGraph: {
