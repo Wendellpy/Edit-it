@@ -21,6 +21,7 @@ export interface AdjustedTextLayout {
 /**
  * Computes rule-based subject-aware text placement and occlusion mitigation.
  * Never uses an LLM; 100% deterministic, local, and sub-millisecond execution.
+ * Strictly guarantees captions NEVER exceed video screen boundaries.
  */
 export function computeSubjectAwareLayout(
   template: CaptionTemplate,
@@ -32,12 +33,28 @@ export function computeSubjectAwareLayout(
   estimatedTextHeight: number,
   layerOrderOverride?: "behind" | "front" | "sandwich"
 ): AdjustedTextLayout {
+  // Screen safe margins & maximum allowed bounds
+  const safeMarginX = Math.round(canvasWidth * 0.08);
+  const maxSafeTextWidth = Math.max(100, Math.round(canvasWidth - safeMarginX * 2));
+  const safeMarginTop = Math.round(canvasHeight * 0.12);
+  const safeMarginBottom = Math.round(canvasHeight * 0.14);
+
+  const clampFontSizeToSafeWidth = (size: number): number => {
+    if (estimatedTextWidth <= 0) return size;
+    const projectedWidth = estimatedTextWidth * (size / rawFontSize);
+    if (projectedWidth > maxSafeTextWidth) {
+      return Math.max(14, Math.floor(rawFontSize * (maxSafeTextWidth / estimatedTextWidth)));
+    }
+    return size;
+  };
+
   // 1. Fallback if no subject is detected or metrics are missing
   if (!metrics || !metrics.hasSubject) {
+    const safeTargetFontSize = clampFontSizeToSafeWidth(rawFontSize);
     return {
       x: canvasWidth / 2,
       y: canvasHeight * (template.layout.yPositionPercent || 0.72),
-      fontSize: rawFontSize,
+      fontSize: safeTargetFontSize,
       occlusionRatio: 0,
       isOccludedWarning: false,
       isFallback: true,
@@ -48,8 +65,6 @@ export function computeSubjectAwareLayout(
   const { boundingBox, headRegion } = metrics;
   const subLeft = boundingBox.x * canvasWidth;
   const subRight = (boundingBox.x + boundingBox.width) * canvasWidth;
-  const subTop = boundingBox.y * canvasHeight;
-  const subBottom = (boundingBox.y + boundingBox.height) * canvasHeight;
 
   // By default, anchor dynamically to the detected subject's horizontal centroid
   let targetX = headRegion ? headRegion.centerX * canvasWidth : canvasWidth / 2;
@@ -69,7 +84,7 @@ export function computeSubjectAwareLayout(
     targetY = headRegion.centerY * canvasHeight;
 
     const headWidthPx = headRegion.radiusX * 2 * canvasWidth;
-    const minRequiredWidth = headWidthPx * 1.45; // Must peek out 45% beyond head width
+    const minRequiredWidth = Math.min(maxSafeTextWidth, headWidthPx * 1.35); // Peek out beyond head width, capped at safe screen width
     if (estimatedTextWidth < minRequiredWidth && estimatedTextWidth > 0) {
       targetFontSize = Math.round(rawFontSize * (minRequiredWidth / estimatedTextWidth));
     }
@@ -119,9 +134,9 @@ export function computeSubjectAwareLayout(
       : (headRegion.centerY + headRegion.radiusY * 1.1);
     targetY = canvasHeight * anchorY;
 
-    // Scale font size dynamically according to the actual object size so text peeks out proportionately
+    // Scale font size dynamically according to the actual object size so text peeks out proportionately, capped at safe screen width
     const torsoWidthPx = boundingBox.width * canvasWidth;
-    const minPeekingWidth = Math.max(torsoWidthPx * 1.35, canvasWidth * 0.18);
+    const minPeekingWidth = Math.min(maxSafeTextWidth, Math.max(torsoWidthPx * 1.25, canvasWidth * 0.20));
     if (estimatedTextWidth < minPeekingWidth && estimatedTextWidth > 0) {
       targetFontSize = Math.round(rawFontSize * (minPeekingWidth / estimatedTextWidth));
     }
@@ -131,13 +146,16 @@ export function computeSubjectAwareLayout(
     targetX = headRegion.centerX * canvasWidth;
     targetY = canvasHeight * (template.layout.yPositionPercent || 0.45);
 
-    // Scale font size dynamically according to the actual object size so text peeks out proportionately
+    // Scale font size dynamically according to the actual object size so text peeks out proportionately, capped at safe screen width
     const torsoWidthPx = boundingBox.width * canvasWidth;
-    const minPeekingWidth = Math.max(torsoWidthPx * 1.35, canvasWidth * 0.18);
+    const minPeekingWidth = Math.min(maxSafeTextWidth, Math.max(torsoWidthPx * 1.25, canvasWidth * 0.20));
     if (estimatedTextWidth < minPeekingWidth && estimatedTextWidth > 0) {
       targetFontSize = Math.round(rawFontSize * (minPeekingWidth / estimatedTextWidth));
     }
   }
+
+  // Strictly enforce safe width ceiling before occlusion check
+  targetFontSize = clampFontSizeToSafeWidth(targetFontSize);
 
   // 3. Occlusion and Legibility Check
   const effectiveTextW = estimatedTextWidth * (targetFontSize / rawFontSize);
@@ -149,7 +167,7 @@ export function computeSubjectAwareLayout(
   const textBottom = targetY + effectiveTextH / 2;
 
   const overlapW = Math.max(0, Math.min(textRight, subRight) - Math.max(textLeft, subLeft));
-  const overlapH = Math.max(0, Math.min(textBottom, subBottom) - Math.max(textTop, subTop));
+  const overlapH = Math.max(0, Math.min(textBottom, (boundingBox.y + boundingBox.height) * canvasHeight) - Math.max(textTop, boundingBox.y * canvasHeight));
   const overlapArea = overlapW * overlapH;
   const textArea = Math.max(1, effectiveTextW * effectiveTextH);
   let occlusionRatio = Math.round((overlapArea / textArea) * 100) / 100;
@@ -159,14 +177,33 @@ export function computeSubjectAwareLayout(
   // If more than 50% of the text area is occluded by the subject:
   if (occlusionRatio > 0.50 && layoutMode !== "vertical_flank" && layoutMode !== "behind_head") {
     isOccludedWarning = true;
-    // Scale up text width so wings peek out further into open space on both sides
-    const scaleFactor = Math.min(1.30, Math.max(1.15, 0.85 / Math.max(0.2, 1.01 - occlusionRatio)));
-    targetFontSize = Math.round(targetFontSize * scaleFactor);
-    const newTextW = effectiveTextW * scaleFactor;
-    const newTextLeft = targetX - newTextW / 2;
-    const newTextRight = targetX + newTextW / 2;
-    const newOverlapW = Math.max(0, Math.min(newTextRight, subRight) - Math.max(newTextLeft, subLeft));
-    occlusionRatio = Math.round(((newOverlapW * overlapH) / (newTextW * effectiveTextH)) * 100) / 100;
+    // Scale up text width so wings peek out further into open space on both sides, strictly capped at safe screen width
+    const scaleFactor = Math.min(1.20, Math.max(1.05, 0.85 / Math.max(0.2, 1.01 - occlusionRatio)));
+    targetFontSize = clampFontSizeToSafeWidth(Math.round(targetFontSize * scaleFactor));
+  }
+
+  // 4. Horizontal Screen Boundary Clamping
+  // Clamps targetX so [targetX - halfW, targetX + halfW] never exceeds safe margins
+  const finalEffectiveW = estimatedTextWidth * (targetFontSize / rawFontSize);
+  const halfTextW = finalEffectiveW / 2;
+  const minTargetX = safeMarginX + halfTextW;
+  const maxTargetX = canvasWidth - safeMarginX - halfTextW;
+  if (minTargetX <= maxTargetX) {
+    targetX = Math.max(minTargetX, Math.min(maxTargetX, targetX));
+  } else {
+    targetX = canvasWidth / 2;
+  }
+
+  // 5. Vertical Screen Boundary Clamping
+  // Clamps targetY so [targetY - halfH, targetY + halfH] never exceeds safe margins
+  const finalEffectiveH = estimatedTextHeight * (targetFontSize / rawFontSize);
+  const halfTextH = finalEffectiveH / 2;
+  const minTargetY = safeMarginTop + halfTextH;
+  const maxTargetY = canvasHeight - safeMarginBottom - halfTextH;
+  if (minTargetY <= maxTargetY) {
+    targetY = Math.max(minTargetY, Math.min(maxTargetY, targetY));
+  } else {
+    targetY = (safeMarginTop + canvasHeight - safeMarginBottom) / 2;
   }
 
   return {

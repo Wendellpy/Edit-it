@@ -638,7 +638,27 @@ export function renderCaptionFrame(options: RenderCaptionFrameOptions): void {
       adjustedLayout.layoutMode = "sandwich";
     }
     fontSize = adjustedLayout.fontSize;
-    lineHeight = Math.round(fontSize * 1.25);
+    lineHeight = Math.round(fontSize * (template.id === "aura" ? 1.08 : isSingleWordMode ? 1.15 : 1.25));
+
+    // Re-verify safe bounds after subject-aware font adjustment so text NEVER goes out of screen
+    let currentMaxW = 0;
+    for (const line of lines) {
+      const w = measureLineWidth(line, fontSize);
+      if (w > currentMaxW) currentMaxW = w;
+    }
+    const totalEffW = currentMaxW + extraDecoration;
+    if (totalEffW > maxAllowedWidth && totalEffW > 0) {
+      const scale = maxAllowedWidth / totalEffW;
+      fontSize = Math.max(14, Math.floor(fontSize * scale));
+      lineHeight = Math.round(fontSize * (template.id === "aura" ? 1.08 : isSingleWordMode ? 1.15 : 1.25));
+    }
+
+    let currentBlockH = lines.length * lineHeight + (template.box?.enabled ? template.box.paddingY * 2 : 0);
+    if (currentBlockH > maxAllowedHeight && currentBlockH > 0) {
+      const scale = maxAllowedHeight / currentBlockH;
+      fontSize = Math.max(14, Math.floor(fontSize * scale));
+      lineHeight = Math.round(fontSize * (template.id === "aura" ? 1.08 : isSingleWordMode ? 1.15 : 1.25));
+    }
   } else {
     // Aspect-ratio-aware vertical placement
     let yPercent = template.layout.yPositionPercent || 0.72;
@@ -665,8 +685,13 @@ export function renderCaptionFrame(options: RenderCaptionFrameOptions): void {
   const blockHeight = lines.length * lineHeight;
   const minY = safeMarginTop + blockHeight / 2;
   const maxY = canvasHeight - safeMarginBottom - blockHeight / 2;
-  const centerY = Math.max(minY, Math.min(maxY, adjustedLayout.y));
-  const startY = centerY - blockHeight / 2;
+  const centerY = minY <= maxY ? Math.max(minY, Math.min(maxY, adjustedLayout.y)) : (safeMarginTop + canvasHeight - safeMarginBottom) / 2;
+  let startY = centerY - blockHeight / 2;
+  if (startY < safeMarginTop) {
+    startY = safeMarginTop;
+  } else if (startY + blockHeight > canvasHeight - safeMarginBottom) {
+    startY = Math.max(safeMarginTop, canvasHeight - safeMarginBottom - blockHeight);
+  }
 
   // 8. Optional Depth Badge (suppressed in singleWordMode so only the spoken word appears)
   if (template.badge && showBehindBadge && !isSingleWordMode) {
@@ -811,14 +836,23 @@ export function renderCaptionFrame(options: RenderCaptionFrameOptions): void {
         }
       });
 
-      let lineStartX =
-        isSingleWordMode
-          ? (canvasWidth - totalLineWidth) / 2
-          : adjustedLayout.layoutMode === "vertical_flank"
-          ? adjustedLayout.x
-          : (canvasWidth - totalLineWidth) / 2;
+      let lineStartX: number;
+      if (isSingleWordMode) {
+        lineStartX = (canvasWidth - totalLineWidth) / 2;
+      } else if (adjustedLayout.layoutMode === "vertical_flank") {
+        lineStartX = adjustedLayout.x;
+      } else if (isDepthActive && adjustedLayout.x !== canvasWidth / 2) {
+        lineStartX = adjustedLayout.x - totalLineWidth / 2;
+      } else {
+        lineStartX = (canvasWidth - totalLineWidth) / 2;
+      }
 
-      lineStartX = Math.max(safeMarginX, Math.min(canvasWidth - safeMarginX - totalLineWidth, lineStartX));
+      const maxStartX = canvasWidth - safeMarginX - totalLineWidth;
+      if (safeMarginX <= maxStartX) {
+        lineStartX = Math.max(safeMarginX, Math.min(maxStartX, lineStartX));
+      } else {
+        lineStartX = Math.max(safeMarginX / 2, (canvasWidth - totalLineWidth) / 2);
+      }
       let currentX = lineStartX;
 
       line.forEach((word, wordIdx) => {

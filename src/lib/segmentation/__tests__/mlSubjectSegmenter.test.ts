@@ -184,4 +184,67 @@ describe("ML Subject Segmenter & Sandwich Tracking Suite", () => {
     // In behind mode, zero caption text should be drawn on top of the subject cutout
     expect(textAfterCutout.length).toBe(0);
   });
+
+  it("Screen Boundary Invariant: Behind & Sandwich text strictly remains within video dimensions", () => {
+    const ctx = createMockCanvasContext();
+    const sandwichTemplate = CAPTION_PRESETS.find((t) => t.id === "behind_sandwich_layer")!;
+    const w = 720;
+    const h = 1280;
+
+    // Very long words that could potentially overflow if not auto-fit and clamped
+    const tokens: WordToken[] = [
+      { id: "1", text: "EXTRAORDINARILY", start: 0.0, end: 0.5, confidence: 1.0 },
+      { id: "2", text: "UNBELIEVABLE", start: 0.5, end: 1.0, confidence: 1.0 },
+      { id: "3", text: "SUPERINTELLECT", start: 1.0, end: 1.5, confidence: 1.0 },
+      { id: "4", text: "BREAKTHROUGH", start: 1.5, end: 2.0, confidence: 1.0 },
+    ];
+
+    // Wide creator subject positioned off-center
+    const subjectMetrics = {
+      hasSubject: true,
+      confidence: 0.98,
+      coveragePercent: 42.0,
+      boundingBox: { x: 0.15, y: 0.20, width: 0.70, height: 0.75 },
+      headRegion: { centerX: 0.58, centerY: 0.36, radiusX: 0.20, radiusY: 0.18 },
+      subjectCount: 1,
+      isLeavingFrame: false,
+    };
+
+    renderCaptionFrame({
+      ctx,
+      canvasWidth: w,
+      canvasHeight: h,
+      currentTime: 0.8,
+      tokens,
+      template: sandwichTemplate,
+      layerOrder: "sandwich",
+      subjectMetrics,
+      videoSource: {} as CanvasImageSource,
+      segmentationMask: new Uint8Array(100).fill(255),
+      maskWidth: 10,
+      maskHeight: 10,
+    });
+
+    const log = ctx.getLog();
+    const fillTexts = log.filter((l) => l.startsWith("fillText"));
+    expect(fillTexts.length).toBeGreaterThan(0);
+
+    for (const cmd of fillTexts) {
+      // Parse coordinates from fillText("...", x, y)
+      const match = cmd.match(/fillText\("([^"]+)",(-?\d+),(-?\d+)\)/);
+      if (match) {
+        const text = match[1];
+        const x = parseInt(match[2], 10);
+        const y = parseInt(match[3], 10);
+
+        // x must be non-negative and within screen width
+        expect(x, `Text "${text}" X position ${x} is off left edge`).toBeGreaterThanOrEqual(0);
+        expect(x, `Text "${text}" X position ${x} is off right edge`).toBeLessThan(w);
+
+        // y must be within screen height
+        expect(y, `Text "${text}" Y position ${y} is off top edge`).toBeGreaterThanOrEqual(0);
+        expect(y, `Text "${text}" Y position ${y} is off bottom edge`).toBeLessThan(h);
+      }
+    }
+  });
 });
