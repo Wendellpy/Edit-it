@@ -86,7 +86,7 @@ export class SegmentationPipeline {
     sourceHeight: number
   ): Promise<SegmentationMaskFrame> {
     // 1. Check cache first (instant hit)
-    const versionedHash = `${videoHash}_mediapipe_ml_v1`;
+    const versionedHash = `${videoHash}_real_ml_v4`;
     const cached = await opfsMaskCache.getMask(versionedHash, timestamp, 0.04);
     if (cached) {
       return cached;
@@ -98,6 +98,7 @@ export class SegmentationPipeline {
 
     let rawMask: Uint8Array;
     let dynamicMetrics: SubjectMetrics | null = null;
+    let isSynthetic = false;
 
     if (frameSource && typeof document !== "undefined") {
       // In browser: extract frame canvas downsampled to procW x procH using reusable canvas
@@ -154,12 +155,15 @@ export class SegmentationPipeline {
           rawMask = analysis.mask;
           dynamicMetrics = analysis.metrics;
         } catch {
+          isSynthetic = true;
           rawMask = this.generateSyntheticSubjectMask(procW, procH, timestamp);
         }
       } else {
+        isSynthetic = true;
         rawMask = this.generateSyntheticSubjectMask(procW, procH, timestamp);
       }
     } else {
+      isSynthetic = true;
       rawMask = this.generateSyntheticSubjectMask(procW, procH, timestamp);
     }
 
@@ -197,8 +201,11 @@ export class SegmentationPipeline {
       metrics,
     };
 
-    // 5. Cache asynchronously
-    await opfsMaskCache.saveMask(versionedHash, frame);
+    // 5. Cache asynchronously ONLY if real frame ML segmentation
+    if (!isSynthetic) {
+      await opfsMaskCache.saveMask(versionedHash, frame);
+    }
+
 
     return frame;
   }
@@ -266,9 +273,11 @@ export class SegmentationPipeline {
     videoHash: string,
     ranges: Array<{ start: number; end: number }>,
     videoDuration: number,
-    onProgress?: SegmentationProgressCallback
+    onProgress?: SegmentationProgressCallback,
+    frameSource: CanvasImageSource | null = null
   ): Promise<void> {
-    if (ranges.length === 0) return;
+    if (ranges.length === 0 || !frameSource) return;
+
 
     let totalFrames = 0;
     const fps = 15; // 15 fps sampling for lazy masks (interpolated at playback)
@@ -315,3 +324,8 @@ export class SegmentationPipeline {
 }
 
 export const segmentationPipeline = SegmentationPipeline.getInstance();
+if (typeof window !== "undefined") {
+  (window as any).__segmentationPipeline = segmentationPipeline;
+  (window as any).__opfsMaskCache = opfsMaskCache;
+}
+

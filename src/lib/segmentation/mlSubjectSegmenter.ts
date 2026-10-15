@@ -303,3 +303,7 @@ export class MlSubjectSegmenter {
 }
 
 export const mlSubjectSegmenter = MlSubjectSegmenter.getInstance();
+if (typeof window !== "undefined") {
+  (window as any).__mlSubjectSegmenter = mlSubjectSegmenter;
+}
+

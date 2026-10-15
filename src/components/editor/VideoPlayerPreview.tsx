@@ -139,24 +139,6 @@ export function VideoPlayerPreview({ onOpenTranscribe }: VideoPlayerPreviewProps
     currentMaskRef.current = null;
   }, [maskQualityTier, maskFeather, maskExpandContract]);
 
-  // Lazy background pre-caching for visible cue ranges
-  useEffect(() => {
-    if (!isDepthActive || !tokens || tokens.length === 0) return;
-
-    const cueRanges: Array<{ start: number; end: number }> = [];
-    const cues = buildCaptionCues(tokens, 8);
-    for (const c of cues) {
-      cueRanges.push({ start: c.start, end: c.displayEnd });
-    }
-
-    if (cueRanges.length > 0) {
-      segmentationPipeline.processVisibleCueRanges(
-        videoTitle || "preview_stream",
-        cueRanges,
-        duration || 10
-      ).catch(() => {});
-    }
-  }, [isDepthActive, tokens, videoTitle, duration]);
 
   // Re-render canvas frame when paused and seeking/scrubbing
   useEffect(() => {

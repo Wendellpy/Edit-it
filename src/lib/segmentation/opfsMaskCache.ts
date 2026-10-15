@@ -29,6 +29,7 @@ export class OpfsMaskCache {
       try {
         this.rootDir = await navigator.storage.getDirectory();
         this.isOpfsSupported = true;
+        this.purgeLegacyCaches().catch(() => {});
         return true;
       } catch {
         this.isOpfsSupported = false;
@@ -38,6 +39,29 @@ export class OpfsMaskCache {
     this.isOpfsSupported = false;
     return false;
   }
+
+  /**
+   * Purges old poisoned synthetic cache folders to ensure clean ML segmentation.
+   */
+  private async purgeLegacyCaches(): Promise<void> {
+    if (!this.rootDir) return;
+    try {
+      const masksDir = await this.rootDir.getDirectoryHandle("bolsub_masks", { create: true });
+      for await (const [name] of (masksDir as any).entries()) {
+        if (
+          name.includes("_mediapipe_ml_v1") ||
+          name.includes("_dyn_v2") ||
+          name.includes("_real_ml_v2") ||
+          name.includes("_real_ml_v3")
+        ) {
+          try {
+            await masksDir.removeEntry(name, { recursive: true });
+          } catch {}
+        }
+      }
+    } catch {}
+  }
+
 
   private makeKey(videoHash: string, timestamp: number): string {
     // Quantize timestamp to 2 decimal places (~10ms precision)
@@ -173,11 +197,34 @@ export class OpfsMaskCache {
 
     try {
       const masksDir = await this.rootDir.getDirectoryHandle("bolsub_masks");
-      await masksDir.removeEntry(videoHash, { recursive: true });
+      for await (const [name] of (masksDir as any).entries()) {
+        if (name === videoHash || name.startsWith(videoHash)) {
+          try {
+            await masksDir.removeEntry(name, { recursive: true });
+          } catch {}
+        }
+      }
     } catch {
       // Ignore if directory doesn't exist
     }
   }
+
+  /**
+   * Wipes all cached masks completely from memory and OPFS disk storage.
+   */
+  async clearAllCache(): Promise<void> {
+    this.memoryFallback.clear();
+    if (!this.isOpfsSupported || !this.rootDir) return;
+    try {
+      const masksDir = await this.rootDir.getDirectoryHandle("bolsub_masks", { create: true });
+      for await (const [name] of (masksDir as any).entries()) {
+        try {
+          await masksDir.removeEntry(name, { recursive: true });
+        } catch {}
+      }
+    } catch {}
+  }
+
 
   /**
    * Reports memory and storage usage metrics.

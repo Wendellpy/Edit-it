@@ -21,11 +21,14 @@ import {
   Cpu,
   X,
   Info,
+  RotateCcw,
 } from "lucide-react";
 import { CAPTION_PRESETS, getTemplateById } from "@/lib/templates";
 import { type TemplateVibe, type WordAnimationEffect } from "@/lib/templates/schema";
 import { generateSrt, generateVtt, generateAss } from "@/lib/export/subtitleFormatters";
 import { saveBlobToDisk } from "@/lib/export/fileSaver";
+import { opfsMaskCache } from "@/lib/segmentation/opfsMaskCache";
+
 
 interface TemplateStyleDockProps {
   onOpenExportModal?: () => void;
@@ -850,7 +853,7 @@ export function TemplateStyleDock({ onOpenExportModal }: TemplateStyleDockProps)
             </div>
             <button
               onClick={toggleMaskOverlay}
-              className={`w-10 h-6 rounded-full p-1 transition-colors ${
+              className={`w-10 h-6 rounded-full p-1 transition-colors cursor-pointer ${
                 showMaskOverlay ? "bg-purple-600" : "bg-zinc-800"
               }`}
             >
@@ -861,6 +864,26 @@ export function TemplateStyleDock({ onOpenExportModal }: TemplateStyleDockProps)
               />
             </button>
           </div>
+
+          {/* Reset / Purge Matte Cache Button */}
+          <div className="p-3 rounded-xl bg-[#14151a] border border-zinc-800 flex items-center justify-between">
+            <div>
+              <span className="font-semibold text-white block">Reset Matte Cache</span>
+              <span className="text-[10px] text-zinc-500">Purge old caches & recompute clean ML masks</span>
+            </div>
+            <button
+              onClick={async () => {
+                await opfsMaskCache.clearAllCache();
+                setSyncOffset(syncOffset); // Trigger state refresh
+              }}
+              className="px-3 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-[11px] font-bold border border-zinc-700 transition-colors flex items-center gap-1.5 cursor-pointer"
+              title="Purge all cached masks from browser storage"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+              <span>Reset</span>
+            </button>
+          </div>
+
 
           {/* Stretch Goal Notice */}
           <div className="p-2.5 rounded-lg bg-zinc-900/60 border border-zinc-800 text-[10px] text-zinc-400 flex items-start gap-2">
