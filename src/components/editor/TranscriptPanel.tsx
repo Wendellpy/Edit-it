@@ -47,6 +47,7 @@ export function TranscriptPanel() {
     setScriptMode,
     currentTime,
     setCurrentTime,
+    seekTo,
     isReviewMode,
     toggleReviewMode,
   } = useEditorStore();
@@ -291,7 +292,10 @@ export function TranscriptPanel() {
                     <div className="flex items-center justify-between text-[10px] font-mono text-[var(--text-muted)] pb-1.5 border-b border-[var(--border-main)]/30">
                       <div className="flex items-center gap-1.5">
                         <button
-                          onClick={() => setCurrentTime(cue.start)}
+                          onClick={() => {
+                            seekTo(cue.start);
+                            useEditorStore.getState().setIsPlaying(true);
+                          }}
                           className="w-5 h-5 rounded-full border border-[var(--border-main)] bg-[var(--accent-lime)] hover:bg-[var(--accent-lime-hover)] text-[#142218] flex items-center justify-center transition-colors cursor-pointer shadow-[1px_1px_0px_var(--border-main)]"
                           title="Play this line"
                         >
@@ -343,7 +347,7 @@ export function TranscriptPanel() {
                             key={token.id}
                             onClick={() => {
                               selectWord(token.id);
-                              setCurrentTime(token.start);
+                              seekTo(token.start);
                             }}
                             onDoubleClick={() => {
                               setEditingWordId(token.id);

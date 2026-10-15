@@ -51,6 +51,7 @@ export default function EditorStudioPage() {
     nudgeWord,
     currentTime,
     setCurrentTime,
+    seekTo,
     duration,
     isReviewMode,
     toggleReviewMode,
@@ -90,29 +91,31 @@ export default function EditorStudioPage() {
       // J / K / L = Scrub backwards / Pause / Scrub forwards
       if (e.key === "j" || e.key === "J") {
         e.preventDefault();
-        setCurrentTime(Math.max(0, currentTime - 1.0));
+        seekTo(Math.max(0, currentTime - 1.0));
       } else if (e.key === "k" || e.key === "K") {
         e.preventDefault();
         togglePlay();
       } else if (e.key === "l" || e.key === "L") {
         e.preventDefault();
-        setCurrentTime(Math.min(duration || 5, currentTime + 1.0));
+        seekTo(Math.min(duration || 5, currentTime + 1.0));
       }
 
-      // Left / Right Arrow = Step 1 Frame (-33ms / +33ms)
+      // Left / Right Arrow = Step 1 Frame (-33ms / +33ms) or Step 1s (Shift)
       if (e.key === "ArrowLeft") {
         e.preventDefault();
-        if (e.shiftKey && selectedWordId) {
+        if (e.altKey && selectedWordId) {
           nudgeWord(selectedWordId, -0.05);
         } else {
-          setCurrentTime(Math.max(0, currentTime - 1 / 30));
+          const step = e.shiftKey ? 1.0 : 1 / 30;
+          seekTo(Math.max(0, currentTime - step));
         }
       } else if (e.key === "ArrowRight") {
         e.preventDefault();
-        if (e.shiftKey && selectedWordId) {
+        if (e.altKey && selectedWordId) {
           nudgeWord(selectedWordId, 0.05);
         } else {
-          setCurrentTime(Math.min(duration || 5, currentTime + 1 / 30));
+          const step = e.shiftKey ? 1.0 : 1 / 30;
+          seekTo(Math.min(duration || 5, currentTime + step));
         }
       }
 

@@ -21,6 +21,7 @@ export function WaveformTimeline() {
     duration,
     currentTime,
     setCurrentTime,
+    seekTo,
     tokens,
     videoUrl,
     videoTitle,
@@ -46,6 +47,9 @@ export function WaveformTimeline() {
   const [isSnapping, setIsSnapping] = useState(true);
   const [isLocked, setIsLocked] = useState(false);
   const [isDraggingPlayhead, setIsDraggingPlayhead] = useState(false);
+  const wasPlayingRef = useRef(false);
+  const dragDistanceRef = useRef(0);
+  const dragStartXRef = useRef(0);
   const [draggingWordEdge, setDraggingWordEdge] = useState<{
     id: string;
     edge: "start" | "end";
@@ -75,7 +79,7 @@ export function WaveformTimeline() {
 
   // Calculate magnetic snapped time
   const getSnappedTime = useCallback(
-    (rawTime: number, excludeWordId?: string): number => {
+    (rawTime: number, excludeWordId?: string, isScrubbing?: boolean): number => {
       if (!isSnapping) {
         setSnapIndicator(null);
         return rawTime;
@@ -83,7 +87,11 @@ export function WaveformTimeline() {
       const snapThresholdPx = 10;
       const snapThresholdSec = snapThresholdPx / pxPerSecond;
 
-      const targets: number[] = [0, duration || 5, currentTime];
+      const targets: number[] = [0, duration || 5];
+      // Do not snap to current playhead when dragging the playhead itself
+      if (!isScrubbing) {
+        targets.push(currentTime);
+      }
       tokens.forEach((t) => {
         if (t.id !== excludeWordId) {
           targets.push(t.start);
@@ -126,8 +134,23 @@ export function WaveformTimeline() {
       const rawTime = pxToTime(currentX);
 
       if (isDraggingPlayhead) {
-        const snapped = getSnappedTime(rawTime);
-        setCurrentTime(snapped);
+        dragDistanceRef.current = Math.abs(e.clientX - dragStartXRef.current);
+
+        // When user actively drags beyond 4px while playing, pause playback for smooth frame inspection
+        if (dragDistanceRef.current > 4 && isPlaying) {
+          useEditorStore.getState().setIsPlaying(false);
+        }
+
+        // Auto-scroll timeline when scrubbing near container edges
+        const edgeThreshold = 40;
+        if (e.clientX > rect.right - edgeThreshold) {
+          containerRef.current.scrollLeft += 12;
+        } else if (e.clientX < rect.left + edgeThreshold) {
+          containerRef.current.scrollLeft -= 12;
+        }
+
+        const snapped = getSnappedTime(rawTime, undefined, true);
+        seekTo(snapped);
       } else if (draggingWordEdge) {
         const word = tokens.find((t) => t.id === draggingWordEdge.id);
         if (word) {
@@ -135,12 +158,12 @@ export function WaveformTimeline() {
             const snapped = getSnappedTime(rawTime, word.id);
             const newStart = Math.min(word.end - 0.05, Math.max(0, snapped));
             updateWordTimings(word.id, Math.round(newStart * 1000) / 1000, word.end);
-            setCurrentTime(newStart);
+            seekTo(newStart);
           } else {
             const snapped = getSnappedTime(rawTime, word.id);
             const newEnd = Math.max(word.start + 0.05, Math.min(duration || 5, snapped));
             updateWordTimings(word.id, word.start, Math.round(newEnd * 1000) / 1000);
-            setCurrentTime(newEnd);
+            seekTo(newEnd);
           }
         }
       } else if (draggingWordBody) {
@@ -164,6 +187,12 @@ export function WaveformTimeline() {
     };
 
     const handleGlobalMouseUp = () => {
+      if (isDraggingPlayhead) {
+        // If it was just a quick click (no drag <= 4px) and video was playing, resume playback from the new position!
+        if (dragDistanceRef.current <= 4 && wasPlayingRef.current) {
+          useEditorStore.getState().setIsPlaying(true);
+        }
+      }
       setIsDraggingPlayhead(false);
       setDraggingWordEdge(null);
       setDraggingWordBody(null);
@@ -187,6 +216,7 @@ export function WaveformTimeline() {
     pxPerSecond,
     updateWordTimings,
     setCurrentTime,
+    isPlaying,
   ]);
 
   // Keyboard Shortcuts (V=Select, C=Razor, S=Snap, L=Lock, +/-=Zoom, Delete=Remove)
@@ -218,14 +248,6 @@ export function WaveformTimeline() {
         if (selectedWordId && !isLocked) {
           deleteWord(selectedWordId);
         }
-      } else if (e.key === "ArrowLeft") {
-        e.preventDefault();
-        const step = e.shiftKey ? 1.0 : 0.1;
-        setCurrentTime(Math.max(0, Math.round((currentTime - step) * 1000) / 1000));
-      } else if (e.key === "ArrowRight") {
-        e.preventDefault();
-        const step = e.shiftKey ? 1.0 : 0.1;
-        setCurrentTime(Math.min(duration || 5, Math.round((currentTime + step) * 1000) / 1000));
       }
     };
 
@@ -237,9 +259,6 @@ export function WaveformTimeline() {
     deleteWord,
     timelineZoom,
     setTimelineZoom,
-    currentTime,
-    setCurrentTime,
-    duration,
   ]);
 
   // Keep playhead scrolled into view when playing
@@ -271,11 +290,18 @@ export function WaveformTimeline() {
   // Timeline mouse down handler for seeking and scrubbing
   const handleTimelineMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!containerRef.current || isLocked) return;
+    if (e.button !== 0) return; // Only primary mouse button
+
     const rect = containerRef.current.getBoundingClientRect();
     const clickX = e.clientX - rect.left + containerRef.current.scrollLeft;
     const rawTime = pxToTime(clickX);
-    const snapped = getSnappedTime(rawTime);
-    setCurrentTime(snapped);
+    const snapped = getSnappedTime(rawTime, undefined, true);
+
+    wasPlayingRef.current = isPlaying;
+    dragStartXRef.current = e.clientX;
+    dragDistanceRef.current = 0;
+
+    seekTo(snapped);
     setIsDraggingPlayhead(true);
   };
 
@@ -587,7 +613,7 @@ export function WaveformTimeline() {
                         e.stopPropagation();
                         if (!hasMovedBodyRef.current && activeTool === "select") {
                           selectWord(token.id);
-                          setCurrentTime(token.start);
+                          seekTo(token.start);
                         }
                       }}
                       style={{ left: `${left}px`, width: `${width}px` }}
@@ -728,7 +754,20 @@ export function WaveformTimeline() {
               className="absolute top-0 bottom-0 z-30 pointer-events-none -ml-px flex flex-col items-center"
             >
               {/* Playhead Scrubber Head */}
-              <div className="w-3.5 h-3.5 bg-[var(--accent-lime)] border-2 border-[var(--border-main)] shadow-[2px_2px_0px_var(--border-main)] transform rotate-45 -mt-1 rounded-sm" />
+              <div
+                onMouseDown={(e) => {
+                  e.stopPropagation();
+                  handleTimelineMouseDown(e);
+                }}
+                className="w-3.5 h-3.5 bg-[var(--accent-lime)] border-2 border-[var(--border-main)] shadow-[2px_2px_0px_var(--border-main)] transform rotate-45 -mt-1 rounded-sm pointer-events-auto cursor-ew-resize hover:scale-125 transition-transform"
+                title={`Playhead: ${formatRulerTime(currentTime)} (Drag to scrub)`}
+              />
+              {/* Floating Scrub Timecode Badge */}
+              {isDraggingPlayhead && (
+                <div className="absolute -top-7 px-1.5 py-0.5 rounded-md bg-[var(--border-main)] text-[var(--accent-lime)] font-mono text-[9px] font-black tracking-wider whitespace-nowrap shadow-md pointer-events-none z-50 border border-[var(--accent-lime)]/40">
+                  {formatRulerTime(currentTime)}
+                </div>
+              )}
               {/* Playhead Needle Line */}
               <div className="w-0.5 flex-1 bg-[var(--accent-lime)] shadow-[1px_0px_0px_var(--border-main)]" />
             </div>

@@ -88,6 +88,9 @@ export interface EditorState {
   setIsTranscribing: (val: boolean) => void;
   setDuration: (duration: number) => void;
   setCurrentTime: (time: number) => void;
+  seekTarget: number | null;
+  seekVersion: number;
+  seekTo: (time: number) => void;
   setIsPlaying: (isPlaying: boolean) => void;
   togglePlay: () => void;
   setPlaybackRate: (rate: number) => void;
@@ -240,9 +243,32 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   },
 
   setDuration: (duration) => set({ duration }),
-  setCurrentTime: (time) => set({ currentTime: Math.max(0, Math.min(get().duration, time)) }),
+  seekTarget: null,
+  seekVersion: 0,
+  seekTo: (time) => {
+    const dur = get().duration;
+    const maxT = dur > 0 ? dur : 3600;
+    const clamped = Math.max(0, Math.min(maxT, time));
+    set((s) => ({
+      currentTime: clamped,
+      seekTarget: clamped,
+      seekVersion: s.seekVersion + 1,
+    }));
+  },
+  setCurrentTime: (time) => {
+    const dur = get().duration;
+    const maxT = dur > 0 ? dur : 3600;
+    set({ currentTime: Math.max(0, Math.min(maxT, time)) });
+  },
   setIsPlaying: (isPlaying) => set({ isPlaying }),
-  togglePlay: () => set((s) => ({ isPlaying: !s.isPlaying })),
+  togglePlay: () => {
+    const { isPlaying, currentTime, duration } = get();
+    if (!isPlaying && duration > 0 && currentTime >= duration - 0.05) {
+      set({ currentTime: 0, isPlaying: true });
+    } else {
+      set({ isPlaying: !isPlaying });
+    }
+  },
   setPlaybackRate: (playbackRate) => set({ playbackRate }),
 
   setTokens: (newTokens) => {

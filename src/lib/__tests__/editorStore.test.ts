@@ -114,4 +114,31 @@ describe("editorStore - Zustand Command Pattern & Token Editing", () => {
     expect(useEditorStore.getState().exportSettings.quality).toBe("fast");
     expect(useEditorStore.getState().exportSettings.aspectRatio).toBe("1:1"); // preserved
   });
+
+  it("should safely clamp currentTime and wrap around on togglePlay at end of video", () => {
+    const store = useEditorStore.getState();
+    store.setDuration(10.0);
+
+    // Normal seeking
+    store.setCurrentTime(4.5);
+    expect(useEditorStore.getState().currentTime).toBe(4.5);
+
+    // Negative clamping
+    store.setCurrentTime(-2.0);
+    expect(useEditorStore.getState().currentTime).toBe(0);
+
+    // Beyond duration clamping
+    store.setCurrentTime(15.0);
+    expect(useEditorStore.getState().currentTime).toBe(10.0);
+
+    // When paused at end (currentTime = 10.0, duration = 10.0), togglePlay wraps around to 0 and starts playing
+    expect(useEditorStore.getState().isPlaying).toBe(false);
+    store.togglePlay();
+    expect(useEditorStore.getState().currentTime).toBe(0);
+    expect(useEditorStore.getState().isPlaying).toBe(true);
+
+    // Calling togglePlay again pauses
+    store.togglePlay();
+    expect(useEditorStore.getState().isPlaying).toBe(false);
+  });
 });

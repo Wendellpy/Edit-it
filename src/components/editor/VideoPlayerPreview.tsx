@@ -38,6 +38,9 @@ export function VideoPlayerPreview({ onOpenTranscribe }: VideoPlayerPreviewProps
     setVideo,
     currentTime,
     setCurrentTime,
+    seekTarget,
+    seekVersion,
+    seekTo,
     duration,
     isPlaying,
     togglePlay,
@@ -212,19 +215,40 @@ export function VideoPlayerPreview({ onOpenTranscribe }: VideoPlayerPreviewProps
     videoTitle,
   ]);
 
+  const fallbackTimeRef = useRef(currentTime);
+  useEffect(() => {
+    fallbackTimeRef.current = currentTime;
+  }, [currentTime]);
+
   // 60fps hardware-synchronized render loop during playback
   useEffect(() => {
     if (!isPlaying) return;
 
     let animId: number;
+    let lastSyntheticTime = performance.now();
 
     const render = () => {
-      // 1. Sync time directly from hardware video element for 0-lag synchronization
+      let liveTime = fallbackTimeRef.current;
       const isVideoPlaying = !!(videoRef.current && !videoRef.current.paused);
-      const liveTime = videoRef.current ? videoRef.current.currentTime : currentTime;
 
-      if (isVideoPlaying) {
-        // Throttle React state updates to 25fps to eliminate component tree churn while preserving timeline smoothness
+      if (videoRef.current && videoRef.current.src && !isNaN(videoRef.current.duration)) {
+        liveTime = videoRef.current.currentTime;
+        if (isVideoPlaying) {
+          // Throttle React state updates to 25fps to eliminate component tree churn while preserving timeline smoothness
+          if (Math.abs(liveTime - lastReportedTime.current) >= 0.04) {
+            lastReportedTime.current = liveTime;
+            setCurrentTime(liveTime);
+          }
+        }
+      } else {
+        // Video-less synthetic playback fallback for previewing templates without a video file
+        const now = performance.now();
+        const delta = (now - lastSyntheticTime) / 1000;
+        lastSyntheticTime = now;
+        const dur = useEditorStore.getState().duration || 5;
+        const nextTime = fallbackTimeRef.current + delta * playbackRate;
+        liveTime = nextTime >= dur ? 0 : nextTime;
+        fallbackTimeRef.current = liveTime;
         if (Math.abs(liveTime - lastReportedTime.current) >= 0.04) {
           lastReportedTime.current = liveTime;
           setCurrentTime(liveTime);
@@ -316,18 +340,56 @@ export function VideoPlayerPreview({ onOpenTranscribe }: VideoPlayerPreviewProps
     showMaskOverlay,
     layerOrder,
     videoTitle,
+    playbackRate,
   ]);
 
-  // Sync play/pause with HTMLVideoElement
+  // Handle explicit user seeks (from timeline click, playhead drag, transcript, shortcuts)
   useEffect(() => {
-    if (videoRef.current) {
-      if (isPlaying && videoRef.current.paused) {
-        videoRef.current.play().catch(() => {});
-      } else if (!isPlaying && !videoRef.current.paused) {
-        videoRef.current.pause();
-      }
+    if (seekVersion === 0 || seekTarget === null) return;
+    const vid = videoRef.current;
+    if (vid) {
+      vid.currentTime = seekTarget;
+      lastReportedTime.current = seekTarget;
+      fallbackTimeRef.current = seekTarget;
     }
-  }, [isPlaying]);
+  }, [seekVersion, seekTarget]);
+
+  // Sync play/pause with HTMLVideoElement, guaranteeing playback starts from exact playhead position
+  useEffect(() => {
+    const vid = videoRef.current;
+    if (!vid) return;
+
+    if (isPlaying) {
+      const cur = useEditorStore.getState().currentTime;
+      const dur = useEditorStore.getState().duration;
+
+      // If at the end of the video, loop back to start
+      if (dur > 0 && cur >= dur - 0.05) {
+        vid.currentTime = 0;
+        seekTo(0);
+        lastReportedTime.current = 0;
+        fallbackTimeRef.current = 0;
+      } else if (Math.abs(vid.currentTime - cur) > 0.02) {
+        // Guarantee video element starts from exact playhead position
+        vid.currentTime = cur;
+        lastReportedTime.current = cur;
+        fallbackTimeRef.current = cur;
+      }
+
+      if (vid.paused) {
+        const playPromise = vid.play();
+        if (playPromise !== undefined) {
+          playPromise.catch(() => {});
+        }
+      }
+    } else {
+      if (!vid.paused) {
+        vid.pause();
+      }
+      lastReportedTime.current = vid.currentTime;
+      fallbackTimeRef.current = vid.currentTime;
+    }
+  }, [isPlaying, seekTo]);
 
   // Sync playback rate
   useEffect(() => {
@@ -345,10 +407,7 @@ export function VideoPlayerPreview({ onOpenTranscribe }: VideoPlayerPreviewProps
 
   const handleSeek = (targetSec: number) => {
     const clamped = Math.max(0, Math.min(duration || 5, targetSec));
-    setCurrentTime(clamped);
-    if (videoRef.current) {
-      videoRef.current.currentTime = clamped;
-    }
+    seekTo(clamped);
   };
 
   const handleFrameStep = (deltaFrames: number) => {
