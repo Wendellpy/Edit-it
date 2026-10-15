@@ -412,40 +412,43 @@ export function VideoPlayerPreview({ onOpenTranscribe }: VideoPlayerPreviewProps
 
           <div className="h-4 w-px bg-[var(--border-main)] opacity-30" />
 
-          {/* Aspect Ratio Switcher */}
+          {/* Aspect Ratio Switcher with Platform Badges */}
           <div className="flex items-center bg-[var(--bg-panel)] rounded-full p-0.5 border-2 border-[var(--border-main)] text-[11px] font-bold shadow-[2px_2px_0px_var(--border-main)]">
             <button
-              onClick={() => setAspectRatio("16:9")}
-              className={`px-2.5 py-0.5 rounded-full transition-all cursor-pointer ${
-                aspectRatio === "16:9"
-                  ? "bg-[var(--accent-lime)] text-[#142218] font-black border border-[var(--border-main)] shadow-sm"
-                  : "text-[var(--text-muted)] hover:text-[var(--text-main)]"
-              }`}
-              title="16:9 Landscape (YouTube / Presentations)"
-            >
-              16:9
-            </button>
-            <button
               onClick={() => setAspectRatio("9:16")}
-              className={`px-2.5 py-0.5 rounded-full transition-all cursor-pointer ${
+              className={`flex items-center gap-1 px-2.5 py-0.5 rounded-full transition-all cursor-pointer ${
                 aspectRatio === "9:16"
                   ? "bg-[var(--accent-lime)] text-[#142218] font-black border border-[var(--border-main)] shadow-sm"
                   : "text-[var(--text-muted)] hover:text-[var(--text-main)]"
               }`}
-              title="9:16 Vertical (Shorts / Reels)"
+              title="9:16 Vertical (Instagram Reels / YouTube Shorts / TikTok)"
             >
-              9:16
+              <span>9:16</span>
+              <span className="hidden md:inline text-[9px] opacity-80 font-mono">(Reels)</span>
+            </button>
+            <button
+              onClick={() => setAspectRatio("16:9")}
+              className={`flex items-center gap-1 px-2.5 py-0.5 rounded-full transition-all cursor-pointer ${
+                aspectRatio === "16:9"
+                  ? "bg-[var(--accent-lime)] text-[#142218] font-black border border-[var(--border-main)] shadow-sm"
+                  : "text-[var(--text-muted)] hover:text-[var(--text-main)]"
+              }`}
+              title="16:9 Landscape (YouTube / Presentations / Cinema)"
+            >
+              <span>16:9</span>
+              <span className="hidden md:inline text-[9px] opacity-80 font-mono">(YouTube)</span>
             </button>
             <button
               onClick={() => setAspectRatio("1:1")}
-              className={`px-2.5 py-0.5 rounded-full transition-all cursor-pointer ${
+              className={`flex items-center gap-1 px-2.5 py-0.5 rounded-full transition-all cursor-pointer ${
                 aspectRatio === "1:1"
                   ? "bg-[var(--accent-lime)] text-[#142218] font-black border border-[var(--border-main)] shadow-sm"
                   : "text-[var(--text-muted)] hover:text-[var(--text-main)]"
               }`}
-              title="1:1 Square (Instagram Feed)"
+              title="1:1 Square (Instagram Feed / LinkedIn)"
             >
-              1:1
+              <span>1:1</span>
+              <span className="hidden md:inline text-[9px] opacity-80 font-mono">(Square)</span>
             </button>
           </div>
 
@@ -456,7 +459,7 @@ export function VideoPlayerPreview({ onOpenTranscribe }: VideoPlayerPreviewProps
 
         {/* Right: View Options & File Import */}
         <div className="flex items-center gap-1.5">
-          {/* Safe Zones Toggle */}
+          {/* Safe Zones Toggle with Status Indicator */}
           <button
             onClick={toggleSafeZones}
             className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full border-2 border-[var(--border-main)] text-[11px] font-bold transition-all cursor-pointer shadow-[2px_2px_0px_var(--border-main)] ${
@@ -464,10 +467,15 @@ export function VideoPlayerPreview({ onOpenTranscribe }: VideoPlayerPreviewProps
                 ? "bg-[var(--accent-lime)] text-[#142218]"
                 : "bg-[var(--bg-panel)] text-[var(--text-muted)] hover:text-[var(--text-main)]"
             }`}
-            title="Toggle Instagram Reels & YouTube Shorts UI Guides"
+            title="Toggle Instagram Reels & YouTube Shorts UI Guides (avoids button overlap)"
           >
-            <Layers className="w-3.5 h-3.5" />
+            <Layers className="w-3.5 h-3.5 shrink-0" />
             <span className="hidden sm:inline">Safe Zones</span>
+            <span
+              className={`w-1.5 h-1.5 rounded-full shrink-0 ${
+                showSafeZones ? "bg-[#142218] animate-pulse" : "bg-[var(--text-muted)] opacity-50"
+              }`}
+            />
           </button>
 
           {/* Audio / Caption Sync Calibration */}

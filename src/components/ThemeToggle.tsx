@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { useTheme } from "@/lib/theme";
 import { Sun, Moon } from "lucide-react";
 
@@ -11,25 +11,52 @@ interface ThemeToggleProps {
 
 export function ThemeToggle({ className = "", compact = false }: ThemeToggleProps) {
   const { theme, toggleTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const isDark = mounted ? theme === "dark" : true;
+
+  if (compact) {
+    return (
+      <button
+        onClick={toggleTheme}
+        type="button"
+        className={`neo-btn-secondary w-7.5 h-7.5 rounded-full flex items-center justify-center p-0 shrink-0 cursor-pointer transition-transform hover:scale-105 active:scale-95 ${className}`}
+        title={isDark ? "Switch to Rustic Light Theme" : "Switch to Forest Noir Dark Theme"}
+        aria-label="Toggle Light/Dark Theme"
+      >
+        {isDark ? (
+          <Sun className="w-4 h-4 text-[var(--accent-lime)] stroke-[2.5] transition-transform hover:rotate-45" />
+        ) : (
+          <Moon className="w-4 h-4 text-[var(--text-main)] stroke-[2.5] transition-transform hover:-rotate-12" />
+        )}
+      </button>
+    );
+  }
 
   return (
     <button
       onClick={toggleTheme}
       type="button"
-      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold transition-all cursor-pointer select-none border-2 border-black dark:border-[#2E4B37] bg-[#F4F1EA] dark:bg-[#132018] text-[#142218] dark:text-[#E8F0EA] shadow-[2px_2px_0px_#142218] dark:shadow-[2px_2px_0px_#050806] hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[3px_3px_0px_#142218] dark:hover:shadow-[3px_3px_0px_#A3E635] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none ${className}`}
-      title={theme === "dark" ? "Switch to Retro Rustic Light Theme" : "Switch to Forest Noir Dark Theme"}
+      className={`neo-btn-secondary px-3 py-1.5 rounded-full text-xs font-bold gap-1.5 flex items-center cursor-pointer select-none transition-all ${className}`}
+      title={isDark ? "Switch to Rustic Light Theme" : "Switch to Forest Noir Dark Theme"}
+      aria-label="Toggle Light/Dark Theme"
     >
-      {theme === "dark" ? (
+      {isDark ? (
         <>
-          <Sun className="w-3.5 h-3.5 text-[#A3E635] stroke-[2.5]" />
-          {!compact && <span>Rustic Light</span>}
+          <Sun className="w-3.5 h-3.5 text-[var(--accent-lime)] stroke-[2.5]" />
+          <span>Rustic Light</span>
         </>
       ) : (
         <>
-          <Moon className="w-3.5 h-3.5 text-[#142218] stroke-[2.5]" />
-          {!compact && <span>Forest Dark</span>}
+          <Moon className="w-3.5 h-3.5 text-[var(--text-main)] stroke-[2.5]" />
+          <span>Forest Dark</span>
         </>
       )}
     </button>
   );
 }
+

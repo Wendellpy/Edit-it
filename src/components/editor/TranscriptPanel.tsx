@@ -17,6 +17,8 @@ import {
   Layers,
   FileText,
   Wand2,
+  X,
+  Crosshair,
 } from "lucide-react";
 import confetti from "canvas-confetti";
 import { applyViralMode } from "@/lib/smart/viralMode";
@@ -150,6 +152,20 @@ export function TranscriptPanel() {
     return `${String(mins).padStart(2, "0")}:${String(s).padStart(2, "0")}.${ms}`;
   };
 
+  const activeCueIndex = useMemo(
+    () => cues.findIndex((c) => currentTime >= c.start && currentTime <= c.end),
+    [cues, currentTime]
+  );
+
+  const scrollToActiveCue = () => {
+    if (activeCueIndex !== -1) {
+      const el = document.getElementById(`transcript-cue-${activeCueIndex}`);
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
+    }
+  };
+
   return (
     <div className="w-80 lg:w-[340px] flex flex-col bg-[var(--bg-panel)] rounded-2xl border-2 border-[var(--border-main)] shrink-0 h-full min-h-0 overflow-hidden select-none shadow-[3px_3px_0px_var(--border-main)] transition-colors">
       {/* 1. Panel Header & Clean Navigation */}
@@ -157,33 +173,36 @@ export function TranscriptPanel() {
         <div className="flex items-center bg-[var(--bg-panel)] p-1 rounded-full border-2 border-[var(--border-main)] shadow-[2px_2px_0px_var(--border-main)]">
           <button
             onClick={() => setActiveTab("cues")}
-            className={`px-2.5 py-1 rounded-full text-[11px] font-extrabold transition-all cursor-pointer ${
+            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-extrabold transition-all cursor-pointer ${
               activeTab === "cues"
                 ? "bg-[var(--accent-lime)] text-[#142218] shadow-sm border border-[var(--border-main)]"
                 : "text-[var(--text-muted)] hover:text-[var(--text-main)]"
             }`}
           >
-            Captions ({cues.length})
+            <FileText className="w-3 h-3" />
+            <span>Cues ({cues.length})</span>
           </button>
           <button
             onClick={() => setActiveTab("smart")}
-            className={`px-2.5 py-1 rounded-full text-[11px] font-extrabold transition-all cursor-pointer ${
+            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-extrabold transition-all cursor-pointer ${
               activeTab === "smart"
                 ? "bg-[var(--accent-lime)] text-[#142218] shadow-sm border border-[var(--border-main)]"
                 : "text-[var(--text-muted)] hover:text-[var(--text-main)]"
             }`}
           >
-            AI Tools
+            <Wand2 className="w-3 h-3" />
+            <span>AI Tools</span>
           </button>
           <button
             onClick={() => setActiveTab("replace")}
-            className={`px-2.5 py-1 rounded-full text-[11px] font-extrabold transition-all cursor-pointer ${
+            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-extrabold transition-all cursor-pointer ${
               activeTab === "replace"
                 ? "bg-[var(--accent-lime)] text-[#142218] shadow-sm border border-[var(--border-main)]"
                 : "text-[var(--text-muted)] hover:text-[var(--text-main)]"
             }`}
           >
-            Find
+            <Search className="w-3 h-3" />
+            <span>Find</span>
           </button>
         </div>
 
@@ -204,13 +223,33 @@ export function TranscriptPanel() {
                 placeholder="Search captions (Ctrl+F)..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-9 pr-3 py-1 rounded-full bg-[var(--bg-panel)] border-2 border-[var(--border-main)] text-[11px] text-[var(--text-main)] placeholder-[var(--text-muted)] focus:outline-none focus:ring-1 focus:ring-[var(--accent-lime)] transition-colors shadow-[2px_2px_0px_var(--border-main)]"
+                className="w-full pl-8 pr-7 py-1 rounded-full bg-[var(--bg-panel)] border-2 border-[var(--border-main)] text-[11px] text-[var(--text-main)] placeholder-[var(--text-muted)] focus:outline-none focus:ring-1 focus:ring-[var(--accent-lime)] transition-colors shadow-[2px_2px_0px_var(--border-main)]"
               />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery("")}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-[var(--text-main)] cursor-pointer"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              )}
             </div>
+
+            {/* Jump to Active Cue Indicator */}
+            {activeCueIndex !== -1 && (
+              <button
+                onClick={scrollToActiveCue}
+                className="neo-btn-secondary px-2 py-1 text-[10px] gap-1 shrink-0 text-[var(--accent-lime)] cursor-pointer"
+                title="Scroll transcript to current active line"
+              >
+                <Crosshair className="w-3 h-3" />
+                <span className="hidden sm:inline">Active</span>
+              </button>
+            )}
 
             <button
               onClick={() => setScriptMode(scriptMode === "roman" ? "devanagari" : "roman")}
-              className="neo-btn-secondary px-2.5 py-1 text-[10px] gap-1 shrink-0"
+              className="neo-btn-secondary px-2.5 py-1 text-[10px] gap-1 shrink-0 cursor-pointer"
               title="Toggle Roman Hinglish / Hindi Devanagari"
             >
               <Languages className="w-3.5 h-3.5 text-[var(--text-main)]" />
@@ -241,6 +280,7 @@ export function TranscriptPanel() {
                 return (
                   <div
                     key={cue.id}
+                    id={`transcript-cue-${index}`}
                     className={`p-2.5 rounded-xl border-2 transition-all ${
                       isLineActive
                         ? "bg-[var(--accent-lime)]/20 border-[var(--border-main)] shadow-[3px_3px_0px_var(--border-main)] ring-2 ring-[var(--accent-lime)]"

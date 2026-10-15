@@ -30,7 +30,12 @@ import {
   ChevronDown,
   Mic,
   Upload,
+  LayoutGrid,
+  Tv,
+  FileText,
+  Pencil,
 } from "lucide-react";
+
 
 export default function EditorStudioPage() {
   const {
@@ -156,14 +161,16 @@ export default function EditorStudioPage() {
 
           <div className="h-5 w-px bg-[var(--border-main)] opacity-30" />
 
-          {/* Project Title Input */}
-          <div className="flex items-center gap-1.5 font-mono text-[11px] bg-[var(--bg-card)] px-3 py-1 rounded-full border-2 border-[var(--border-main)] text-[var(--text-main)] shadow-[2px_2px_0px_var(--border-main)]">
-            <span className="text-[var(--text-muted)] font-bold text-[10px]">PROJECT:</span>
+          {/* Project Title Input with Edit Indicator */}
+          <div className="flex items-center gap-1.5 font-mono text-[11px] bg-[var(--bg-card)] px-2.5 py-1 rounded-full border-2 border-[var(--border-main)] text-[var(--text-main)] shadow-[2px_2px_0px_var(--border-main)] hover:border-[var(--accent-lime)] transition-colors">
+            <Pencil className="w-3 h-3 text-[var(--text-muted)] shrink-0" />
             <input
               type="text"
               value={projectTitle}
               onChange={(e) => setProjectTitle(e.target.value)}
-              className="bg-transparent text-[var(--text-main)] font-bold focus:outline-none max-w-[130px] sm:max-w-[180px] transition-colors"
+              placeholder="Untitled Project"
+              title="Click to rename project"
+              className="bg-transparent text-[var(--text-main)] font-bold focus:outline-none max-w-[120px] sm:max-w-[160px] transition-colors"
             />
           </div>
 
@@ -174,89 +181,96 @@ export default function EditorStudioPage() {
           </div>
         </div>
 
-        {/* Center: Workspaces Mode Switcher */}
-        <div className="hidden lg:flex items-center bg-[var(--bg-card)] p-1 rounded-full border-2 border-[var(--border-main)] text-[11px] font-bold shadow-[2px_2px_0px_var(--border-main)]">
+        {/* Center: Workspaces Mode Switcher with Visual Icons */}
+        <nav aria-label="Workspace Views" className="hidden lg:flex items-center bg-[var(--bg-card)] p-1 rounded-full border-2 border-[var(--border-main)] text-[11px] font-bold shadow-[2px_2px_0px_var(--border-main)]">
           <button
             onClick={() => setActiveWorkspace("edit")}
-            className={`px-3 py-1 rounded-full transition-all cursor-pointer ${
+            className={`flex items-center gap-1.5 px-3 py-1 rounded-full transition-all cursor-pointer ${
               activeWorkspace === "edit"
                 ? "bg-[var(--accent-lime)] text-[#142218] border border-[var(--border-main)] shadow-sm font-extrabold"
                 : "text-[var(--text-muted)] hover:text-[var(--text-main)]"
             }`}
+            title="Complete 4-panel editing workspace (Monitor, Script, Styles, Waveform)"
           >
-            Studio Layout
+            <LayoutGrid className="w-3.5 h-3.5 shrink-0" />
+            <span>Studio</span>
           </button>
           <button
             onClick={() => setActiveWorkspace("widescreen")}
-            className={`px-3 py-1 rounded-full transition-all cursor-pointer ${
+            className={`flex items-center gap-1.5 px-3 py-1 rounded-full transition-all cursor-pointer ${
               activeWorkspace === "widescreen"
                 ? "bg-[var(--accent-lime)] text-[#142218] border border-[var(--border-main)] shadow-sm font-extrabold"
                 : "text-[var(--text-muted)] hover:text-[var(--text-main)]"
             }`}
             title="Focus on 16:9 widescreen video playback"
           >
-            16:9 Cinema
+            <Tv className="w-3.5 h-3.5 shrink-0" />
+            <span>Cinema</span>
           </button>
           <button
             onClick={() => setActiveWorkspace("captions")}
-            className={`px-3 py-1 rounded-full transition-all cursor-pointer ${
+            className={`flex items-center gap-1.5 px-3 py-1 rounded-full transition-all cursor-pointer ${
               activeWorkspace === "captions"
                 ? "bg-[var(--accent-lime)] text-[#142218] border border-[var(--border-main)] shadow-sm font-extrabold"
                 : "text-[var(--text-muted)] hover:text-[var(--text-main)]"
             }`}
             title="Expanded script editor for captions"
           >
-            Captions Focus
+            <FileText className="w-3.5 h-3.5 shrink-0" />
+            <span>Captions</span>
           </button>
-        </div>
+        </nav>
 
         {/* Right: Actions, Shortcuts, Theme & Export */}
         <div className="flex items-center gap-2">
-          {/* Import Video Clip */}
-          <button
-            onClick={() => masterFileInputRef.current?.click()}
-            className="neo-btn-secondary px-3 py-1 text-[11px] gap-1.5"
-            title="Import video clip from device"
-          >
-            <Upload className="w-3.5 h-3.5 text-[var(--text-main)]" />
-            <span className="hidden sm:inline">Import Video</span>
-          </button>
-          <input
-            ref={masterFileInputRef}
-            type="file"
-            accept="video/*"
-            className="hidden"
-            onChange={(e) => {
-              const file = e.target.files?.[0];
-              if (file) {
-                setVideo(file);
-                setAutoStartTranscribe(true);
-                setIsTranscribeModalOpen(true);
-              }
-            }}
-          />
+          {/* Primary Ingestion Flow: Import + Transcribe */}
+          <div className="flex items-center gap-1.5 bg-[var(--bg-card)]/60 p-0.5 rounded-full border border-[var(--border-main)]/50">
+            {/* Import Video Clip */}
+            <button
+              onClick={() => masterFileInputRef.current?.click()}
+              className="neo-btn-secondary px-2.5 py-1 text-[11px] gap-1.5 cursor-pointer"
+              title="Import video clip from device"
+            >
+              <Upload className="w-3.5 h-3.5 text-[var(--text-main)]" />
+              <span className="hidden sm:inline">Import</span>
+            </button>
+            <input
+              ref={masterFileInputRef}
+              type="file"
+              accept="video/*"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) {
+                  setVideo(file);
+                  setAutoStartTranscribe(true);
+                  setIsTranscribeModalOpen(true);
+                }
+              }}
+            />
 
-          {/* AI Transcribe Hub Button */}
-          <button
-            onClick={() => {
-              setAutoStartTranscribe(false);
-              setIsTranscribeModalOpen(true);
-            }}
-            className="neo-btn px-3.5 py-1 text-[11px] gap-1.5 text-[#142218]"
-            title="Open AI Speech-to-Text Transcription Hub"
-          >
-            <Mic className="w-3.5 h-3.5" />
-            <span>Transcribe AI</span>
-          </button>
+            {/* AI Transcribe Hub Button */}
+            <button
+              onClick={() => {
+                setAutoStartTranscribe(false);
+                setIsTranscribeModalOpen(true);
+              }}
+              className="neo-btn px-3 py-1 text-[11px] gap-1.5 text-[#142218] cursor-pointer"
+              title="Open AI Speech-to-Text Transcription Hub"
+            >
+              <Mic className="w-3.5 h-3.5" />
+              <span>Transcribe</span>
+            </button>
+          </div>
 
           {/* Projects Dashboard Link */}
           <Link
             href="/projects"
-            className="neo-btn-secondary px-3 py-1 text-[11px] gap-1.5"
+            className="neo-btn-secondary px-2.5 py-1 text-[11px] gap-1.5"
             title="Open Projects Dashboard"
           >
             <FolderKanban className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Projects</span>
+            <span className="hidden xl:inline">Projects</span>
           </Link>
 
           {/* Undo / Redo */}
@@ -282,7 +296,7 @@ export default function EditorStudioPage() {
           {/* Shortcuts Modal Trigger */}
           <button
             onClick={() => setIsShortcutsModalOpen(true)}
-            className="neo-btn-secondary p-1.5 rounded-full"
+            className="neo-btn-secondary w-7.5 h-7.5 rounded-full flex items-center justify-center p-0 shrink-0 cursor-pointer"
             title="Keyboard Shortcuts (?)"
           >
             <Keyboard className="w-3.5 h-3.5" />
