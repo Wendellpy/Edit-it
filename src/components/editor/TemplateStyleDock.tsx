@@ -299,7 +299,10 @@ export function TemplateStyleDock({ onOpenExportModal }: TemplateStyleDockProps)
                 <button
                   key={preset.id}
                   type="button"
-                  onClick={() => setTemplateId(preset.id)}
+                  onClick={() => {
+                    setTemplateId(preset.id);
+                    setLayerOrder(preset.layout?.layerOrder || (preset.layout?.behindSubjectDepth ? "behind" : "front"));
+                  }}
                   className={`min-h-[162px] w-full p-2.5 rounded-2xl border-2 border-[var(--border-main)] text-left flex flex-col justify-between transition-all group relative select-none cursor-pointer ${
                     isSelected
                       ? "bg-[var(--accent-lime)]/20 shadow-[4px_4px_0px_var(--border-main)] ring-2 ring-[var(--accent-lime)]"

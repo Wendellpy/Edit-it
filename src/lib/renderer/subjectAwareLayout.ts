@@ -29,7 +29,8 @@ export function computeSubjectAwareLayout(
   canvasHeight: number,
   rawFontSize: number,
   estimatedTextWidth: number,
-  estimatedTextHeight: number
+  estimatedTextHeight: number,
+  layerOrderOverride?: "behind" | "front" | "sandwich"
 ): AdjustedTextLayout {
   // 1. Fallback if no subject is detected or metrics are missing
   if (!metrics || !metrics.hasSubject) {
@@ -40,7 +41,7 @@ export function computeSubjectAwareLayout(
       occlusionRatio: 0,
       isOccludedWarning: false,
       isFallback: true,
-      layoutMode: "standard",
+      layoutMode: layerOrderOverride === "sandwich" || template.layout.layerOrder === "sandwich" ? "sandwich" : "standard",
     };
   }
 
@@ -56,6 +57,9 @@ export function computeSubjectAwareLayout(
   let targetFontSize = rawFontSize;
   let layoutMode: AdjustedTextLayout["layoutMode"] = "standard";
   let arcParams: AdjustedTextLayout["arcParams"] = undefined;
+
+  const isSandwich = layerOrderOverride === "sandwich" || template.id === "behind_sandwich_layer" || template.layout.layerOrder === "sandwich";
+  const isBehind = layerOrderOverride === "behind" || template.layout.behindSubjectDepth;
 
   // 2. Specific Style Placement Logic
   if (template.id === "behind_head_giant_word") {
@@ -106,10 +110,14 @@ export function computeSubjectAwareLayout(
       targetX = Math.round(subRight + rightMargin * 0.45);
     }
     targetY = (boundingBox.y + boundingBox.height * 0.38) * canvasHeight;
-  } else if (template.id === "behind_sandwich_layer") {
+  } else if (isSandwich) {
     layoutMode = "sandwich";
     targetX = headRegion.centerX * canvasWidth;
-    targetY = canvasHeight * template.layout.yPositionPercent;
+    // Position comfortably across the neck/upper-chest junction so Line 0 peeks behind shoulders and Line 1 sits in front
+    const anchorY = template.layout.yPositionPercent && template.layout.yPositionPercent >= 0.35 && template.layout.yPositionPercent <= 0.65
+      ? template.layout.yPositionPercent
+      : (headRegion.centerY + headRegion.radiusY * 1.1);
+    targetY = canvasHeight * anchorY;
 
     // Scale font size dynamically according to the actual object size so text peeks out proportionately
     const torsoWidthPx = boundingBox.width * canvasWidth;
@@ -117,11 +125,11 @@ export function computeSubjectAwareLayout(
     if (estimatedTextWidth < minPeekingWidth && estimatedTextWidth > 0) {
       targetFontSize = Math.round(rawFontSize * (minPeekingWidth / estimatedTextWidth));
     }
-  } else if (template.layout.behindSubjectDepth) {
+  } else if (isBehind) {
     // General behind-the-subject styles (Behind You White, Neon Halo, Cinema Letterbox, etc.)
     // Anchor horizontally behind the detected subject
     targetX = headRegion.centerX * canvasWidth;
-    targetY = canvasHeight * template.layout.yPositionPercent;
+    targetY = canvasHeight * (template.layout.yPositionPercent || 0.45);
 
     // Scale font size dynamically according to the actual object size so text peeks out proportionately
     const torsoWidthPx = boundingBox.width * canvasWidth;

@@ -123,7 +123,11 @@ export function VideoPlayerPreview({ onOpenTranscribe }: VideoPlayerPreviewProps
   const isInferencingRef = useRef<boolean>(false);
   const lastInferenceTimeRef = useRef<number>(-1);
 
-  const isDepthActive = (layerOrder ? layerOrder !== "front" : false);
+  const effectiveLayerOrder =
+    layerOrder ||
+    template.layout?.layerOrder ||
+    (template.layout?.behindSubjectDepth ? "behind" : "front");
+  const isDepthActive = effectiveLayerOrder !== "front";
 
   // Synchronize segmentation pipeline config with user settings
   useEffect(() => {
@@ -200,7 +204,7 @@ export function VideoPlayerPreview({ onOpenTranscribe }: VideoPlayerPreviewProps
                 maskHeight: mask.height,
                 subjectMetrics: mask.metrics,
                 showMaskOverlay,
-                layerOrder,
+                layerOrder: effectiveLayerOrder,
               }
             : undefined
           );
@@ -295,7 +299,7 @@ export function VideoPlayerPreview({ onOpenTranscribe }: VideoPlayerPreviewProps
                   maskHeight: activeMask.height,
                   subjectMetrics: activeMask.metrics,
                   showMaskOverlay,
-                  layerOrder,
+                  layerOrder: effectiveLayerOrder,
                 }
               : undefined
           );
@@ -632,7 +636,7 @@ export function VideoPlayerPreview({ onOpenTranscribe }: VideoPlayerPreviewProps
                             maskHeight: m.height,
                             subjectMetrics: m.metrics,
                             showMaskOverlay,
-                            layerOrder,
+                            layerOrder: effectiveLayerOrder,
                           }
                         );
                       }
@@ -669,7 +673,7 @@ export function VideoPlayerPreview({ onOpenTranscribe }: VideoPlayerPreviewProps
                             maskHeight: m.height,
                             subjectMetrics: m.metrics,
                             showMaskOverlay,
-                            layerOrder,
+                            layerOrder: effectiveLayerOrder,
                           }
                         );
                       }

@@ -86,7 +86,7 @@ export class SegmentationPipeline {
     sourceHeight: number
   ): Promise<SegmentationMaskFrame> {
     // 1. Check cache first (instant hit)
-    const versionedHash = `${videoHash}_accurate_v3`;
+    const versionedHash = `${videoHash}_mediapipe_ml_v1`;
     const cached = await opfsMaskCache.getMask(versionedHash, timestamp, 0.04);
     if (cached) {
       return cached;
@@ -145,9 +145,8 @@ export class SegmentationPipeline {
         try {
           ctx.clearRect(0, 0, procW, procH);
           ctx.drawImage(frameSource, fitX, fitY, fitW, fitH);
-          const imgData = ctx.getImageData(0, 0, procW, procH);
-          const analysis = dynamicSubjectAnalyzer.analyzeFrame(
-            imgData.data,
+          const analysis = await dynamicSubjectAnalyzer.analyzeFrameAsync(
+            this.reusableCanvas,
             procW,
             procH,
             timestamp

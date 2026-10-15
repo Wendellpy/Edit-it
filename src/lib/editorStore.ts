@@ -417,8 +417,12 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     const { history, historyIndex, tokens } = get();
     const nextHistory = history.slice(0, historyIndex + 1);
     nextHistory.push({ tokens, templateId });
+    const tmpl = getTemplateById(templateId);
+    const targetLayerOrder =
+      tmpl.layout?.layerOrder || (tmpl.layout?.behindSubjectDepth ? "behind" : "front");
     set({
       templateId,
+      layerOrder: targetLayerOrder,
       history: nextHistory,
       historyIndex: nextHistory.length - 1,
     });

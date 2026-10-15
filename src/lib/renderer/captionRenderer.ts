@@ -318,7 +318,24 @@ export function drawSubjectCutout(
 
   // 3. Mask the cutout buffer using destination-in
   cutoutCtx.globalCompositeOperation = "destination-in";
-  cutoutCtx.drawImage(maskCanvas, 0, 0, canvasWidth, canvasHeight);
+
+  const mAspect = maskWidth / maskHeight;
+  const cAspect = canvasWidth / canvasHeight;
+  const vAspect = vW && vH ? vW / vH : cAspect;
+
+  let maskDstX = 0;
+  let maskDstY = 0;
+  let maskDstW = canvasWidth;
+  let maskDstH = canvasHeight;
+
+  if (Math.abs(mAspect - cAspect) > 0.02 && Math.abs(mAspect - vAspect) < 0.02) {
+    maskDstX = dstX;
+    maskDstY = dstY;
+    maskDstW = dstW;
+    maskDstH = dstH;
+  }
+
+  cutoutCtx.drawImage(maskCanvas, maskDstX, maskDstY, maskDstW, maskDstH);
 
   // 4. Composite subject cutout on top of caption text
   targetCtx.save();
@@ -614,7 +631,8 @@ export function renderCaptionFrame(options: RenderCaptionFrameOptions): void {
       canvasHeight,
       fontSize,
       maxLineWidth,
-      totalBlockHeight
+      totalBlockHeight,
+      layerOrder
     );
     if (layerOrder === "sandwich") {
       adjustedLayout.layoutMode = "sandwich";
@@ -822,15 +840,15 @@ export function renderCaptionFrame(options: RenderCaptionFrameOptions): void {
         }
 
         // In Sandwich mode:
-        // Multi-line: Line 0 (top line) is behind the subject's neck/shoulders, Line 1 is in front of chest.
-        // Single-line: Active keyword is behind the subject (scaled wide to peek out), context words in front.
+        // Multi-line: Line 0 (top line) is strictly behind the subject, Line 1+ is strictly in front across chest.
+        // Single-line: Active keyword is strictly behind the subject (scaled wide to peek out), context words in front.
         if (adjustedLayout.layoutMode === "sandwich") {
           if (lines.length > 1) {
             if (!isFrontPass && lineIdx > 0) {
               currentX += leftPad + metric.width + rightPad + baseSpaceWidth;
               return;
             }
-            if (isFrontPass && lineIdx === 0 && !isActive) {
+            if (isFrontPass && lineIdx === 0) {
               currentX += leftPad + metric.width + rightPad + baseSpaceWidth;
               return;
             }
