@@ -130,7 +130,7 @@ export default function ClipsPage() {
   const [exportResults, setExportResults] = useState<SingleClipExportResult[]>([]);
   const [exportError, setExportError] = useState<string | null>(null);
   const [exportResolution, setExportResolution] = useState<ExportResolution>("1080p");
-  const [exportEngine, setExportEngine] = useState<"auto" | "ffmpeg">("auto");
+  const [exportEngine, setExportEngine] = useState<"auto" | "ffmpeg" | "webcodecs">("auto");
   const exportAbortRef = useRef<AbortController | null>(null);
 
   // Memory cleanup for generated blob URLs
@@ -362,6 +362,10 @@ export default function ClipsPage() {
         videoUrl: previewBlobUrl || localHelperClient.getFileUrl(ingestResult.fileId),
         videoElement: (previewVideoRef.current && previewVideoRef.current.videoWidth > 0) ? previewVideoRef.current : undefined,
         videoFile,
+        templateId: customTemplateId || undefined,
+        enableKeywords,
+        enableEmojis,
+        removeFillers,
         reframeMode,
         resolution: exportResolution,
         preferEngine: exportEngine,
@@ -1229,8 +1233,9 @@ export default function ClipsPage() {
                             onChange={(e) => setExportEngine(e.target.value as any)}
                             className="px-2 py-1 rounded-lg bg-[var(--bg-panel)] border border-[var(--border-main)] text-xs font-bold"
                           >
-                            <option value="auto">Auto (GPU WebCodecs + FFmpeg)</option>
-                            <option value="ffmpeg">Force Local FFmpeg</option>
+                            <option value="auto">Fast Local FFmpeg (Smooth &amp; Instant)</option>
+                            <option value="ffmpeg">Force Companion FFmpeg</option>
+                            <option value="webcodecs">GPU WebCodecs (In-Browser)</option>
                           </select>
                         </div>
 
@@ -1253,10 +1258,10 @@ export default function ClipsPage() {
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                       {discoveredClips.map((clip) => {
                         const styling = selectCaptionTemplate(clip, {
-                          templateId: clip.id === selectedClipId && customTemplateId ? customTemplateId : undefined,
-                          enableKeywords,
-                          enableEmojis,
-                          removeFillers,
+                          templateId: clip.customTemplateId || (clip.id === selectedClipId && customTemplateId ? customTemplateId : undefined),
+                          enableKeywords: clip.customEnableKeywords ?? enableKeywords,
+                          enableEmojis: clip.customEnableEmojis ?? enableEmojis,
+                          removeFillers: clip.customRemoveFillers ?? removeFillers,
                         });
                         const isSelected = clip.id === selectedClipId;
                         const isChecked = selectedForExport.has(clip.id);
@@ -1271,7 +1276,11 @@ export default function ClipsPage() {
                             }`}
                             onClick={() => {
                               setSelectedClipId(clip.id);
-                              setCustomTemplateId(null);
+                              setCustomTemplateId(clip.customTemplateId || null);
+                              if (clip.customReframeMode) setReframeMode(clip.customReframeMode);
+                              if (clip.customEnableKeywords !== undefined) setEnableKeywords(clip.customEnableKeywords);
+                              if (clip.customEnableEmojis !== undefined) setEnableEmojis(clip.customEnableEmojis);
+                              if (clip.customRemoveFillers !== undefined) setRemoveFillers(clip.customRemoveFillers);
                               if (previewVideoRef.current) {
                                 previewVideoRef.current.currentTime = clip.start;
                               }
@@ -1609,7 +1618,15 @@ export default function ClipsPage() {
                                   ].map((mode) => (
                                     <button
                                       key={mode.id}
-                                      onClick={() => setReframeMode(mode.id as any)}
+                                      onClick={() => {
+                                        const m = mode.id as any;
+                                        setReframeMode(m);
+                                        if (selectedClipId) {
+                                          setDiscoveredClips((prev) =>
+                                            prev.map((c) => (c.id === selectedClipId ? { ...c, customReframeMode: m } : c))
+                                          );
+                                        }
+                                      }}
                                       className={`p-2.5 rounded-xl text-left border-2 transition-all cursor-pointer ${
                                         reframeMode === mode.id
                                           ? "bg-[#A3E635]/15 border-[#A3E635] text-[var(--text-main)] shadow-[2px_2px_0px_#A3E635]"
@@ -1649,7 +1666,16 @@ export default function ClipsPage() {
                                     return (
                                       <button
                                         key={preset.id}
-                                        onClick={() => setCustomTemplateId(preset.id)}
+                                        onClick={() => {
+                                          setCustomTemplateId(preset.id);
+                                          if (selectedClipId) {
+                                            setDiscoveredClips((prev) =>
+                                              prev.map((c) =>
+                                                c.id === selectedClipId ? { ...c, customTemplateId: preset.id } : c
+                                              )
+                                            );
+                                          }
+                                        }}
                                         className={`p-2 rounded-xl text-left border-2 transition-all cursor-pointer ${
                                           isChosen
                                             ? "bg-[#A3E635] text-[#142218] border-[#142218] shadow-[2px_2px_0px_var(--border-main)] font-black"
@@ -1676,7 +1702,17 @@ export default function ClipsPage() {
                                 </label>
                                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                                   <button
-                                    onClick={() => setEnableKeywords(!enableKeywords)}
+                                    onClick={() => {
+                                      const nextVal = !enableKeywords;
+                                      setEnableKeywords(nextVal);
+                                      if (selectedClipId) {
+                                        setDiscoveredClips((prev) =>
+                                          prev.map((c) =>
+                                            c.id === selectedClipId ? { ...c, customEnableKeywords: nextVal } : c
+                                          )
+                                        );
+                                      }
+                                    }}
                                     className={`p-2 rounded-xl border flex items-center gap-2 cursor-pointer transition-all ${
                                       enableKeywords
                                         ? "bg-amber-500/10 border-amber-500 text-amber-700 dark:text-amber-300 font-bold"
@@ -1688,7 +1724,17 @@ export default function ClipsPage() {
                                   </button>
 
                                   <button
-                                    onClick={() => setEnableEmojis(!enableEmojis)}
+                                    onClick={() => {
+                                      const nextVal = !enableEmojis;
+                                      setEnableEmojis(nextVal);
+                                      if (selectedClipId) {
+                                        setDiscoveredClips((prev) =>
+                                          prev.map((c) =>
+                                            c.id === selectedClipId ? { ...c, customEnableEmojis: nextVal } : c
+                                          )
+                                        );
+                                      }
+                                    }}
                                     className={`p-2 rounded-xl border flex items-center gap-2 cursor-pointer transition-all ${
                                       enableEmojis
                                         ? "bg-emerald-500/10 border-emerald-500 text-emerald-700 dark:text-emerald-300 font-bold"
@@ -1700,7 +1746,17 @@ export default function ClipsPage() {
                                   </button>
 
                                   <button
-                                    onClick={() => setRemoveFillers(!removeFillers)}
+                                    onClick={() => {
+                                      const nextVal = !removeFillers;
+                                      setRemoveFillers(nextVal);
+                                      if (selectedClipId) {
+                                        setDiscoveredClips((prev) =>
+                                          prev.map((c) =>
+                                            c.id === selectedClipId ? { ...c, customRemoveFillers: nextVal } : c
+                                          )
+                                        );
+                                      }
+                                    }}
                                     className={`p-2 rounded-xl border flex items-center gap-2 cursor-pointer transition-all ${
                                       removeFillers
                                         ? "bg-purple-500/10 border-purple-500 text-purple-700 dark:text-purple-300 font-bold"

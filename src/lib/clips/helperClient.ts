@@ -126,6 +126,13 @@ class HelperClient {
   }
 
   /**
+   * Alias for checkStatus()
+   */
+  async getStatus(): Promise<HelperStatus | null> {
+    return this.checkStatus();
+  }
+
+  /**
    * Hardware cut and 9:16 reframing via companion helper FFmpeg.
    */
   async exportClipFfmpeg(params: {
@@ -135,8 +142,11 @@ class HelperClient {
     end: number;
     reframeMode?: "9:16_auto" | "16:9_fit_blur" | "original";
     crop?: { sx: number; sy: number; sw: number; sh: number };
+    templateId?: string;
     srtContent?: string;
     assContent?: string;
+    force?: boolean;
+    noCache?: boolean;
   }): Promise<{ success: boolean; fileId: string; downloadUrl: string; cached?: boolean }> {
     const res = await this.fetchWithAuth(`${HELPER_ORIGIN}/export-clip-ffmpeg`, {
       method: "POST",

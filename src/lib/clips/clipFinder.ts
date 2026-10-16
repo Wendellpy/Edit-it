@@ -29,6 +29,11 @@ export interface ClipCandidate {
   hookType: string;
   tokens: HinglishWordToken[];
   signals: ExtractedSignals;
+  customTemplateId?: string;
+  customEnableKeywords?: boolean;
+  customEnableEmojis?: boolean;
+  customRemoveFillers?: boolean;
+  customReframeMode?: "9:16_auto" | "16:9_fit_blur" | "original";
 }
 
 export interface FindClipsOptions {

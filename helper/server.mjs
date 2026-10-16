@@ -843,11 +843,19 @@ const server = http.createServer(async (req, res) => {
       }
 
       const reframeMode = body.reframeMode || "9:16_auto";
-      const outFileName = `export_${fileId}_${clipId}_${reframeMode.replace(/[^a-zA-Z0-9]/g, "")}_${Math.round(start)}_${Math.round(end)}.mp4`;
+      const forceRerender = Boolean(body.force || body.noCache);
+
+      // Unique hash based on subtitle content and styling so any setting change triggers a fresh export
+      const subContent = (body.assContent || body.srtContent || "") + (body.templateId || "");
+      const subHash = subContent
+        ? crypto.createHash("md5").update(subContent).digest("hex").slice(0, 10)
+        : "nosub";
+
+      const outFileName = `export_${fileId}_${clipId}_${reframeMode.replace(/[^a-zA-Z0-9]/g, "")}_${Math.round(start * 100)}_${Math.round(end * 100)}_${subHash}.mp4`;
       const outputMp4 = path.join(CACHE_DIR, outFileName);
 
-      // If already exported in cache, return immediately
-      if (fs.existsSync(outputMp4)) {
+      // If already exported in cache and not forcing fresh render, return immediately
+      if (!forceRerender && fs.existsSync(outputMp4)) {
         res.writeHead(200, { "Content-Type": "application/json" });
         res.end(JSON.stringify({
           success: true,
@@ -861,12 +869,13 @@ const server = http.createServer(async (req, res) => {
       // Optional Subtitle writing (supports ASS karaoke or SRT)
       let subPath = null;
       let subFileName = null;
+      const randSuffix = Math.random().toString(36).slice(2, 7);
       if (body.assContent && typeof body.assContent === "string") {
-        subFileName = `temp_${fileId}_${clipId}.ass`;
+        subFileName = `temp_${fileId}_${clipId}_${Date.now()}_${randSuffix}.ass`;
         subPath = path.join(CACHE_DIR, subFileName);
         await fsp.writeFile(subPath, body.assContent, "utf-8");
       } else if (body.srtContent && typeof body.srtContent === "string") {
-        subFileName = `temp_${fileId}_${clipId}.srt`;
+        subFileName = `temp_${fileId}_${clipId}_${Date.now()}_${randSuffix}.srt`;
         subPath = path.join(CACHE_DIR, subFileName);
         await fsp.writeFile(subPath, body.srtContent, "utf-8");
       }
@@ -915,10 +924,12 @@ const server = http.createServer(async (req, res) => {
         ffmpegArgs.push("-vf", vfParts.join(","));
       }
 
+      // Pristine visual quality settings: CRF 18 (visually lossless), yuv420p (broadest compatibility), 192k AAC
       ffmpegArgs.push(
         "-c:v", "libx264",
         "-preset", "veryfast",
-        "-crf", "20",
+        "-crf", "18",
+        "-pix_fmt", "yuv420p",
         "-c:a", "aac",
         "-b:a", "192k",
         "-movflags", "+faststart",

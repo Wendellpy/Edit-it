@@ -1020,17 +1020,27 @@ function seekVideoToTimestamp(video: HTMLVideoElement, time: number): Promise<vo
     const onDone = () => {
       if (isDone) return;
       isDone = true;
-      video.removeEventListener('seeked', onDone);
+      video.removeEventListener('seeked', onSeeked);
       video.removeEventListener('error', onDone);
       if (timer) clearTimeout(timer);
       resolve();
     };
 
-    video.addEventListener('seeked', onDone, { once: true });
+    const onSeeked = () => {
+      if ('requestVideoFrameCallback' in video && typeof (video as any).requestVideoFrameCallback === 'function') {
+        try {
+          (video as any).requestVideoFrameCallback(() => onDone());
+          return;
+        } catch {}
+      }
+      onDone();
+    };
+
+    video.addEventListener('seeked', onSeeked, { once: true });
     video.addEventListener('error', onDone, { once: true });
 
-    // Fast timeout (120ms): if decoder stalls or has no frames, resolve to avoid hanging the export loop
-    timer = setTimeout(onDone, 120);
+    // 500ms safety timeout: ensures browser decoder has adequate time to fetch keyframe without premature dropping
+    timer = setTimeout(onDone, 500);
 
     try {
       video.currentTime = targetTime;
