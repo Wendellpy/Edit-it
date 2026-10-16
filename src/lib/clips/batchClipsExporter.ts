@@ -303,6 +303,7 @@ export async function exportSingleClip(
       clipId: `clip_${clip.index}`,
       start: clip.start,
       end: clip.end,
+      reframeMode,
       crop: centerCrop,
       assContent: ass,
       srtContent: srt,

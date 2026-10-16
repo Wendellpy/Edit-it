@@ -157,6 +157,30 @@ describe("Batch Hardware Export Pipeline", () => {
       }
     });
 
+    it("forwards reframeMode '16:9_fit_blur' to helper export engine", async () => {
+      const { localHelperClient } = await import("../helperClient");
+      const origMethod = localHelperClient.exportClipFfmpeg;
+      let capturedMode: string | undefined = undefined;
+      localHelperClient.exportClipFfmpeg = vi.fn().mockImplementation(async (params: any) => {
+        capturedMode = params.reframeMode;
+        return { success: true, fileId: "out_test", downloadUrl: "/file/out_test.mp4" };
+      });
+
+      try {
+        const result = await exportBatchClips({
+          clips: [mockClip1],
+          fileId: "test_vid",
+          reframeMode: "16:9_fit_blur",
+          preferEngine: "ffmpeg",
+        });
+
+        expect(result.successCount).toBe(1);
+        expect(capturedMode).toBe("16:9_fit_blur");
+      } finally {
+        localHelperClient.exportClipFfmpeg = origMethod;
+      }
+    });
+
     it("respects abort signal to cleanly cancel ongoing batch export", async () => {
       const controller = new AbortController();
       controller.abort();

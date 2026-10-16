@@ -464,24 +464,37 @@ export function drawVideoFrameToCanvas(
     const dy = Math.round((canvasHeight - drawH) / 2);
     ctx.drawImage(video, dx, dy, drawW, drawH);
   } else if (fitMode === 'fit_blur') {
-    // 1. Blurred background overscan
+    // 1. Modern Ambient Blurred Background (fills 9:16 vertical canvas)
     ctx.save();
     try {
-      (ctx as unknown as { filter: string }).filter = 'blur(22px) brightness(0.6)';
+      (ctx as unknown as { filter: string }).filter = 'blur(45px) brightness(0.65) contrast(1.08)';
     } catch {}
     const bgScale = Math.max(canvasWidth / vw, canvasHeight / vh);
-    const bgW = Math.round(vw * bgScale * 1.06);
-    const bgH = Math.round(vh * bgScale * 1.06);
+    // 10% overscan to prevent blur edge-bleed
+    const bgW = Math.round(vw * bgScale * 1.10);
+    const bgH = Math.round(vh * bgScale * 1.10);
     ctx.drawImage(video, Math.round((canvasWidth - bgW) / 2), Math.round((canvasHeight - bgH) / 2), bgW, bgH);
     ctx.restore();
 
-    // 2. Crisp centered video
+    // 1b. Subtle dark scrim so captions and foreground stay crisp and legible
+    ctx.save();
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.22)';
+    ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+    ctx.restore();
+
+    // 2. Crisp Centered Foreground Video with Modern Drop Shadow
     const scale = Math.min(canvasWidth / vw, canvasHeight / vh);
     const drawW = Math.round(vw * scale);
     const drawH = Math.round(vh * scale);
     const dx = Math.round((canvasWidth - drawW) / 2);
     const dy = Math.round((canvasHeight - drawH) / 2);
+
+    ctx.save();
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.75)';
+    ctx.shadowBlur = 28;
+    ctx.shadowOffsetY = 6;
     ctx.drawImage(video, dx, dy, drawW, drawH);
+    ctx.restore();
   } else if (fitMode === 'stretch') {
     ctx.drawImage(video, 0, 0, canvasWidth, canvasHeight);
   } else {

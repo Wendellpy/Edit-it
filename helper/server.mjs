@@ -842,7 +842,8 @@ const server = http.createServer(async (req, res) => {
         return;
       }
 
-      const outFileName = `export_${fileId}_${clipId}_${Math.round(start)}_${Math.round(end)}.mp4`;
+      const reframeMode = body.reframeMode || "9:16_auto";
+      const outFileName = `export_${fileId}_${clipId}_${reframeMode.replace(/[^a-zA-Z0-9]/g, "")}_${Math.round(start)}_${Math.round(end)}.mp4`;
       const outputMp4 = path.join(CACHE_DIR, outFileName);
 
       // If already exported in cache, return immediately
@@ -859,30 +860,15 @@ const server = http.createServer(async (req, res) => {
 
       // Optional Subtitle writing (supports ASS karaoke or SRT)
       let subPath = null;
+      let subFileName = null;
       if (body.assContent && typeof body.assContent === "string") {
-        subPath = path.join(CACHE_DIR, `temp_${fileId}_${clipId}.ass`);
+        subFileName = `temp_${fileId}_${clipId}.ass`;
+        subPath = path.join(CACHE_DIR, subFileName);
         await fsp.writeFile(subPath, body.assContent, "utf-8");
       } else if (body.srtContent && typeof body.srtContent === "string") {
-        subPath = path.join(CACHE_DIR, `temp_${fileId}_${clipId}.srt`);
+        subFileName = `temp_${fileId}_${clipId}.srt`;
+        subPath = path.join(CACHE_DIR, subFileName);
         await fsp.writeFile(subPath, body.srtContent, "utf-8");
-      }
-
-      // Crop coordinates (normalized 0..1)
-      const crop = body.crop || { sx: 0.34, sy: 0, sw: 0.3164, sh: 1.0 };
-      const sx = Math.max(0, Math.min(0.9, parseFloat(crop.sx) || 0.34));
-      const sy = Math.max(0, Math.min(0.9, parseFloat(crop.sy) || 0));
-      const sw = Math.max(0.1, Math.min(1.0, parseFloat(crop.sw) || 0.3164));
-      const sh = Math.max(0.1, Math.min(1.0, parseFloat(crop.sh) || 1.0));
-
-      // Construct FFmpeg video filter: crop to 9:16 then scale to 1080x1920
-      const vfParts = [
-        `crop=w=in_w*${sw.toFixed(4)}:h=in_h*${sh.toFixed(4)}:x=in_w*${sx.toFixed(4)}:y=in_h*${sy.toFixed(4)}`,
-        `scale=1080:1920:flags=bicubic`,
-      ];
-
-      if (subPath && fs.existsSync(subPath)) {
-        const escapedSub = subPath.replace(/\\/g, "/").replace(/:/g, "\\:");
-        vfParts.push(`subtitles='${escapedSub}'`);
       }
 
       const duration = Math.max(0.1, end - start);
@@ -893,17 +879,53 @@ const server = http.createServer(async (req, res) => {
         "-i", sourceMp4,
         "-t", duration.toFixed(3),
         "-avoid_negative_ts", "make_zero",
-        "-vf", vfParts.join(","),
+      ];
+
+      if (reframeMode === "16:9_fit_blur") {
+        // Modern YouTube Shorts 9:16 Fit + Blur Filter Graph:
+        // Background: Scaled to fill 1080x1920, boxblurred 28px, slightly dimmed (-0.14 brightness)
+        // Foreground: Preserved 16:9 scaled to width 1080, centered vertically
+        // Combined: Subtitles burned cleanly over the composite
+        const filterComplex =
+          `[0:v]split=2[bg_raw][fg_raw];` +
+          `[bg_raw]scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,boxblur=28:2,eq=brightness=-0.14:contrast=1.05[bg];` +
+          `[fg_raw]scale=1080:-2[fg];` +
+          `[bg][fg]overlay=(W-w)/2:(H-h)/2${subFileName ? `[combined];[combined]subtitles=${subFileName}` : ''}[v_out]`;
+
+        ffmpegArgs.push(
+          "-filter_complex", filterComplex,
+          "-map", "[v_out]",
+          "-map", "0:a?"
+        );
+      } else {
+        // 9:16 auto crop or original
+        const crop = body.crop || { sx: 0.34, sy: 0, sw: 0.3164, sh: 1.0 };
+        const sx = Math.max(0, Math.min(0.9, parseFloat(crop.sx) || 0.34));
+        const sy = Math.max(0, Math.min(0.9, parseFloat(crop.sy) || 0));
+        const sw = Math.max(0.1, Math.min(1.0, parseFloat(crop.sw) || 0.3164));
+        const sh = Math.max(0.1, Math.min(1.0, parseFloat(crop.sh) || 1.0));
+
+        const vfParts = [
+          `crop=w=in_w*${sw.toFixed(4)}:h=in_h*${sh.toFixed(4)}:x=in_w*${sx.toFixed(4)}:y=in_h*${sy.toFixed(4)}`,
+          `scale=1080:1920:flags=bicubic`,
+        ];
+        if (subFileName) {
+          vfParts.push(`subtitles=${subFileName}`);
+        }
+        ffmpegArgs.push("-vf", vfParts.join(","));
+      }
+
+      ffmpegArgs.push(
         "-c:v", "libx264",
         "-preset", "veryfast",
         "-crf", "20",
         "-c:a", "aac",
         "-b:a", "192k",
         "-movflags", "+faststart",
-        outputMp4,
-      ];
+        outputMp4
+      );
 
-      execFile(binaries.ffmpeg.path, ffmpegArgs, { timeout: 180000 }, async (err) => {
+      execFile(binaries.ffmpeg.path, ffmpegArgs, { cwd: CACHE_DIR, timeout: 180000 }, async (err) => {
         if (subPath && fs.existsSync(subPath)) {
           try { await fsp.unlink(subPath); } catch {}
         }

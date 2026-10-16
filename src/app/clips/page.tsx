@@ -97,6 +97,7 @@ export default function ClipsPage() {
   const [isPlayingPreview, setIsPlayingPreview] = useState(false);
   const [previewTime, setPreviewTime] = useState(0);
   const previewVideoRef = useRef<HTMLVideoElement | null>(null);
+  const bgCanvasRef = useRef<HTMLCanvasElement | null>(null);
 
   // Memoized Active Clip & Kinetic Caption Styling (prevents CPU recalculation in 60fps render loop)
   const activeClip = useMemo(() => {
@@ -207,7 +208,25 @@ export default function ClipsPage() {
     }
   }, [selectedClipId, discoveredClips]);
 
-  // High-precision 60fps playhead synchronization for frame-accurate captions
+  // High-precision live background blur canvas update
+  const updateBgCanvas = useCallback(() => {
+    if (reframeMode !== "16:9_fit_blur") return;
+    const vid = previewVideoRef.current;
+    const canvas = bgCanvasRef.current;
+    if (vid && canvas && vid.readyState >= 2) {
+      const bgCtx = canvas.getContext("2d", { alpha: false });
+      if (bgCtx) {
+        bgCtx.drawImage(vid, 0, 0, canvas.width, canvas.height);
+      }
+    }
+  }, [reframeMode]);
+
+  // Update background blur canvas whenever reframeMode changes to fit_blur or clip changes
+  useEffect(() => {
+    updateBgCanvas();
+  }, [reframeMode, selectedClipId, updateBgCanvas]);
+
+  // High-precision 60fps playhead synchronization for frame-accurate captions & ambient blur
   useEffect(() => {
     if (!isPlayingPreview) return;
     let animId: number;
@@ -222,6 +241,12 @@ export default function ClipsPage() {
           vid.currentTime = activeClip.start;
           setPreviewTime(activeClip.start);
         }
+        if (reframeMode === "16:9_fit_blur" && bgCanvasRef.current && vid.readyState >= 2) {
+          const bgCtx = bgCanvasRef.current.getContext("2d", { alpha: false });
+          if (bgCtx) {
+            bgCtx.drawImage(vid, 0, 0, bgCanvasRef.current.width, bgCanvasRef.current.height);
+          }
+        }
       }
       if (isPlayingPreview) {
         animId = requestAnimationFrame(syncPlayhead);
@@ -232,7 +257,7 @@ export default function ClipsPage() {
     return () => {
       if (animId) cancelAnimationFrame(animId);
     };
-  }, [isPlayingPreview, selectedClipId, discoveredClips]);
+  }, [isPlayingPreview, selectedClipId, discoveredClips, reframeMode]);
 
   // Keyboard Shortcuts: Space (Play/Pause), Esc (Close Preview), ArrowLeft/Right (Seek +/- 2s)
   useEffect(() => {
@@ -1348,18 +1373,32 @@ export default function ClipsPage() {
                             {/* 9:16 Shorts Phone Viewport (Left 5 Cols) */}
                             <div className="lg:col-span-5 flex flex-col items-center">
                               <div className="relative w-full max-w-[280px] aspect-[9/16] rounded-2xl overflow-hidden bg-black border-4 border-[var(--border-main)] shadow-[4px_4px_0px_var(--border-main)] flex items-center justify-center">
+                                {/* Modern YouTube Shorts Fit + Blur Ambient Backdrop */}
+                                {reframeMode === "16:9_fit_blur" && (
+                                  <div className="absolute inset-0 overflow-hidden pointer-events-none">
+                                    <canvas
+                                      ref={bgCanvasRef}
+                                      width={180}
+                                      height={320}
+                                      className="w-full h-full object-cover scale-125 filter blur-xl brightness-60 contrast-110"
+                                    />
+                                    {/* Ambient dark scrim */}
+                                    <div className="absolute inset-0 bg-black/25 pointer-events-none" />
+                                  </div>
+                                )}
+
                                 {/* HTML Video Player */}
                                 <video
                                   ref={previewVideoRef}
                                   src={videoSourceUrl}
                                   crossOrigin="anonymous"
                                   preload="auto"
-                                  className={`w-full h-full ${
+                                  className={`w-full transition-all duration-200 ${
                                     reframeMode === "9:16_auto"
-                                      ? "object-cover object-center"
+                                      ? "h-full object-cover object-center"
                                       : reframeMode === "16:9_fit_blur"
-                                      ? "object-contain"
-                                      : "object-contain"
+                                      ? "relative z-10 object-contain drop-shadow-[0_12px_28px_rgba(0,0,0,0.85)]"
+                                      : "h-full object-contain"
                                   }`}
                                   playsInline
                                   onLoadedMetadata={(e) => {
@@ -1367,13 +1406,16 @@ export default function ClipsPage() {
                                     if (activeClip && (vid.currentTime < activeClip.start || vid.currentTime >= activeClip.end)) {
                                       vid.currentTime = activeClip.start;
                                     }
+                                    updateBgCanvas();
                                   }}
+                                  onSeeked={updateBgCanvas}
                                   onTimeUpdate={(e) => {
                                     const t = (e.target as HTMLVideoElement).currentTime;
                                     setPreviewTime(t);
                                     if (t >= activeClip.end) {
                                       (e.target as HTMLVideoElement).currentTime = activeClip.start;
                                     }
+                                    updateBgCanvas();
                                   }}
                                   onPlay={() => setIsPlayingPreview(true)}
                                   onPause={() => setIsPlayingPreview(false)}
@@ -1386,7 +1428,7 @@ export default function ClipsPage() {
                                 />
 
                                 {/* 9:16 Reframed Live Captions Overlay */}
-                                <div className="absolute inset-x-3 bottom-14 flex flex-col items-center justify-center pointer-events-none text-center">
+                                <div className="absolute inset-x-3 bottom-14 z-20 flex flex-col items-center justify-center pointer-events-none text-center">
                                   {activeCue && activeCue.words.length > 0 ? (
                                     <div
                                       style={{
@@ -1449,9 +1491,9 @@ export default function ClipsPage() {
                                 </div>
 
                                 {/* Reframed Viewport Mode Indicator */}
-                                <div className="absolute top-3 left-3 px-2 py-0.5 rounded-full bg-black/60 backdrop-blur-md text-[9px] font-black text-white border border-white/20 flex items-center gap-1">
+                                <div className="absolute top-3 left-3 z-20 px-2 py-0.5 rounded-full bg-black/60 backdrop-blur-md text-[9px] font-black text-white border border-white/20 flex items-center gap-1">
                                   <Crop className="w-2.5 h-2.5 text-[#A3E635]" />
-                                  <span>{reframeMode === "9:16_auto" ? "9:16 Reframed (Face-Tracked)" : reframeMode}</span>
+                                  <span>{reframeMode === "9:16_auto" ? "9:16 Reframed (Face-Tracked)" : reframeMode === "16:9_fit_blur" ? "9:16 Fit + Ambient Blur" : reframeMode}</span>
                                 </div>
 
                                 {/* Floating Play/Pause Center Overlay */}
@@ -1468,7 +1510,7 @@ export default function ClipsPage() {
                                       }
                                     }
                                   }}
-                                  className="absolute inset-0 m-auto w-12 h-12 rounded-full bg-black/60 hover:bg-[#A3E635] text-white hover:text-[#142218] flex items-center justify-center transition-all cursor-pointer opacity-80 hover:opacity-100 border border-white/30"
+                                  className="absolute inset-0 z-20 m-auto w-12 h-12 rounded-full bg-black/60 hover:bg-[#A3E635] text-white hover:text-[#142218] flex items-center justify-center transition-all cursor-pointer opacity-80 hover:opacity-100 border border-white/30"
                                 >
                                   {isPlayingPreview ? (
                                     <Pause className="w-5 h-5 fill-current" />

@@ -133,6 +133,7 @@ class HelperClient {
     clipId: string;
     start: number;
     end: number;
+    reframeMode?: "9:16_auto" | "16:9_fit_blur" | "original";
     crop?: { sx: number; sy: number; sw: number; sh: number };
     srtContent?: string;
     assContent?: string;
