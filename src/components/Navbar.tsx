@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useState, useEffect } from "react";
 import { CapabilityBadge } from "./CapabilityBadge";
 import { ThemeToggle } from "./ThemeToggle";
@@ -25,8 +26,16 @@ export function Navbar() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-15 flex items-center justify-between gap-4">
           {/* Brand Logo with Fraunces Italic Typography */}
           <Link href="/" className="flex items-center gap-2.5 group select-none">
-            <div className="w-8 h-8 rounded-full bg-[#A3E635] border-2 border-[var(--border-main)] flex items-center justify-center text-[#142218] font-black font-fraunces text-base shadow-[2px_2px_0px_var(--border-main)] group-hover:-translate-x-0.5 group-hover:-translate-y-0.5 group-hover:shadow-[3px_3px_0px_var(--border-main)] transition-all">
-              B
+            <div className="relative w-8.5 h-8.5 shrink-0 group-hover:-translate-x-0.5 group-hover:-translate-y-0.5 transition-transform">
+              <Image
+                src="/favicon.svg"
+                alt="BolSub Studio Logo"
+                width={34}
+                height={34}
+                className="w-full h-full object-contain"
+                unoptimized
+                priority
+              />
             </div>
             <div className="flex items-center tracking-tight">
               <span className="font-fraunces italic font-extrabold text-xl text-[var(--text-main)]">

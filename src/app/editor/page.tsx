@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { TranscriptPanel } from "@/components/editor/TranscriptPanel";
 import { VideoPlayerPreview } from "@/components/editor/VideoPlayerPreview";
 import { TemplateStyleDock } from "@/components/editor/TemplateStyleDock";
@@ -154,8 +155,16 @@ export default function EditorStudioPage() {
             className="flex items-center gap-2 group hover:opacity-90 transition-opacity"
             title="Return to BolSub Studio Home"
           >
-            <div className="w-7 h-7 rounded-full border-2 border-[var(--border-main)] bg-[var(--accent-lime)] flex items-center justify-center text-[#142218] font-black text-xs shadow-[2px_2px_0px_var(--border-main)] group-hover:scale-105 transition-transform">
-              B
+            <div className="relative w-7 h-7 shrink-0 group-hover:scale-105 transition-transform">
+              <Image
+                src="/favicon.svg"
+                alt="BolSub Logo"
+                width={28}
+                height={28}
+                className="w-full h-full object-contain"
+                unoptimized
+                priority
+              />
             </div>
             <span className="font-fraunces italic font-bold tracking-tight text-[var(--text-main)] hidden sm:inline text-base">
               BolSub<span className="text-[var(--accent-lime)] font-black">.Studio</span>
