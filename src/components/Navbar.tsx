@@ -2,23 +2,16 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { CapabilityBadge } from "./CapabilityBadge";
 import { ThemeToggle } from "./ThemeToggle";
 import { ModelManagerModal } from "./ModelManagerModal";
 import { MODEL_TIERS, type ModelTierId } from "@/lib/modelManager";
-import { useTheme } from "@/lib/theme";
 import { Sparkles, Cpu, Film, Scissors, FolderKanban, Settings, ArrowRight } from "lucide-react";
 
 export function Navbar() {
   const [isModelModalOpen, setIsModelModalOpen] = useState(false);
   const [selectedTier, setSelectedTier] = useState<ModelTierId>("balanced");
-  const { theme } = useTheme();
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
 
   return (
     <>
@@ -43,9 +36,6 @@ export function Navbar() {
               </span>
               <span className="font-fraunces italic font-bold text-xl text-[#A3E635] ml-0.5">
                 .Studio
-              </span>
-              <span className="ml-2 px-2 py-0.5 rounded-full text-[9px] font-extrabold bg-[#A3E635] text-[#142218] border-1.5 border-[var(--border-main)] uppercase tracking-wider shadow-[1.5px_1.5px_0px_var(--border-main)]">
-                {mounted && theme === "dark" ? "Forest Noir" : "Rustic Neo"}
               </span>
             </div>
           </Link>
