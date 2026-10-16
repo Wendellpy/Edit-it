@@ -1,16 +1,23 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { CapabilityBadge } from "./CapabilityBadge";
 import { ThemeToggle } from "./ThemeToggle";
 import { ModelManagerModal } from "./ModelManagerModal";
 import { MODEL_TIERS, type ModelTierId } from "@/lib/modelManager";
+import { useTheme } from "@/lib/theme";
 import { Sparkles, Cpu, Film, Scissors, FolderKanban, Settings, ArrowRight } from "lucide-react";
 
 export function Navbar() {
   const [isModelModalOpen, setIsModelModalOpen] = useState(false);
   const [selectedTier, setSelectedTier] = useState<ModelTierId>("balanced");
+  const { theme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   return (
     <>
@@ -29,7 +36,7 @@ export function Navbar() {
                 .Studio
               </span>
               <span className="ml-2 px-2 py-0.5 rounded-full text-[9px] font-extrabold bg-[#A3E635] text-[#142218] border-1.5 border-[var(--border-main)] uppercase tracking-wider shadow-[1.5px_1.5px_0px_var(--border-main)]">
-                Rustic Neo
+                {mounted && theme === "dark" ? "Forest Noir" : "Rustic Neo"}
               </span>
             </div>
           </Link>

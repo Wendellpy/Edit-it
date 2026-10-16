@@ -168,7 +168,7 @@ export default function SettingsPage() {
               >
                 <span>{word.devanagari}</span>
                 <span className="text-[var(--text-muted)]">→</span>
-                <span className="font-bold font-mono text-[var(--accent-lime)] dark:text-[var(--accent-lime)] text-emerald-800">{word.roman}</span>
+                <span className="font-bold font-mono text-emerald-800 dark:text-[#A3E635]">{word.roman}</span>
                 <button
                   onClick={() => handleRemoveWord(idx)}
                   className="text-[var(--text-muted)] hover:text-red-500 ml-1 transition-colors cursor-pointer"

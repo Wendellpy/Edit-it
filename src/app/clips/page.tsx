@@ -615,18 +615,19 @@ export default function ClipsPage() {
     }
   };
 
-  const handleProbe = async (e?: React.FormEvent) => {
+  const handleProbe = async (e?: React.FormEvent, overrideUrl?: string) => {
     if (e) e.preventDefault();
-    if (!urlInput.trim()) return;
+    const targetUrl = (overrideUrl || urlInput).trim();
+    if (!targetUrl) return;
 
     if (autoRunOnPaste) {
-      return handleAutoProcessPipeline();
+      return handleAutoProcessPipeline(targetUrl);
     }
 
     setProbeError(null);
     setProbeResult(null);
 
-    const validation = parseAndValidateYouTubeUrl(urlInput);
+    const validation = parseAndValidateYouTubeUrl(targetUrl);
     if (!validation.isValid) {
       setProbeError(validation.error || "Invalid YouTube link");
       return;
@@ -644,7 +645,7 @@ export default function ClipsPage() {
 
     setIsProbing(true);
     try {
-      const result = await localHelperClient.probeVideo(urlInput);
+      const result = await localHelperClient.probeVideo(targetUrl);
       setProbeResult(result);
     } catch (err: unknown) {
       setProbeError((err as Error).message || "Could not retrieve video information");
@@ -683,7 +684,7 @@ export default function ClipsPage() {
             <div
               className={`flex items-center gap-2 px-3.5 py-1.5 rounded-full border-2 border-[var(--border-main)] text-xs font-black shadow-[2px_2px_0px_var(--border-main)] ${
                 helperStatus?.ok
-                  ? "bg-[#A3E635]/20 text-[#142218] dark:text-[#A3E635]"
+                  ? "bg-[#A3E635]/20 text-[var(--text-main)] dark:text-[#A3E635]"
                   : "bg-red-500/15 text-red-700 dark:text-red-400"
               }`}
             >
@@ -1035,6 +1036,86 @@ export default function ClipsPage() {
               </div>
             )}
           </form>
+
+          {/* Quick Example Video Chips & Feature Showcase when no link has been pasted yet */}
+          {!probeResult && !isProbing && !ingestResult && (
+            <div className="space-y-6 pt-2">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-2xl bg-[var(--bg-panel)] border-2 border-[var(--border-main)] shadow-[3px_3px_0px_var(--border-main)]">
+                <div className="flex items-center gap-2 text-xs font-bold text-[var(--text-main)]">
+                  <Sparkles className="w-4 h-4 text-[#A3E635]" />
+                  <span>Try an example video (1-click):</span>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const url = "https://www.youtube.com/watch?v=YWeEE9vchDo";
+                      setUrlInput(url);
+                      handleProbe(undefined, url);
+                    }}
+                    className="px-3 py-1 rounded-full text-xs font-bold bg-[var(--bg-card)] border-2 border-[var(--border-main)] shadow-[1.5px_1.5px_0px_var(--border-main)] hover:bg-[var(--accent-lime)]/20 hover:-translate-y-0.5 transition-all cursor-pointer text-[var(--text-main)]"
+                  >
+                    🎮 MrBeast Challenge (1080p)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const url = "https://www.youtube.com/watch?v=5V94ARRE7tk";
+                      setUrlInput(url);
+                      handleProbe(undefined, url);
+                    }}
+                    className="px-3 py-1 rounded-full text-xs font-bold bg-[var(--bg-card)] border-2 border-[var(--border-main)] shadow-[1.5px_1.5px_0px_var(--border-main)] hover:bg-[var(--accent-lime)]/20 hover:-translate-y-0.5 transition-all cursor-pointer text-[var(--text-main)]"
+                  >
+                    🔬 Science Short
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const url = "https://www.youtube.com/watch?v=JheRzFxeSBg";
+                      setUrlInput(url);
+                      handleProbe(undefined, url);
+                    }}
+                    className="px-3 py-1 rounded-full text-xs font-bold bg-[var(--bg-card)] border-2 border-[var(--border-main)] shadow-[1.5px_1.5px_0px_var(--border-main)] hover:bg-[var(--accent-lime)]/20 hover:-translate-y-0.5 transition-all cursor-pointer text-[var(--text-main)]"
+                  >
+                    🎙️ Creator Podcast
+                  </button>
+                </div>
+              </div>
+
+              {/* 3-Step Feature Showcase Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
+                <div className="neo-card p-5 bg-[var(--bg-card)] border-2 border-[var(--border-main)] shadow-[3px_3px_0px_var(--border-main)] space-y-2">
+                  <div className="w-10 h-10 rounded-xl bg-[var(--accent-lime)] text-[#142218] border-2 border-[var(--border-main)] shadow-[2px_2px_0px_var(--border-main)] flex items-center justify-center font-black">
+                    1
+                  </div>
+                  <h4 className="font-extrabold text-sm text-[var(--text-main)]">Acoustic &amp; Hook Mining</h4>
+                  <p className="text-xs text-[var(--text-muted)] font-medium leading-relaxed">
+                    Local AI discovers high-energy moments, questions, and punchlines, snapping cleanly to sentence boundaries.
+                  </p>
+                </div>
+
+                <div className="neo-card p-5 bg-[var(--bg-card)] border-2 border-[var(--border-main)] shadow-[3px_3px_0px_var(--border-main)] space-y-2">
+                  <div className="w-10 h-10 rounded-xl bg-[var(--accent-lime)] text-[#142218] border-2 border-[var(--border-main)] shadow-[2px_2px_0px_var(--border-main)] flex items-center justify-center font-black">
+                    2
+                  </div>
+                  <h4 className="font-extrabold text-sm text-[var(--text-main)]">Smart 9:16 Reframe</h4>
+                  <p className="text-xs text-[var(--text-muted)] font-medium leading-relaxed">
+                    Track the speaker or preserve the complete 16:9 view with high-res ambient blur background for Shorts.
+                  </p>
+                </div>
+
+                <div className="neo-card p-5 bg-[var(--bg-card)] border-2 border-[var(--border-main)] shadow-[3px_3px_0px_var(--border-main)] space-y-2">
+                  <div className="w-10 h-10 rounded-xl bg-[var(--accent-lime)] text-[#142218] border-2 border-[var(--border-main)] shadow-[2px_2px_0px_var(--border-main)] flex items-center justify-center font-black">
+                    3
+                  </div>
+                  <h4 className="font-extrabold text-sm text-[var(--text-main)]">Word-by-Word Viral Captions</h4>
+                  <p className="text-xs text-[var(--text-muted)] font-medium leading-relaxed">
+                    Over 70 creator presets (MrBeast bounce, Hormozi highlighter, Ali Abdaal wipe) with synchronized frame reveals.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Probed Video Card */}
           {probeResult && (
