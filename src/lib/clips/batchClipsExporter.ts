@@ -281,7 +281,7 @@ export async function exportSingleClip(
       });
 
       if (helperExport.success && helperExport.fileId) {
-        mp4Url = localHelperClient.getFileUrl(helperExport.fileId);
+        mp4Url = localHelperClient.getFileUrl(helperExport.fileId, mp4FileName);
         engineUsed = "ffmpeg";
       } else {
         throw new Error("FFmpeg helper returned unsuccessful status");
@@ -390,13 +390,16 @@ export async function saveClipFilesToDisk(result: SingleClipExportResult): Promi
         return;
       }
     } catch {}
-    // Trigger download link for helper URL
+    // Trigger download link with attachment header for helper URL
+    const downloadUrl = result.mp4Url.includes("download=1")
+      ? result.mp4Url
+      : `${result.mp4Url}${result.mp4Url.includes("?") ? "&" : "?"}download=1&name=${encodeURIComponent(result.mp4FileName)}`;
     const a = document.createElement("a");
-    a.href = result.mp4Url;
+    a.href = downloadUrl;
     a.download = result.mp4FileName;
     document.body.appendChild(a);
     a.click();
-    document.body.removeChild(a);
+    setTimeout(() => document.body.removeChild(a), 500);
   }
 
   // 2. Save SRT sidecar

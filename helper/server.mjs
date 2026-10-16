@@ -351,7 +351,7 @@ const server = http.createServer(async (req, res) => {
   res.setHeader("Access-Control-Allow-Origin", isAllowedOrigin ? origin || "*" : "http://localhost:3000");
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS, HEAD");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, X-Helper-Token, Range, Authorization, Accept");
-  res.setHeader("Access-Control-Expose-Headers", "Content-Range, Content-Length, Accept-Ranges, Content-Type");
+  res.setHeader("Access-Control-Expose-Headers", "Content-Range, Content-Length, Accept-Ranges, Content-Type, Content-Disposition");
   res.setHeader("Access-Control-Max-Age", "86400");
 
   if (req.method === "OPTIONS") {
@@ -736,17 +736,25 @@ const server = http.createServer(async (req, res) => {
       const ext = path.extname(targetPath).toLowerCase();
       const mimeType = ext === ".wav" ? "audio/wav" : "video/mp4";
 
+      const isDownloadReq = urlObj.searchParams.get("download") === "1";
+      const downloadParam = urlObj.searchParams.get("name") || path.basename(targetPath);
+      const safeDownloadName = downloadParam.replace(/["\r\n\\]/g, "_");
+
       if (req.method === "HEAD") {
-        res.writeHead(200, {
-          "Content-Type": mimeType,
+        const headHeaders = {
+          "Content-Type": isDownloadReq ? "application/octet-stream" : mimeType,
           "Content-Length": fileSize,
           "Accept-Ranges": "bytes",
-        });
+        };
+        if (isDownloadReq) {
+          headHeaders["Content-Disposition"] = `attachment; filename="${safeDownloadName}"`;
+        }
+        res.writeHead(200, headHeaders);
         res.end();
         return;
       }
 
-      if (range) {
+      if (range && !isDownloadReq) {
         const parts = range.replace(/bytes=/, "").split("-");
         const start = parseInt(parts[0], 10);
         const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
@@ -770,11 +778,15 @@ const server = http.createServer(async (req, res) => {
         });
         stream.pipe(res);
       } else {
-        res.writeHead(200, {
+        const respHeaders = {
           "Content-Length": fileSize,
-          "Content-Type": mimeType,
+          "Content-Type": isDownloadReq ? "application/octet-stream" : mimeType,
           "Accept-Ranges": "bytes",
-        });
+        };
+        if (isDownloadReq) {
+          respHeaders["Content-Disposition"] = `attachment; filename="${safeDownloadName}"`;
+        }
+        res.writeHead(200, respHeaders);
         fs.createReadStream(targetPath).pipe(res);
       }
       return;
@@ -899,7 +911,7 @@ const server = http.createServer(async (req, res) => {
           `[0:v]split=2[bg_raw][fg_raw];` +
           `[bg_raw]scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,boxblur=28:2,eq=brightness=-0.14:contrast=1.05[bg];` +
           `[fg_raw]scale=1080:-2[fg];` +
-          `[bg][fg]overlay=(W-w)/2:(H-h)/2${subFileName ? `[combined];[combined]subtitles=${subFileName}` : ''}[v_out]`;
+          `[bg][fg]overlay=(W-w)/2:(H-h)/2${subFileName ? `[combined];[combined]subtitles='${subFileName}'` : ''}[v_out]`;
 
         ffmpegArgs.push(
           "-filter_complex", filterComplex,
@@ -919,7 +931,7 @@ const server = http.createServer(async (req, res) => {
           `scale=1080:1920:flags=bicubic`,
         ];
         if (subFileName) {
-          vfParts.push(`subtitles=${subFileName}`);
+          vfParts.push(`subtitles='${subFileName}'`);
         }
         ffmpegArgs.push("-vf", vfParts.join(","));
       }

@@ -199,12 +199,16 @@ class HelperClient {
   }
 
   /**
-   * Returns authenticated URL for streaming a file from helper cache.
+   * Returns authenticated URL for streaming or downloading a file from helper cache.
    */
-  getFileUrl(fileId: string): string {
+  getFileUrl(fileId: string, downloadName?: string): string {
     const url = new URL(`${HELPER_ORIGIN}/file/${encodeURIComponent(fileId)}`);
     if (this.token) {
       url.searchParams.set("token", this.token);
+    }
+    if (downloadName) {
+      url.searchParams.set("download", "1");
+      url.searchParams.set("name", downloadName);
     }
     return url.toString();
   }

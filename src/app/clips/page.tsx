@@ -409,6 +409,47 @@ export default function ClipsPage() {
     }
   };
 
+  const handleDownloadSingleMp4 = async (res: SingleClipExportResult) => {
+    if (res.mp4Blob) {
+      await saveBlobToDisk(res.mp4Blob, {
+        suggestedName: res.mp4FileName,
+        mimeType: "video/mp4",
+        extension: "mp4",
+        description: "MPEG-4 Vertical Shorts Video",
+      });
+      return;
+    }
+
+    if (res.mp4Url) {
+      try {
+        const resp = await fetch(res.mp4Url);
+        if (resp.ok) {
+          const blob = await resp.blob();
+          await saveBlobToDisk(blob, {
+            suggestedName: res.mp4FileName,
+            mimeType: "video/mp4",
+            extension: "mp4",
+            description: "MPEG-4 Vertical Shorts Video",
+          });
+          return;
+        }
+      } catch (err) {
+        console.warn("Direct blob download failed, falling back to helper download URL:", err);
+      }
+
+      // Fallback: direct download with attachment header
+      const downloadUrl = res.mp4Url.includes("download=1")
+        ? res.mp4Url
+        : `${res.mp4Url}${res.mp4Url.includes("?") ? "&" : "?"}download=1&name=${encodeURIComponent(res.mp4FileName)}`;
+      const a = document.createElement("a");
+      a.href = downloadUrl;
+      a.download = res.mp4FileName;
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => document.body.removeChild(a), 500);
+    }
+  };
+
   const handleStartIngest = async () => {
     if (!probeResult || !urlInput.trim()) return;
     setIsIngesting(true);
@@ -1932,14 +1973,13 @@ export default function ClipsPage() {
                                   </p>
 
                                   <div className="flex items-center gap-2 pt-1 border-t border-[var(--border-subtle)]">
-                                    <a
-                                      href={res.mp4Url}
-                                      download={res.mp4FileName}
-                                      className="px-2.5 py-1.5 rounded-lg bg-[#A3E635] text-[#142218] font-bold text-xs flex items-center gap-1.5 hover:shadow-xs transition-all"
+                                    <button
+                                      onClick={() => handleDownloadSingleMp4(res)}
+                                      className="px-2.5 py-1.5 rounded-lg bg-[#A3E635] text-[#142218] font-bold text-xs flex items-center gap-1.5 hover:shadow-xs transition-all cursor-pointer"
                                     >
                                       <Download className="w-3.5 h-3.5" />
                                       <span>MP4 Video</span>
-                                    </a>
+                                    </button>
 
                                     <button
                                       onClick={() => {

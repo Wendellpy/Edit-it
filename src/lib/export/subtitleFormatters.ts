@@ -215,25 +215,39 @@ export function generateAss(
 ): string {
   const cues = groupWordsIntoCues(words, maxWordsPerCue);
 
-  const primaryColorAss = hexToAssColor(template.colors.primaryText);
-  const secondaryColorAss = hexToAssColor(template.colors.activeWordText || '#FFE600');
+  const rawFont = template.typography.primaryFont || 'Arial';
+  const cleanFont = rawFont.split(',')[0].replace(/['"]/g, '').trim() || 'Arial';
+
+  const isAnimated = Boolean(
+    template.animation?.perWordEffect && template.animation.perWordEffect !== 'none'
+  );
+  // In ASS karaoke, SecondaryColour is the base unhighlighted text color,
+  // and PrimaryColour is the highlighted active word color that \k sweeps into.
+  const primaryColorAss = hexToAssColor(
+    isAnimated ? (template.colors.activeWordText || '#FFE600') : template.colors.primaryText
+  );
+  const secondaryColorAss = hexToAssColor(template.colors.primaryText);
   const outlineColorAss = hexToAssColor(template.colors.strokeColor || '#000000');
-  const backColorAss = hexToAssColor(template.box?.bgColor || '#000000', template.box?.enabled ? 0.3 : 1.0);
+  const backColorAss = hexToAssColor(
+    template.box?.enabled
+      ? (template.box.bgColor || '#000000')
+      : (template.colors.shadowColor || '#000000'),
+    template.box?.enabled ? 0.3 : 0.2
+  );
 
-  const fontSizeAss = Math.round(videoHeight * template.typography.fontSizeBasePercent);
-  const strokeWidthAss = template.colors.strokeWidthPercent
-    ? Math.max(1, Math.round(template.colors.strokeWidthPercent * videoHeight))
-    : 2;
-  const shadowDepthAss = template.colors.shadowBlur ? Math.min(6, Math.round(template.colors.shadowBlur / 4)) : 1;
+  const fontSizeAss = Math.max(24, Math.round(videoHeight * (template.typography.fontSizeBasePercent || 0.045)));
+  const strokeWidthAss = Math.max(
+    2,
+    Math.round((template.colors.strokeWidthPercent || 0.003) * videoHeight)
+  );
+  const shadowDepthAss = template.colors.shadowBlur ? Math.min(8, Math.max(1, Math.round(template.colors.shadowBlur / 3))) : 2;
 
-  // Alignment: 2 = Bottom-Center, 5 = Middle-Center, 8 = Top-Center
-  let alignment = 2;
-  if (template.layout.yPositionPercent < 0.35) {
-    alignment = 8;
-  } else if (template.layout.yPositionPercent < 0.65) {
-    alignment = 5;
-  }
-  const marginV = Math.round(videoHeight * Math.abs(1 - template.layout.yPositionPercent));
+  // Use Bottom-Center (2) alignment with marginV measuring upward from bottom
+  const alignment = 2;
+  const marginV = Math.max(
+    40,
+    Math.round(videoHeight * Math.max(0.05, Math.min(0.95, 1 - template.layout.yPositionPercent)))
+  );
 
   const boldAss = template.typography.primaryWeight === '900' || template.typography.primaryWeight === 'bold' ? -1 : 0;
 
@@ -253,7 +267,7 @@ export function generateAss(
   const styles = [
     '[V4+ Styles]',
     'Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding',
-    `Style: Default,${template.typography.primaryFont},${fontSizeAss},${primaryColorAss},${secondaryColorAss},${outlineColorAss},${backColorAss},${boldAss},0,0,0,100,100,0,0,1,${strokeWidthAss},${shadowDepthAss},${alignment},40,40,${marginV},1`,
+    `Style: Default,${cleanFont},${fontSizeAss},${primaryColorAss},${secondaryColorAss},${outlineColorAss},${backColorAss},${boldAss},0,0,0,100,100,0,0,1,${strokeWidthAss},${shadowDepthAss},${alignment},40,40,${marginV},1`,
     '',
   ];
 
@@ -268,7 +282,7 @@ export function generateAss(
 
     // Build karaoke word timing if animated active word is configured
     let dialogueText = '';
-    if (template.animation?.perWordEffect === 'karaoke_fill' || template.animation?.perWordEffect === 'scale_pop') {
+    if (isAnimated || template.animation?.perWordEffect === 'karaoke_fill' || template.animation?.perWordEffect === 'scale_pop') {
       dialogueText = cue.words
         .map((w) => {
           const durationCentis = Math.max(5, Math.round((w.end - w.start) * 100));
