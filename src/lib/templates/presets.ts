@@ -114,15 +114,6 @@ export const CAPTION_PRESETS: CaptionTemplate[] = [
       shadowColor: "rgba(0,0,0,1)",
       shadowBlur: 16,
     },
-    box: {
-      enabled: true,
-      bgColor: "rgba(10, 15, 26, 0.88)",
-      paddingX: 24,
-      paddingY: 12,
-      borderRadius: 20,
-      borderColor: "rgba(255, 255, 255, 0.12)",
-      borderWidth: 1,
-    },
     layout: {
       yPositionPercent: 0.7,
       maxWordsPerLine: 2,

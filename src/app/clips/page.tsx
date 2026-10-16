@@ -1434,24 +1434,24 @@ export default function ClipsPage() {
                                       style={{
                                         backgroundColor: activeStyling.template.box?.enabled && activeStyling.template.box?.bgColor
                                           ? activeStyling.template.box.bgColor
-                                          : "rgba(10, 15, 26, 0.88)",
-                                        borderRadius: activeStyling.template.box?.borderRadius
+                                          : "transparent",
+                                        borderRadius: activeStyling.template.box?.enabled && activeStyling.template.box?.borderRadius
                                           ? `${activeStyling.template.box.borderRadius}px`
-                                          : "20px",
-                                        padding: "10px 22px",
-                                        boxShadow: "0 10px 28px rgba(0, 0, 0, 0.65), inset 0 1px 1px rgba(255, 255, 255, 0.12)",
-                                        border: "1px solid rgba(255, 255, 255, 0.12)",
-                                        backdropFilter: "blur(12px)",
+                                          : undefined,
+                                        padding: activeStyling.template.box?.enabled ? "8px 14px" : "0px",
                                       }}
-                                      className="inline-flex flex-wrap justify-center items-center gap-2.5 transition-all duration-75"
+                                      className="flex flex-wrap justify-center items-center gap-2 transition-all duration-75 pointer-events-none"
                                     >
                                       {activeCue.words.map((word, wIdx) => {
                                         const isSpeakingNow = previewTime >= word.start && previewTime <= word.end;
                                         const hasPassed = previewTime > word.end;
+                                        const isUpcoming = previewTime < word.start;
                                         const isSingleWord = activeStyling.template.layout.singleWordOnly;
 
                                         // In single-word mode: ONLY show the currently spoken word
                                         if (isSingleWord && !isSpeakingNow) return null;
+                                        // Frame-accurate timing: do NOT display upcoming words before the audio speaks them
+                                        if (isUpcoming) return null;
 
                                         const isKeyword = word.isKeyword;
 
@@ -1462,23 +1462,25 @@ export default function ClipsPage() {
                                           : (activeStyling.template.colors.primaryText || "#FFFFFF");
 
                                         const textShadow = isSpeakingNow
-                                          ? "-1.5px -1.5px 0 #000, 1.5px -1.5px 0 #000, -1.5px 1.5px 0 #000, 1.5px 1.5px 0 #000, 0 3px 8px rgba(0,0,0,0.95)"
-                                          : "-1.5px -1.5px 0 #000, 1.5px -1.5px 0 #000, -1.5px 1.5px 0 #000, 1.5px 1.5px 0 #000, 0 2px 5px rgba(0,0,0,0.85)";
+                                          ? (activeStyling.template.colors.shadowColor
+                                              ? `0 0 14px ${activeStyling.template.colors.shadowColor}, -2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000, 2px 2px 0 #000, 0 3px 6px #000000`
+                                              : "0 0 12px #FFE600, -2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000, 2px 2px 0 #000, 0 3px 6px #000000")
+                                          : "-2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000, 2px 2px 0 #000, 0 3px 6px rgba(0,0,0,0.95)";
 
                                         return (
                                           <span
                                             key={wIdx}
                                             style={{
                                               color: textColor,
-                                              fontFamily: activeStyling.template.typography.primaryFont || "Montserrat, 'Arial Black', Inter, sans-serif",
+                                              fontFamily: activeStyling.template.typography.primaryFont || "Impact, sans-serif",
                                               textTransform: (activeStyling.template.typography.textTransform as any) || "uppercase",
-                                              fontSize: isSpeakingNow ? "1.28rem" : "1.18rem",
+                                              fontSize: isSpeakingNow ? "1.25rem" : "1.12rem",
                                               fontWeight: activeStyling.template.typography.primaryWeight || "900",
                                               textShadow,
-                                              opacity: isSpeakingNow ? 1.0 : hasPassed ? 0.95 : 0.85,
-                                              transform: isSpeakingNow ? "scale(1.08)" : "scale(1.0)",
+                                              opacity: isSpeakingNow ? 1.0 : hasPassed ? 0.95 : 0.75,
+                                              transform: isSpeakingNow ? "scale(1.12)" : "scale(1.0)",
                                             }}
-                                            className="inline-block transition-transform duration-75 origin-center font-black tracking-wide"
+                                            className="inline-block transition-transform duration-75 origin-center select-none"
                                           >
                                             {word.text}
                                           </span>
@@ -1588,7 +1590,7 @@ export default function ClipsPage() {
                                   {[
                                     { id: "behind_you_white", name: "Clean White", badge: "VIRAL" },
                                     { id: "alex_hormozi_punch", name: "Hormozi Box", badge: "PUNCH" },
-                                    { id: "mr_beast_bold", name: "Shorts Dark Pill", badge: "VIRAL PILL" },
+                                    { id: "mr_beast_bold", name: "MrBeast Squash", badge: "ENERGY" },
                                     { id: "die_cut_sticker", name: "Die-Cut Sticker", badge: "COMEDY" },
                                     { id: "sunshine_impact_yellow", name: "Sunshine Impact", badge: "CINEMA" },
                                     { id: "neon_sticker_lime", name: "Neon Lime", badge: "NEON" },
