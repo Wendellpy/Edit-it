@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "helper": "node helper/server.mjs"
   },
   "dependencies": {
     "@huggingface/transformers": "^4.3.1",

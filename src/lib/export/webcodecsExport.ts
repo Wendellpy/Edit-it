@@ -11,6 +11,7 @@ import type { WordToken } from '@/lib/timestampRefiner';
 import type { CaptionTemplate } from '@/lib/templates/schema';
 import { renderCaptionsToCanvas } from '@/lib/renderer/captionRenderer';
 import { segmentationPipeline } from '@/lib/segmentation/segmentationPipeline';
+import { getCropWindowAtTime, applyReframedCrop } from '@/lib/clips/autoReframe';
 
 export type ExportResolution = '720p' | '1080p' | '1440p' | '4k' | 'source';
 export type ExportAspectRatio = 'original' | '9:16' | '16:9' | '1:1' | '4:5' | '21:9';
@@ -504,6 +505,8 @@ export interface ExportJobOptions {
   template: CaptionTemplate;
   config: ExportConfig;
   duration?: number;
+  startTime?: number;
+  cropTrajectory?: any;
   layerOrder?: 'behind' | 'front' | 'sandwich';
   onProgress?: (progress: ExportProgress) => void;
   onFrameRendered?: (canvas: HTMLCanvasElement | OffscreenCanvas) => void;
@@ -519,9 +522,20 @@ export async function exportVideoWithWebCodecs(options: ExportJobOptions): Promi
   // 1. Resolve video source element
   let videoEl: HTMLVideoElement;
   let ownsVideoElement = false;
+  let videoBlobUrlToRevoke: string | null = null;
 
-  if (options.videoUrl) {
+  if (options.videoFile) {
     videoEl = document.createElement('video');
+    videoBlobUrlToRevoke = URL.createObjectURL(options.videoFile);
+    videoEl.src = videoBlobUrlToRevoke;
+    videoEl.crossOrigin = 'anonymous';
+    videoEl.muted = true;
+    videoEl.playsInline = true;
+    videoEl.preload = 'auto';
+    ownsVideoElement = true;
+  } else if (options.videoUrl) {
+    videoEl = document.createElement('video');
+    videoEl.crossOrigin = 'anonymous';
     videoEl.src = options.videoUrl;
     videoEl.muted = true;
     videoEl.playsInline = true;
@@ -546,23 +560,30 @@ export async function exportVideoWithWebCodecs(options: ExportJobOptions): Promi
     throw new Error('No video element or URL available for export');
   }
 
-  // Wait for metadata if dedicated element was created
-  if (ownsVideoElement && videoEl.readyState < 1) {
+  // Wait for metadata and dimensions
+  if (videoEl.readyState < 1 || videoEl.videoWidth === 0) {
     await new Promise<void>((resolve) => {
-      const onLoaded = () => {
-        videoEl.removeEventListener('loadedmetadata', onLoaded);
-        videoEl.removeEventListener('error', onError);
+      const onReady = () => {
+        cleanup();
         resolve();
       };
-      const onError = () => {
-        videoEl.removeEventListener('loadedmetadata', onLoaded);
-        videoEl.removeEventListener('error', onError);
-        resolve();
+      const cleanup = () => {
+        videoEl.removeEventListener('loadedmetadata', onReady);
+        videoEl.removeEventListener('loadeddata', onReady);
+        videoEl.removeEventListener('canplay', onReady);
+        videoEl.removeEventListener('error', onReady);
       };
-      videoEl.addEventListener('loadedmetadata', onLoaded, { once: true });
-      videoEl.addEventListener('error', onError, { once: true });
-      setTimeout(resolve, 800);
+      videoEl.addEventListener('loadedmetadata', onReady, { once: true });
+      videoEl.addEventListener('loadeddata', onReady, { once: true });
+      videoEl.addEventListener('canplay', onReady, { once: true });
+      videoEl.addEventListener('error', onReady, { once: true });
+      setTimeout(() => { cleanup(); resolve(); }, 1200);
     });
+  }
+
+  // Guard against 0-dimension video sources (fail fast so fallback engine can take over)
+  if (!videoEl.videoWidth || !videoEl.videoHeight) {
+    throw new Error('Video source has 0 dimensions or failed to load. Falling back to FFmpeg engine.');
   }
 
   // 2. Compute dynamic dimensions & bitrate
@@ -676,6 +697,24 @@ export async function exportVideoWithWebCodecs(options: ExportJobOptions): Promi
     audioBuffer = await extractAudioFromSource(
       options.videoFile || options.videoUrl || videoEl
     );
+    const startTimeOffset = options.startTime || 0;
+    if (audioBuffer && startTimeOffset > 0) {
+      const sampleRate = audioBuffer.sampleRate;
+      const startSample = Math.round(startTimeOffset * sampleRate);
+      const endSample = Math.min(audioBuffer.length, Math.round((startTimeOffset + duration) * sampleRate));
+      const slicedLength = Math.max(1, endSample - startSample);
+      try {
+        const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate });
+        const slicedBuffer = audioCtx.createBuffer(audioBuffer.numberOfChannels, slicedLength, sampleRate);
+        for (let ch = 0; ch < audioBuffer.numberOfChannels; ch++) {
+          slicedBuffer.copyToChannel(audioBuffer.getChannelData(ch).subarray(startSample, endSample), ch);
+        }
+        audioBuffer = slicedBuffer;
+        await audioCtx.close();
+      } catch (err) {
+        console.warn('Audio slice fallback:', err);
+      }
+    }
     if (audioBuffer) {
       audioConfig = await probeAudioEncoderSupport(
         audioBuffer.sampleRate,
@@ -805,14 +844,21 @@ export async function exportVideoWithWebCodecs(options: ExportJobOptions): Promi
         throw encoderError;
       }
 
+      const startTimeOffset = options.startTime || 0;
       const currentTime = frameIndex / fps;
+      const absoluteVideoTime = startTimeOffset + currentTime;
 
       // Seek video element to target timestamp safely with robust decoder sync
-      await seekVideoToTimestamp(videoEl, currentTime);
+      await seekVideoToTimestamp(videoEl, absoluteVideoTime);
 
       // Composite: 1. Video background with framing mode and high quality smoothing
       ctx.clearRect(0, 0, width, height);
-      drawVideoFrameToCanvas(ctx, videoEl, width, height, fitMode);
+      if (options.cropTrajectory) {
+        const crop = getCropWindowAtTime(options.cropTrajectory, absoluteVideoTime);
+        applyReframedCrop(ctx, videoEl, crop, width, height);
+      } else {
+        drawVideoFrameToCanvas(ctx, videoEl, width, height, fitMode);
+      }
 
       // Composite: 2. Behind-Subject Segmentation Compositing (only when depth layering is active)
       let behindCompositing = undefined;
@@ -923,6 +969,9 @@ export async function exportVideoWithWebCodecs(options: ExportJobOptions): Promi
 
     return mp4Blob;
   } finally {
+    if (videoBlobUrlToRevoke) {
+      URL.revokeObjectURL(videoBlobUrlToRevoke);
+    }
     if (ownsVideoElement) {
       if (videoEl.parentNode) {
         videoEl.parentNode.removeChild(videoEl);
@@ -938,6 +987,11 @@ export async function exportVideoWithWebCodecs(options: ExportJobOptions): Promi
  */
 function seekVideoToTimestamp(video: HTMLVideoElement, time: number): Promise<void> {
   return new Promise((resolve) => {
+    if (!video.videoWidth || !video.videoHeight) {
+      resolve();
+      return;
+    }
+
     const maxDur = isFinite(video.duration) && video.duration > 0 ? video.duration : 10000;
     const targetTime = Math.min(Math.max(0, time), Math.max(0, maxDur - 0.001));
 
@@ -962,9 +1016,8 @@ function seekVideoToTimestamp(video: HTMLVideoElement, time: number): Promise<vo
     video.addEventListener('seeked', onDone, { once: true });
     video.addEventListener('error', onDone, { once: true });
 
-    // Robust safety timeout (600ms): guarantees decoder finishes high-res GOP seek
-    // without premature timeout that previously resulted in duplicate frozen frames.
-    timer = setTimeout(onDone, 600);
+    // Fast timeout (120ms): if decoder stalls or has no frames, resolve to avoid hanging the export loop
+    timer = setTimeout(onDone, 120);
 
     try {
       video.currentTime = targetTime;

@@ -6,7 +6,7 @@ import { CapabilityBadge } from "./CapabilityBadge";
 import { ThemeToggle } from "./ThemeToggle";
 import { ModelManagerModal } from "./ModelManagerModal";
 import { MODEL_TIERS, type ModelTierId } from "@/lib/modelManager";
-import { Sparkles, Cpu, Film, FolderKanban, Settings, ArrowRight } from "lucide-react";
+import { Sparkles, Cpu, Film, Scissors, FolderKanban, Settings, ArrowRight } from "lucide-react";
 
 export function Navbar() {
   const [isModelModalOpen, setIsModelModalOpen] = useState(false);
@@ -41,6 +41,15 @@ export function Navbar() {
               className="px-3 py-1.5 rounded-full text-[var(--text-main)] hover:bg-[var(--accent-lime)]/20 border-2 border-transparent hover:border-[var(--border-main)] hover:shadow-[2px_2px_0px_var(--border-main)] transition-all flex items-center gap-1.5"
             >
               <Film className="w-3.5 h-3.5 text-[#A3E635]" /> Editor
+            </Link>
+            <Link
+              href="/clips"
+              className="px-3 py-1.5 rounded-full text-[var(--text-main)] hover:bg-[var(--accent-lime)]/20 border-2 border-transparent hover:border-[var(--border-main)] hover:shadow-[2px_2px_0px_var(--border-main)] transition-all flex items-center gap-1.5"
+            >
+              <Scissors className="w-3.5 h-3.5 text-[#A3E635]" /> Clips
+              <span className="px-1.5 py-0.2 text-[8px] font-black uppercase tracking-wider bg-[#A3E635] text-[#142218] rounded-full border border-[var(--border-main)]">
+                Auto
+              </span>
             </Link>
             <Link
               href="/projects"

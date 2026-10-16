@@ -232,7 +232,7 @@ export function drawSubjectCutout(
     return;
   }
 
-  const cutoutCtx = cutoutCanvas.getContext("2d");
+  const cutoutCtx = cutoutCanvas.getContext("2d") as CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D | null;
   if (!cutoutCtx) return;
 
   // Compute aspect-ratio bounds to align with video viewport
@@ -301,7 +301,7 @@ export function drawSubjectCutout(
     return;
   }
 
-  const maskCtx = maskCanvas.getContext("2d");
+  const maskCtx = maskCanvas.getContext("2d") as CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D | null;
   if (!maskCtx) return;
 
   const maskImgData = maskCtx.createImageData(maskWidth, maskHeight);
@@ -371,7 +371,7 @@ function drawMaskOverlay(
     return;
   }
 
-  const oCtx = overlayCanvas.getContext("2d");
+  const oCtx = overlayCanvas.getContext("2d") as CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D | null;
   if (!oCtx) return;
 
   const imgData = oCtx.createImageData(maskWidth, maskHeight);

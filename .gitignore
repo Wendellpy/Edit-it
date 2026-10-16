@@ -51,3 +51,9 @@ next-env.d.ts
 .playwright-mcp/
 /*.png
 
+# helper service
+.helper-token
+helper/cache/
+helper/bin/
+
+

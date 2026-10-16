@@ -183,13 +183,21 @@ export class LocalWhisperPipeline {
 
         const transcribeKwargs: Record<string, unknown> = {
           task: "transcribe",
-          return_timestamps: true,
+          return_timestamps: "word",
         };
         if (language && language !== "auto") {
           transcribeKwargs.language = language;
         }
 
-        const output = await transcriber(chunk.data, transcribeKwargs);
+        let output: any;
+        try {
+          output = await transcriber(chunk.data, transcribeKwargs);
+        } catch {
+          output = await transcriber(chunk.data, {
+            ...transcribeKwargs,
+            return_timestamps: true,
+          });
+        }
         const textResult = (typeof output === "string" ? output : output?.text || "").trim();
 
         if (textResult) {
@@ -199,7 +207,26 @@ export class LocalWhisperPipeline {
 
           // If Whisper returned timestamped segments, use the precise segment bounds
           if (output?.chunks && Array.isArray(output.chunks) && output.chunks.length > 0) {
-            output.chunks.forEach((seg: { timestamp?: [number, number]; text?: string }, sIdx: number) => {
+            output.chunks.forEach((seg: any, sIdx: number) => {
+              // 1. Direct word-level timestamps from Whisper cross-attention
+              if (Array.isArray(seg.words) && seg.words.length > 0) {
+                seg.words.forEach((w: any, wIdx: number) => {
+                  const rawWord = (w.word || w.text || "").trim();
+                  if (!rawWord) return;
+                  const [relStart, relEnd] = w.timestamp || [0, 0.1];
+                  const wStart = chunk.startSecond + (typeof relStart === "number" ? relStart : 0);
+                  const wEnd = chunk.startSecond + (typeof relEnd === "number" ? relEnd : wStart + 0.1);
+                  chunkWords.push({
+                    id: `tok_${i}_${sIdx}_${wIdx}_${Date.now()}`,
+                    text: rawWord,
+                    start: parseFloat(wStart.toFixed(3)),
+                    end: parseFloat(Math.max(wStart + 0.08, wEnd).toFixed(3)),
+                    confidence: 0.98,
+                  });
+                });
+                return;
+              }
+
               const segText = (seg.text || "").trim();
               if (!segText) return;
 
@@ -207,8 +234,21 @@ export class LocalWhisperPipeline {
               const [relStart, relEnd] = seg.timestamp || [0, 1];
               const sStart = chunk.startSecond + (typeof relStart === "number" ? relStart : 0);
               const sEnd = chunk.startSecond + (typeof relEnd === "number" ? relEnd : sStart + 1);
+
+              // 2. Single-word segment: exactly snaps to Whisper segment
+              if (segTokens.length === 1) {
+                chunkWords.push({
+                  id: `tok_${i}_${sIdx}_0_${Date.now()}`,
+                  text: segTokens[0],
+                  start: parseFloat(sStart.toFixed(3)),
+                  end: parseFloat(Math.max(sStart + 0.08, sEnd).toFixed(3)),
+                  confidence: 0.96,
+                });
+                return;
+              }
+
+              // 3. Multi-word phrase fallback with phonetic & syllable weighting
               const sDuration = Math.max(0.1, sEnd - sStart);
-              // Compute phonetic and character weights so short words don't push following words ahead of audio
               const weights = segTokens.map((tok: string) => {
                 const clean = tok.replace(/[^a-zA-Z0-9\u0900-\u097F]/g, "");
                 const len = Math.max(1, clean.length);
