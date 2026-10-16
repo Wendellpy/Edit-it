@@ -3,6 +3,7 @@ import type { WordToken } from "./timestampRefiner";
 import { refineWordTimestamps } from "./timestampRefiner";
 import { detectSpeechSegments } from "./vad";
 import { chunkAudio } from "./audioPipeline";
+import { censorCurseWord } from "./smart/audioCleanup";
 
 export interface TranscriptionProgress {
   status: "init" | "loading_model" | "transcribing" | "refining" | "complete" | "error";
@@ -63,7 +64,7 @@ export class LocalWhisperPipeline {
     options: TranscriptionOptions = {}
   ): Promise<TranscriptionResult> {
     const {
-      tierId = "fast",
+      tierId = "balanced",
       language = "auto",
       preferWebGPU = true,
       onProgress,
@@ -73,7 +74,7 @@ export class LocalWhisperPipeline {
     const durationSeconds = audioBuffer.length / 16000;
     const device = await this.resolveExecutionDevice(preferWebGPU);
     this.activeDevice = device;
-    const tier = MODEL_TIERS[tierId] || MODEL_TIERS.fast;
+    const tier = MODEL_TIERS[tierId] || MODEL_TIERS.balanced;
 
     onProgress?.({
       status: "loading_model",
@@ -184,6 +185,13 @@ export class LocalWhisperPipeline {
         const transcribeKwargs: Record<string, unknown> = {
           task: "transcribe",
           return_timestamps: "word",
+          chunk_length_s: 30,
+          stride_length_s: 4,
+          temperature: 0.0,
+          repetition_penalty: 1.15,
+          no_speech_threshold: 0.6,
+          condition_on_previous_text: false,
+          initial_prompt: "YouTube video captions, spoken English, Hindi, and Hinglish dialogue with clear words.",
         };
         if (language && language !== "auto") {
           transcribeKwargs.language = language;
@@ -218,7 +226,7 @@ export class LocalWhisperPipeline {
                   const wEnd = chunk.startSecond + (typeof relEnd === "number" ? relEnd : wStart + 0.1);
                   chunkWords.push({
                     id: `tok_${i}_${sIdx}_${wIdx}_${Date.now()}`,
-                    text: rawWord,
+                    text: censorCurseWord(rawWord),
                     start: parseFloat(wStart.toFixed(3)),
                     end: parseFloat(Math.max(wStart + 0.08, wEnd).toFixed(3)),
                     confidence: 0.98,
@@ -239,7 +247,7 @@ export class LocalWhisperPipeline {
               if (segTokens.length === 1) {
                 chunkWords.push({
                   id: `tok_${i}_${sIdx}_0_${Date.now()}`,
-                  text: segTokens[0],
+                  text: censorCurseWord(segTokens[0]),
                   start: parseFloat(sStart.toFixed(3)),
                   end: parseFloat(Math.max(sStart + 0.08, sEnd).toFixed(3)),
                   confidence: 0.96,
@@ -264,7 +272,7 @@ export class LocalWhisperPipeline {
                 const wEnd = parseFloat((accumulatedT + wDur).toFixed(3));
                 chunkWords.push({
                   id: `tok_${i}_${sIdx}_${tIdx}_${Date.now()}`,
-                  text: tok,
+                  text: censorCurseWord(tok),
                   start: wStart,
                   end: Math.max(wStart + 0.08, wEnd),
                   confidence: 0.95,
@@ -291,7 +299,7 @@ export class LocalWhisperPipeline {
               const wEnd = parseFloat((accumulatedT + wDur).toFixed(3));
               chunkWords.push({
                 id: `tok_${i}_${wIdx}_${Date.now()}`,
-                text: t,
+                text: censorCurseWord(t),
                 start: wStart,
                 end: Math.max(wStart + 0.08, wEnd),
                 confidence: 0.94,

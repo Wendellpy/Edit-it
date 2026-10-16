@@ -11,6 +11,7 @@ import { extractAndResampleAudio } from "../audioPipeline";
 import { LocalWhisperPipeline, type TranscriptionProgress } from "../whisper";
 import type { WordToken } from "../timestampRefiner";
 import { processTranscriptHinglish, type HinglishWordToken } from "../hinglish/postProcessor";
+import { censorCurseWord } from "../smart/audioCleanup";
 import type { ModelTierId } from "../modelManager";
 import type { VideoProbeResult } from "./types";
 
@@ -49,7 +50,7 @@ export class ClipsTranscriptionPipeline {
   static async ingestAndTranscribe(options: ClipsIngestionOptions): Promise<ClipsIngestionResult> {
     const {
       url,
-      tierId = "fast",
+      tierId = "balanced",
       language = "auto",
       preferWebGPU = true,
       onProgress,
@@ -148,7 +149,7 @@ export class ClipsTranscriptionPipeline {
       report("transcribing", 80, `Using ${captionsHint.timedWords.length} frame-accurate word timestamps from YouTube audio...`);
       wordsTokens = captionsHint.timedWords.map((tw, idx) => ({
         id: `yt_tok_${idx}_${Date.now()}`,
-        text: tw.text,
+        text: censorCurseWord(tw.text),
         start: tw.start,
         end: tw.end,
         confidence: 0.99,

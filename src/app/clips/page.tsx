@@ -38,6 +38,7 @@ import {
   type PipelineStageProgress,
   type ClipsIngestionResult,
 } from "@/lib/clips/clipsTranscriptionPipeline";
+import type { ModelTierId } from "@/lib/modelManager";
 import { parseAndValidateYouTubeUrl } from "@/lib/clips/urlValidator";
 import { findClipCandidates, type ClipCandidate } from "@/lib/clips/clipFinder";
 import type { ClipStylePreset } from "@/lib/clips/scoringConfig";
@@ -82,6 +83,7 @@ export default function ClipsPage() {
   // Auto Pipeline & UI settings
   const [autoRunOnPaste, setAutoRunOnPaste] = useState(true);
   const [showToolDetails, setShowToolDetails] = useState(false);
+  const [transcriptionTier, setTranscriptionTier] = useState<ModelTierId>("balanced");
 
   // Clips Candidate Discovery state
   const [selectedPreset, setSelectedPreset] = useState<ClipStylePreset>("balanced");
@@ -415,7 +417,7 @@ export default function ClipsPage() {
       const result = await ClipsTranscriptionPipeline.ingestAndTranscribe({
         url: urlInput.trim(),
         probeResult,
-        tierId: "fast",
+        tierId: transcriptionTier,
         language: "auto",
         onProgress: setIngestProgress,
       });
@@ -481,7 +483,7 @@ export default function ClipsPage() {
       const result = await ClipsTranscriptionPipeline.ingestAndTranscribe({
         url: targetUrl,
         probeResult: probed,
-        tierId: "fast",
+        tierId: transcriptionTier,
         language: "auto",
         onProgress: setIngestProgress,
       });
@@ -933,6 +935,52 @@ export default function ClipsPage() {
                   Inspect info only (no auto-download)
                 </button>
               )}
+            </div>
+
+            {/* Transcription Accuracy Tier Selector */}
+            <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-[var(--border-subtle)] text-xs">
+              <div className="flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-[#A3E635]" />
+                <span className="font-bold text-[var(--text-main)]">Transcription Accuracy:</span>
+              </div>
+              <div className="inline-flex rounded-xl p-1 bg-[var(--bg-canvas)] border-2 border-[var(--border-main)] gap-1 shadow-[2px_2px_0px_var(--border-main)]">
+                <button
+                  type="button"
+                  onClick={() => setTranscriptionTier("balanced")}
+                  className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                    transcriptionTier === "balanced"
+                      ? "bg-[#A3E635] text-[#142218] shadow-sm"
+                      : "text-[var(--text-muted)] hover:text-[var(--text-main)]"
+                  }`}
+                  title="Whisper Base: High accuracy on code-mixed Hinglish & English dialogue"
+                >
+                  Balanced (Whisper Base 145MB)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setTranscriptionTier("best")}
+                  className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                    transcriptionTier === "best"
+                      ? "bg-[#A3E635] text-[#142218] shadow-sm"
+                      : "text-[var(--text-muted)] hover:text-[var(--text-main)]"
+                  }`}
+                  title="Whisper Small: Maximum phonetic accuracy and dialect resolution"
+                >
+                  ⚡ Super Accurate (Whisper Small 465MB)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setTranscriptionTier("fast")}
+                  className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                    transcriptionTier === "fast"
+                      ? "bg-[#A3E635] text-[#142218] shadow-sm"
+                      : "text-[var(--text-muted)] hover:text-[var(--text-main)]"
+                  }`}
+                  title="Whisper Tiny: Quickest preview speed for quick checks"
+                >
+                  Fast (Whisper Tiny 39MB)
+                </button>
+              </div>
             </div>
 
             {probeError && (

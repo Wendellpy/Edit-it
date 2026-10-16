@@ -5,6 +5,7 @@ import {
 } from "./transliterator";
 import { lookupUserDictionary } from "./dictionaryDb";
 import type { WordToken } from "../timestampRefiner";
+import { censorCurseWord } from "../smart/audioCleanup";
 
 export interface HinglishWordToken extends WordToken {
   romanText: string;
@@ -15,7 +16,8 @@ export interface HinglishWordToken extends WordToken {
 export type CaptionScriptMode = "roman" | "devanagari";
 
 /**
- * Normalizes a single token to Roman Hinglish while preserving English loanwords.
+ * Normalizes a single token to Roman Hinglish while preserving English loanwords
+ * and censoring curse words with few letters + ** (e.g. "f**k", "s**t", "b***h").
  */
 export function normalizeTokenToHinglish(rawToken: string): {
   roman: string;
@@ -24,11 +26,12 @@ export function normalizeTokenToHinglish(rawToken: string): {
 } {
   const trimmed = rawToken.trim();
 
-  // 1. If token is in Latin script (e.g. "video", "upload", "template", "ready")
+  // 1. If token is in Latin script (e.g. "video", "upload", "template", "ready", "fuck")
   if (!isDevanagariWord(trimmed)) {
+    const censored = censorCurseWord(trimmed);
     return {
-      roman: trimmed,
-      devanagari: trimmed, // keep as is for code-mix
+      roman: censored,
+      devanagari: censored, // keep as is for code-mix
       isCodeMixedEnglish: true,
     };
   }
@@ -40,28 +43,21 @@ export function normalizeTokenToHinglish(rawToken: string): {
   const suffix = match ? match[3] : "";
 
   // 2. Check User Custom Dictionary first (highest priority)
+  let rawRoman = "";
   const userOverride = lookupUserDictionary(coreDev);
   if (userOverride) {
-    return {
-      roman: prefix + userOverride + suffix,
-      devanagari: trimmed,
-      isCodeMixedEnglish: false,
-    };
+    rawRoman = userOverride;
+  } else if (HINGLISH_LEXICON[coreDev]) {
+    // 3. Check High-Frequency Curated Hinglish Lexicon
+    rawRoman = HINGLISH_LEXICON[coreDev];
+  } else {
+    // 4. Fallback to Algorithmic Transliterator with Schwa Deletion
+    rawRoman = transliterateDevanagariWord(coreDev);
   }
 
-  // 3. Check High-Frequency Curated Hinglish Lexicon
-  if (HINGLISH_LEXICON[coreDev]) {
-    return {
-      roman: prefix + HINGLISH_LEXICON[coreDev] + suffix,
-      devanagari: trimmed,
-      isCodeMixedEnglish: false,
-    };
-  }
-
-  // 4. Fallback to Algorithmic Transliterator with Schwa Deletion
-  const algorithmic = transliterateDevanagariWord(coreDev);
+  const censoredRoman = censorCurseWord(prefix + rawRoman + suffix);
   return {
-    roman: prefix + algorithmic + suffix,
+    roman: censoredRoman,
     devanagari: trimmed,
     isCodeMixedEnglish: false,
   };

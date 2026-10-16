@@ -1,7 +1,7 @@
 import type { WordToken } from '@/lib/timestampRefiner';
 import { highlightKeywords } from './keywordHighlighter';
 import { applySmartEmojis } from './emojiTagging';
-import { removeFillerWords } from './audioCleanup';
+import { removeFillerWords, maskProfanity } from './audioCleanup';
 
 export interface ViralModeResult<T extends WordToken = WordToken> {
   tokens: T[];
@@ -28,18 +28,19 @@ export function calculateWpm(tokens: WordToken[], durationSeconds?: number): num
 }
 
 /**
- * Synthesizes speech tempo, removes fillers, applies keywords & emojis,
+ * Synthesizes speech tempo, removes fillers, censors curse words, applies keywords & emojis,
  * and chooses the optimal viral template from the 72 presets.
  */
 export function applyViralMode<T extends WordToken>(tokens: T[], durationSeconds?: number): ViralModeResult<T> {
   const wordsOriginal = tokens.length;
 
-  // 1. Clean filler words
+  // 1. Clean filler words and censor curse words
   const withoutFillers = removeFillerWords(tokens);
+  const withCensored = maskProfanity(withoutFillers);
   const fillersRemoved = wordsOriginal - withoutFillers.length;
 
   // 2. Highlight high-impact keywords
-  const withKeywords = highlightKeywords(withoutFillers, 0.22);
+  const withKeywords = highlightKeywords(withCensored, 0.22);
   const keywordsHighlighted = withKeywords.filter((t) => t.isKeyword).length;
 
   // 3. Apply contextual creator emojis

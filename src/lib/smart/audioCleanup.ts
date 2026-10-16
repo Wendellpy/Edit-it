@@ -13,8 +13,117 @@ export const FILLER_WORDS = new Set([
  * Common Indian / English abusive or profanity terms for optional bleeping/masking.
  */
 export const PROFANITY_WORDS = new Set([
-  'bc', 'mc', 'chutiya', 'saala', 'kamina', 'harami', 'fuck', 'shit', 'bitch', 'asshole',
+  // English
+  'fuck', 'fucking', 'fucked', 'fucker', 'fuckers', 'fucks', 'fuckin',
+  'motherfucker', 'motherfucking',
+  'shit', 'shits', 'shitting', 'shitty', 'bullshit',
+  'bitch', 'bitches', 'bitching', 'bitchy',
+  'ass', 'asshole', 'assholes', 'asses',
+  'bastard', 'bastards',
+  'damn', 'damned',
+  'cunt', 'cunts',
+  'dick', 'dicks', 'dickhead',
+  'pussy', 'pussies',
+  'cock', 'cocks', 'cocksucker',
+  'whore', 'whores',
+  'slut', 'sluts',
+  'nigger', 'nigga', 'niggaz',
+  'twat', 'prick',
+
+  // Hindi / Hinglish
+  'bc', 'mc',
+  'chutiya', 'chutiye', 'chutiyapa', 'chut', 'choot',
+  'bhenchod', 'behenchod', 'bhenchodd', 'behenchodd',
+  'madarchod', 'maderchod', 'madarchodd',
+  'bhosdike', 'bhosadike', 'bhosda', 'bhosadi',
+  'gaand', 'gand', 'gandu', 'gaandu',
+  'lauda', 'lawda', 'loda', 'lodu', 'lavda',
+  'harami', 'haraami',
+  'kamina', 'kamine', 'kameena',
+  'saala', 'sala', 'saale', 'sale',
+  'randi', 'raandi', 'kuttiya', 'kutta',
+  'jhaant', 'mutth', 'chuda', 'chudai', 'chudao',
 ]);
+
+/**
+ * Censors a curse word by writing a few letters and replacing the rest with ** (e.g. "f**k", "s**t", "b***h").
+ * Accurately preserves original punctuation, capitalization, and suffixes.
+ */
+export function censorCurseWord(rawWord: string): string {
+  if (!rawWord || typeof rawWord !== 'string') return rawWord;
+
+  // Split leading and trailing punctuation from the core alphanumeric token
+  const match = rawWord.match(/^([^a-zA-Z0-9\u0900-\u097F]*)(.*?)([^a-zA-Z0-9\u0900-\u097F]*)$/);
+  if (!match) return rawWord;
+
+  const prefix = match[1] || '';
+  const core = match[2] || '';
+  const suffix = match[3] || '';
+
+  if (!core) return rawWord;
+
+  const lower = core.toLowerCase();
+
+  // Check if exact match or contains a known profanity stem
+  const isProfane =
+    PROFANITY_WORDS.has(lower) ||
+    (lower.length >= 4 &&
+      Array.from(PROFANITY_WORDS).some(
+        (p) => p.length >= 4 && (lower === p || lower.startsWith(p) || lower.endsWith(p))
+      ));
+
+  if (!isProfane) {
+    return rawWord;
+  }
+
+  const len = core.length;
+  let censored = '';
+
+  if (len <= 2) {
+    censored = core[0] + '*';
+  } else if (len === 3) {
+    censored = core[0] + '**';
+  } else if (len === 4) {
+    // e.g. "fuck" -> "f**k", "shit" -> "s**t", "damn" -> "d**n", "cunt" -> "c**t"
+    censored = core[0] + '**' + core[3];
+  } else if (len === 5) {
+    // e.g. "bitch" -> "b***h", "pussy" -> "p***y", "whore" -> "w***e"
+    censored = core[0] + '***' + core[4];
+  } else {
+    // 6+ characters (e.g. "fucking", "chutiya", "asshole", "bhenchod", "bastard")
+    if (lower.endsWith('ing') && len >= 6) {
+      // "fucking" -> "f***ing"
+      censored = core[0] + '*'.repeat(len - 4) + core.slice(len - 3);
+    } else if ((lower.endsWith('er') || lower.endsWith('ed')) && len >= 6) {
+      // "fucked" -> "f***ed", "fucker" -> "f***er"
+      censored = core[0] + '*'.repeat(len - 3) + core.slice(len - 2);
+    } else if (lower.startsWith('ass') && len >= 7) {
+      // "asshole" -> "a**hole"
+      censored = core[0] + '**' + core.slice(3);
+    } else if (lower.startsWith('chut') && len >= 6) {
+      // "chutiya" -> "ch***ya"
+      censored = core.slice(0, 2) + '*'.repeat(len - 4) + core.slice(len - 2);
+    } else if (lower.startsWith('bhen') || lower.startsWith('behen')) {
+      // "bhenchod" -> "bh***hod"
+      censored = core.slice(0, 2) + '*'.repeat(len - 5) + core.slice(len - 3);
+    } else {
+      // Generic multi-letter: keep first 1-2 letters, asterisks, and last 1-2 letters
+      const leadCount = len >= 8 ? 2 : 1;
+      const trailCount = len >= 8 ? 2 : 1;
+      const starCount = Math.max(2, len - leadCount - trailCount);
+      censored = core.slice(0, leadCount) + '*'.repeat(starCount) + core.slice(len - trailCount);
+    }
+  }
+
+  // Preserve all-caps casing if original was all uppercase (e.g. FUCK -> F**K)
+  if (core === core.toUpperCase() && /[A-Z]/.test(core)) {
+    censored = censored.toUpperCase();
+  } else if (core[0] === core[0].toUpperCase()) {
+    censored = censored[0].toUpperCase() + censored.slice(1);
+  }
+
+  return prefix + censored + suffix;
+}
 
 /**
  * Flags filler words in transcript.
@@ -41,15 +150,30 @@ export function removeFillerWords<T extends WordToken>(tokens: T[]): T[] {
 }
 
 /**
- * Masks profanity words with asterisk or bleep symbols (e.g. "c******" or "****").
+ * Masks profanity words. Supports:
+ * - 'partial' (default): Writes a few letters and ** the rest (e.g. "f**k", "s**t", "b***h").
+ * - 'full': Replaces all following letters with maskChar (e.g. "s****").
  */
-export function maskProfanity<T extends WordToken>(tokens: T[], maskChar: string = '*'): T[] {
+export function maskProfanity<T extends WordToken>(
+  tokens: T[],
+  maskChar?: string,
+  mode?: 'partial' | 'full'
+): T[] {
+  const effectiveMode = mode || (maskChar ? 'full' : 'partial');
   return tokens.map((token) => {
     const clean = token.text.toLowerCase().replace(/[^a-z0-9]/g, '');
-    if (PROFANITY_WORDS.has(clean)) {
-      const masked = token.text.length > 2
-        ? token.text[0] + maskChar.repeat(token.text.length - 1)
-        : maskChar.repeat(token.text.length);
+    const isProfane =
+      PROFANITY_WORDS.has(clean) ||
+      (clean.length >= 4 && Array.from(PROFANITY_WORDS).some((p) => p.length >= 4 && clean.includes(p)));
+
+    if (isProfane) {
+      const masked =
+        effectiveMode === 'full' && maskChar
+          ? token.text.length > 2
+            ? token.text[0] + maskChar.repeat(token.text.length - 1)
+            : maskChar.repeat(token.text.length)
+          : censorCurseWord(token.text);
+
       return {
         ...token,
         text: masked,

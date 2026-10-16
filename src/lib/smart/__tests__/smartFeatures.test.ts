@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import type { WordToken } from '@/lib/timestampRefiner';
 import { highlightKeywords, scoreToken } from '../keywordHighlighter';
 import { applySmartEmojis, getEmojiForWord } from '../emojiTagging';
-import { detectFillerWords, removeFillerWords, maskProfanity, findSilenceGaps } from '../audioCleanup';
+import { detectFillerWords, removeFillerWords, maskProfanity, censorCurseWord, findSilenceGaps } from '../audioCleanup';
 import { applyViralMode, calculateWpm } from '../viralMode';
 
 describe('Smart Features Engine', () => {
@@ -74,6 +74,19 @@ describe('Smart Features Engine', () => {
       expect(masked[0].text).toBe('s****');
       expect(masked[0].isProfanity).toBe(true);
       expect(masked[1].text).toBe('bhai');
+    });
+
+    it('censors curse words writing few letters and ** the rest', () => {
+      expect(censorCurseWord('fuck')).toBe('f**k');
+      expect(censorCurseWord('shit')).toBe('s**t');
+      expect(censorCurseWord('bitch')).toBe('b***h');
+      expect(censorCurseWord('damn')).toBe('d**n');
+      expect(censorCurseWord('asshole')).toBe('a**hole');
+      expect(censorCurseWord('fucking')).toBe('f***ing');
+      expect(censorCurseWord('chutiya')).toBe('ch***ya');
+      expect(censorCurseWord('bhenchod')).toBe('bh***hod');
+      expect(censorCurseWord('FUCK!')).toBe('F**K!');
+      expect(censorCurseWord('hello')).toBe('hello');
     });
 
     it('detects silence gaps between words', () => {
