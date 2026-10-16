@@ -1526,7 +1526,13 @@ export default function ClipsPage() {
                                 />
 
                                 {/* 9:16 Reframed Live Captions Overlay */}
-                                <div className="absolute inset-x-3 bottom-14 z-20 flex flex-col items-center justify-center pointer-events-none text-center">
+                                <div
+                                  className="absolute inset-x-3 z-20 flex flex-col items-center justify-center pointer-events-none text-center"
+                                  style={{
+                                    bottom: `${Math.max(5, Math.min(85, (1 - (activeStyling.template.layout?.yPositionPercent ?? 0.74)) * 100)).toFixed(1)}%`,
+                                    transform: "translateY(50%)",
+                                  }}
+                                >
                                   {activeCue && activeCue.words.length > 0 ? (
                                     <div
                                       style={{
@@ -1576,7 +1582,9 @@ export default function ClipsPage() {
                                               fontWeight: activeStyling.template.typography.primaryWeight || "900",
                                               textShadow,
                                               opacity: isSpeakingNow ? 1.0 : hasPassed ? 0.95 : 0.75,
-                                              transform: isSpeakingNow ? "scale(1.12)" : "scale(1.0)",
+                                              transform: isSpeakingNow
+                                                ? `scale(${activeStyling.template.animation?.scaleMagnitude || 1.18})`
+                                                : "scale(1.0)",
                                             }}
                                             className="inline-block transition-transform duration-75 origin-center select-none"
                                           >

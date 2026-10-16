@@ -568,20 +568,22 @@ const server = http.createServer(async (req, res) => {
       // Prepare download arguments
       const formatStr =
         quality === "4k"
-          ? "bestvideo[height<=2160][ext=mp4]+bestaudio[ext=m4a]/bestvideo[height<=2160]+bestaudio/best[height<=2160]/best"
+          ? "bestvideo[height<=2160]+bestaudio/best[height<=2160]/best"
           : quality === "1440p"
-          ? "bestvideo[height<=1440][ext=mp4]+bestaudio[ext=m4a]/bestvideo[height<=1440]+bestaudio/best[height<=1440]/best"
+          ? "bestvideo[height<=1440]+bestaudio/best[height<=1440]/best"
           : quality === "720p"
-          ? "bestvideo[height<=720][ext=mp4]+bestaudio[ext=m4a]/bestvideo[height<=720]+bestaudio/best[height<=720]/best"
+          ? "bestvideo[height<=720]+bestaudio/best[height<=720]/best"
           : quality === "source"
           ? "bestvideo+bestaudio/best"
-          : "bestvideo[height<=1080][ext=mp4]+bestaudio[ext=m4a]/bestvideo[height<=1080]+bestaudio/best[height<=1080]/best";
+          : "bestvideo[height<=1080]+bestaudio/best[height<=1080]/best";
 
       const dlArgs = [
         "--newline",
         "--progress",
         "--progress-template",
         "download:[%(progress._percent_str)s] speed:[%(progress._speed_str)s] eta:[%(progress._eta_str)s] downloaded:[%(progress.downloaded_bytes)s] total:[%(progress.total_bytes)s]",
+        "--js-runtimes",
+        "node:node",
         "-f",
         formatStr,
         "--merge-output-format",
@@ -592,8 +594,6 @@ const server = http.createServer(async (req, res) => {
         "5",
         "--socket-timeout",
         "30",
-        "--extractor-args",
-        "youtube:player_client=android,web",
         "-o",
         tempOutput,
       ];
@@ -910,7 +910,7 @@ const server = http.createServer(async (req, res) => {
         const filterComplex =
           `[0:v]split=2[bg_raw][fg_raw];` +
           `[bg_raw]scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,boxblur=28:2,eq=brightness=-0.14:contrast=1.05[bg];` +
-          `[fg_raw]scale=1080:-2[fg];` +
+          `[fg_raw]scale=1080:-2:flags=lanczos[fg];` +
           `[bg][fg]overlay=(W-w)/2:(H-h)/2${subFileName ? `[combined];[combined]subtitles='${subFileName}'` : ''}[v_out]`;
 
         ffmpegArgs.push(
@@ -928,7 +928,7 @@ const server = http.createServer(async (req, res) => {
 
         const vfParts = [
           `crop=w=in_w*${sw.toFixed(4)}:h=in_h*${sh.toFixed(4)}:x=in_w*${sx.toFixed(4)}:y=in_h*${sy.toFixed(4)}`,
-          `scale=1080:1920:flags=bicubic`,
+          `scale=1080:1920:flags=lanczos`,
         ];
         if (subFileName) {
           vfParts.push(`subtitles='${subFileName}'`);
@@ -936,11 +936,11 @@ const server = http.createServer(async (req, res) => {
         ffmpegArgs.push("-vf", vfParts.join(","));
       }
 
-      // Pristine visual quality settings: CRF 18 (visually lossless), yuv420p (broadest compatibility), 192k AAC
+      // Pristine visual quality settings: CRF 17 (visually lossless), yuv420p (broadest compatibility), 192k AAC
       ffmpegArgs.push(
         "-c:v", "libx264",
-        "-preset", "veryfast",
-        "-crf", "18",
+        "-preset", "faster",
+        "-crf", "17",
         "-pix_fmt", "yuv420p",
         "-c:a", "aac",
         "-b:a", "192k",

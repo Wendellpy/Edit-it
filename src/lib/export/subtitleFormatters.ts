@@ -204,7 +204,7 @@ export function generateVtt(
 
 /**
  * Generates Advanced SubStation Alpha (.ass) format with accurate font, colors,
- * positions, and word-by-word karaoke highlights.
+ * positions, and dynamic word-by-word reveal animations matching preview.
  */
 export function generateAss(
   words: WordToken[],
@@ -215,41 +215,60 @@ export function generateAss(
 ): string {
   const cues = groupWordsIntoCues(words, maxWordsPerCue);
 
-  const rawFont = template.typography.primaryFont || 'Arial';
+  const rawFont = template.typography?.primaryFont || 'Arial';
   const cleanFont = rawFont.split(',')[0].replace(/['"]/g, '').trim() || 'Arial';
+
+  // Apply typography transform (MrBeast is UPPERCASE)
+  const textTransform = template.typography?.textTransform || 'none';
+  const applyTransform = (text: string): string => {
+    if (!text) return '';
+    if (textTransform === 'uppercase') return text.toUpperCase();
+    if (textTransform === 'lowercase') return text.toLowerCase();
+    if (textTransform === 'capitalize') {
+      return text.replace(/\b\w/g, (c) => c.toUpperCase());
+    }
+    return text;
+  };
 
   const isAnimated = Boolean(
     template.animation?.perWordEffect && template.animation.perWordEffect !== 'none'
   );
-  // In ASS karaoke, SecondaryColour is the base unhighlighted text color,
-  // and PrimaryColour is the highlighted active word color that \k sweeps into.
-  const primaryColorAss = hexToAssColor(
-    isAnimated ? (template.colors.activeWordText || '#FFE600') : template.colors.primaryText
-  );
-  const secondaryColorAss = hexToAssColor(template.colors.primaryText);
+  const isKaraokeFill = template.animation?.perWordEffect === 'karaoke_fill';
+  const isSingleWord = Boolean(template.layout?.singleWordOnly);
+  const scaleMag = template.animation?.scaleMagnitude || 1.15;
+  const activeScalePct = Math.min(150, Math.max(105, Math.round(scaleMag * 100)));
+
+  const primaryColorAss = hexToAssColor(template.colors.primaryText || '#FFFFFF');
+  const activeColorAss = hexToAssColor(template.colors.activeWordText || '#FFE600');
+  const secondaryColorAss = hexToAssColor(template.colors.secondaryText || '#38BDF8');
   const outlineColorAss = hexToAssColor(template.colors.strokeColor || '#000000');
-  const backColorAss = hexToAssColor(
-    template.box?.enabled
-      ? (template.box.bgColor || '#000000')
-      : (template.colors.shadowColor || '#000000'),
-    template.box?.enabled ? 0.3 : 0.2
-  );
+  const shadowColorAss = hexToAssColor(template.colors.shadowColor || '#000000', 0.2);
+  const boxBgColorAss = hexToAssColor(template.box?.bgColor || '#000000', 0.25);
 
-  const fontSizeAss = Math.max(24, Math.round(videoHeight * (template.typography.fontSizeBasePercent || 0.045)));
-  const strokeWidthAss = Math.max(
-    2,
-    Math.round((template.colors.strokeWidthPercent || 0.003) * videoHeight)
-  );
-  const shadowDepthAss = template.colors.shadowBlur ? Math.min(8, Math.max(1, Math.round(template.colors.shadowBlur / 3))) : 2;
+  const fontSizeAss = Math.max(28, Math.round(videoHeight * (template.typography?.fontSizeBasePercent || 0.05)));
+  const strokeWidthAss = template.colors.strokeWidthPercent
+    ? Math.min(16, Math.max(2, Math.round(template.colors.strokeWidthPercent * videoHeight)))
+    : 6;
+  const shadowDepthAss = template.colors.shadowBlur
+    ? Math.min(10, Math.max(1, Math.round(template.colors.shadowBlur / 2.5)))
+    : 3;
 
-  // Use Bottom-Center (2) alignment with marginV measuring upward from bottom
+  const borderStyle = template.box?.enabled ? 3 : 1;
+  const backColorAss = template.box?.enabled ? boxBgColorAss : shadowColorAss;
+
+  // Bottom-Center (2) alignment
   const alignment = 2;
+  const yPos = template.layout?.yPositionPercent ?? 0.74;
   const marginV = Math.max(
     40,
-    Math.round(videoHeight * Math.max(0.05, Math.min(0.95, 1 - template.layout.yPositionPercent)))
+    Math.round(videoHeight * Math.max(0.05, Math.min(0.95, 1 - yPos)))
   );
 
-  const boldAss = template.typography.primaryWeight === '900' || template.typography.primaryWeight === 'bold' ? -1 : 0;
+  const isBold =
+    template.typography?.primaryWeight === '900' ||
+    template.typography?.primaryWeight === 'bold' ||
+    cleanFont.toLowerCase().includes('black');
+  const boldAss = isBold ? -1 : 0;
 
   const scriptInfo = [
     '[Script Info]',
@@ -267,7 +286,7 @@ export function generateAss(
   const styles = [
     '[V4+ Styles]',
     'Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding',
-    `Style: Default,${cleanFont},${fontSizeAss},${primaryColorAss},${secondaryColorAss},${outlineColorAss},${backColorAss},${boldAss},0,0,0,100,100,0,0,1,${strokeWidthAss},${shadowDepthAss},${alignment},40,40,${marginV},1`,
+    `Style: Default,${cleanFont},${fontSizeAss},${primaryColorAss},${primaryColorAss},${outlineColorAss},${backColorAss},${boldAss},0,0,0,100,100,0,0,${borderStyle},${strokeWidthAss},${shadowDepthAss},${alignment},40,40,${marginV},1`,
     '',
   ];
 
@@ -277,24 +296,84 @@ export function generateAss(
   ];
 
   cues.forEach((cue) => {
-    const startTimeStr = formatAssTime(cue.start);
-    const endTimeStr = formatAssTime(cue.end);
-
-    // Build karaoke word timing if animated active word is configured
-    let dialogueText = '';
-    if (isAnimated || template.animation?.perWordEffect === 'karaoke_fill' || template.animation?.perWordEffect === 'scale_pop') {
-      dialogueText = cue.words
-        .map((w) => {
-          const durationCentis = Math.max(5, Math.round((w.end - w.start) * 100));
-          return `{\\k${durationCentis}}${w.text}`;
-        })
-        .join(' ');
-    } else {
-      dialogueText = cue.text;
+    if (!cue.words || cue.words.length === 0) {
+      events.push(
+        `Dialogue: 0,${formatAssTime(cue.start)},${formatAssTime(cue.end)},Default,,0,0,0,,${applyTransform(cue.text)}`
+      );
+      return;
     }
 
-    events.push(`Dialogue: 0,${startTimeStr},${endTimeStr},Default,,0,0,0,,${dialogueText}`);
+    if (isKaraokeFill) {
+      // Classic ASS \k sweep
+      const dialogueText = cue.words
+        .map((w) => {
+          const durationCentis = Math.max(5, Math.round((w.end - w.start) * 100));
+          return `{\\k${durationCentis}}${applyTransform(w.text)}`;
+        })
+        .join(' ');
+      events.push(
+        `Dialogue: 0,${formatAssTime(cue.start)},${formatAssTime(cue.end)},Default,,0,0,0,,${dialogueText}`
+      );
+      return;
+    }
+
+    if (!isAnimated) {
+      // Static display
+      events.push(
+        `Dialogue: 0,${formatAssTime(cue.start)},${formatAssTime(cue.end)},Default,,0,0,0,,${applyTransform(cue.text)}`
+      );
+      return;
+    }
+
+    // Dynamic word-by-word reveal (Shorts / Reels / MrBeast dynamic bounce)
+    // Upcoming words are hidden until spoken, active word is highlighted & popped, passed words remain visible
+    const words = cue.words;
+    const n = words.length;
+
+    for (let i = 0; i < n; i++) {
+      const w = words[i];
+      const nextWordStart = i < n - 1 ? words[i + 1].start : cue.end;
+
+      // 1. Spoken interval for word i
+      const activeStart = w.start;
+      const activeEnd = Math.max(activeStart + 0.05, Math.min(w.end, nextWordStart));
+
+      if (activeEnd > activeStart) {
+        let lineText = '';
+        if (isSingleWord) {
+          lineText = `{\\c${activeColorAss}\\fscx${activeScalePct}\\fscy${activeScalePct}}${applyTransform(w.text)}`;
+        } else {
+          const parts: string[] = [];
+          for (let j = 0; j < i; j++) {
+            const prevW = words[j];
+            const cAss = prevW.isKeyword ? secondaryColorAss : primaryColorAss;
+            parts.push(`{\\c${cAss}\\fscx100\\fscy100}${applyTransform(prevW.text)}`);
+          }
+          parts.push(`{\\c${activeColorAss}\\fscx${activeScalePct}\\fscy${activeScalePct}}${applyTransform(w.text)}`);
+          lineText = parts.join(' ');
+        }
+        events.push(
+          `Dialogue: 0,${formatAssTime(activeStart)},${formatAssTime(activeEnd)},Default,,0,0,0,,${lineText}`
+        );
+      }
+
+      // 2. Pause interval before next word starts (or until cue end)
+      const pauseStart = activeEnd;
+      const pauseEnd = nextWordStart;
+      if (pauseEnd - pauseStart >= 0.05 && !isSingleWord) {
+        const parts: string[] = [];
+        for (let j = 0; j <= i; j++) {
+          const prevW = words[j];
+          const cAss = prevW.isKeyword ? secondaryColorAss : primaryColorAss;
+          parts.push(`{\\c${cAss}\\fscx100\\fscy100}${applyTransform(prevW.text)}`);
+        }
+        events.push(
+          `Dialogue: 0,${formatAssTime(pauseStart)},${formatAssTime(pauseEnd)},Default,,0,0,0,,${parts.join(' ')}`
+        );
+      }
+    }
   });
 
   return [...scriptInfo, ...styles, ...events, ''].join('\n');
 }
+

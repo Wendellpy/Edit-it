@@ -124,7 +124,7 @@ describe('subtitleFormatters', () => {
       expect(vtt).toContain('Namaste dosto aaj hum');
     });
 
-    it('generates valid Advanced SubStation Alpha (.ass) format with style headers and karaoke timings', () => {
+    it('generates valid Advanced SubStation Alpha (.ass) format with style headers and dynamic word reveals', () => {
       const ass = generateAss(sampleWords, sampleTemplate, 1080, 1920);
       expect(ass).toContain('[Script Info]');
       expect(ass).toContain('PlayResX: 1080');
@@ -132,7 +132,17 @@ describe('subtitleFormatters', () => {
       expect(ass).toContain('[V4+ Styles]');
       expect(ass).toContain('Style: Default,Montserrat');
       expect(ass).toContain('[Events]');
-      expect(ass).toContain('Dialogue: 0,0:00:00.10,0:00:01.75,Default,,0,0,0,,{\\k50}Namaste {\\k45}dosto {\\k30}aaj {\\k25}hum');
+      expect(ass).toContain('{\\c&H0000E6FF&\\fscx125\\fscy125}NAMASTE');
+      expect(ass).toContain('{\\c&H0014FF39&\\fscx100\\fscy100}NAMASTE {\\c&H0000E6FF&\\fscx125\\fscy125}DOSTO');
+    });
+
+    it('generates valid karaoke fill (.ass) format when configured', () => {
+      const karaokeTemplate: CaptionTemplate = {
+        ...sampleTemplate,
+        animation: { perWordEffect: 'karaoke_fill', scaleMagnitude: 1.0 },
+      };
+      const ass = generateAss(sampleWords, karaokeTemplate, 1080, 1920);
+      expect(ass).toContain('{\\k50}NAMASTE {\\k45}DOSTO {\\k30}AAJ {\\k25}HUM');
     });
   });
 });
