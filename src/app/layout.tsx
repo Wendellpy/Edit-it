@@ -55,7 +55,7 @@ export default function RootLayout({
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link
-          href="https://fonts.googleapis.com/css2?family=Caveat:wght@700&family=Fraunces:ital,opsz,wght@0,9..144,400..900;1,9..144,400..900&family=Montserrat:ital,wght@0,700;0,900;1,700;1,900&family=Playfair+Display:ital,wght@0,700;0,900;1,700;1,900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Yellowtail&display=swap"
+          href="https://fonts.googleapis.com/css2?family=Alex+Brush&family=Birthstone+Bounce:wght@400;500&family=Caveat:wght@700&family=Fraunces:ital,opsz,wght@0,9..144,400..900;1,9..144,400..900&family=Great+Vibes&family=Montserrat:ital,wght@0,700;0,900;1,700;1,900&family=Playfair+Display:ital,wght@0,700;0,900;1,700;1,900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Yellowtail&display=swap"
           rel="stylesheet"
         />
       </head>

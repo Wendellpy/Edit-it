@@ -342,15 +342,15 @@ export const CAPTION_PRESETS: CaptionTemplate[] = [
     badge: "EDITORIAL",
     typography: {
       primaryFont: "Montserrat, sans-serif",
-      secondaryFont: "'Caveat', 'Playfair Display', cursive, sans-serif",
+      secondaryFont: "'Birthstone Bounce', 'Alex Brush', 'Great Vibes', cursive, sans-serif",
       primaryWeight: "900",
       textTransform: "lowercase",
       fontSizeBasePercent: 0.088,
     },
     colors: {
       primaryText: "#FFFFFF",
-      secondaryText: "#E50914",
-      activeWordText: "#E50914",
+      secondaryText: "#FF0022",
+      activeWordText: "#FF0022",
       strokeColor: "#000000",
       strokeWidthPercent: 0.003,
       shadowColor: "rgba(0, 0, 0, 0.92)",

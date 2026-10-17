@@ -442,13 +442,14 @@ export function TemplateStyleDock({ onOpenExportModal }: TemplateStyleDockProps)
                                   only
                                 </span>
                                 <span
-                                  className="absolute left-1 top-0 text-[10px] font-bold text-[#E50914] -rotate-6 tracking-normal whitespace-nowrap"
+                                  className="absolute -left-0.5 -top-1 text-[13px] font-medium text-[#FF0022] -rotate-6 tracking-normal whitespace-nowrap"
                                   style={{
-                                    fontFamily: "'Caveat', 'Playfair Display', cursive, sans-serif",
+                                    fontFamily: "'Birthstone Bounce', 'Alex Brush', 'Great Vibes', cursive, sans-serif",
                                     textShadow: "0 1px 3px rgba(0,0,0,0.95)",
+                                    WebkitTextStroke: "0.5px rgba(0,0,0,0.85)",
                                   }}
                                 >
-                                  consequence
+                                  Consequence
                                 </span>
                               </span>
                               <span className="text-[8px] font-black lowercase text-zinc-300 tracking-tight leading-none mt-0.5">

@@ -385,15 +385,16 @@ export function CreatorTemplatePreview() {
                       {selectedTemplate.previewWords.keyword || "only"}
                     </span>
                     <span
-                      className={`absolute left-3 top-5 sm:top-6 text-[#E50914] text-2xl sm:text-3xl font-bold tracking-wide -rotate-6 drop-shadow-lg transition-transform ${
+                      className={`absolute -left-1 top-4 sm:top-5 text-[#FF0022] text-4xl sm:text-5xl font-medium tracking-normal -rotate-6 drop-shadow-xl transition-transform ${
                         animatingWord ? "scale-110 -rotate-3" : "scale-100 -rotate-6"
                       }`}
                       style={{
-                        fontFamily: "'Caveat', 'Playfair Display', cursive, sans-serif",
-                        textShadow: "0 2px 8px rgba(0,0,0,0.9)",
+                        fontFamily: "'Birthstone Bounce', 'Alex Brush', 'Great Vibes', cursive, sans-serif",
+                        textShadow: "0 3px 10px rgba(0,0,0,0.95)",
+                        WebkitTextStroke: "1px rgba(0,0,0,0.85)",
                       }}
                     >
-                      consequence
+                      Consequence
                     </span>
                   </div>
                   <span className="text-zinc-200 text-sm font-black lowercase tracking-tight mt-[-2px] drop-shadow-md">

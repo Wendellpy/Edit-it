@@ -367,13 +367,13 @@ export function renderWinnerCaptions(opts: RenderWinnerCaptionsOptions): void {
   const comp = decomposeWinnerCue(currentChunk);
 
   const primaryFamily = template.typography.primaryFont || "Montserrat, sans-serif";
-  const secondaryFamily = template.typography.secondaryFont || "'Caveat', 'Playfair Display', cursive, sans-serif";
+  const secondaryFamily = template.typography.secondaryFont || "'Birthstone Bounce', 'Alex Brush', 'Great Vibes', cursive, sans-serif";
   const baseScale = template.typography.fontSizeBasePercent || 0.088;
   const anchorFontSize = Math.round(
     canvasHeight * (isPortraitMobile ? baseScale * 1.05 : isWidescreen ? baseScale * 0.95 : baseScale)
   );
   const minorFontSize = Math.round(anchorFontSize * 0.38);
-  const scriptFontSize = Math.round(anchorFontSize * 0.76);
+  const scriptFontSize = Math.round(anchorFontSize * 1.15);
 
   const fmt = (str: string) => {
     if (!str) return "";
@@ -382,6 +382,12 @@ export function renderWinnerCaptions(opts: RenderWinnerCaptionsOptions): void {
       : template.typography.textTransform === "uppercase"
       ? str.toUpperCase()
       : str;
+  };
+
+  const toScriptTitle = (s: string) => {
+    if (!s) return "";
+    const clean = s.trim();
+    return clean.charAt(0).toUpperCase() + clean.slice(1).toLowerCase();
   };
 
   ctx.save();
@@ -404,8 +410,8 @@ export function renderWinnerCaptions(opts: RenderWinnerCaptionsOptions): void {
   let scriptText = "";
   let scriptW = 0;
   if (comp.scriptToken) {
-    ctx.font = `700 ${scriptFontSize}px ${secondaryFamily}`;
-    scriptText = fmt(comp.scriptToken.text);
+    ctx.font = `500 ${scriptFontSize}px ${secondaryFamily}`;
+    scriptText = toScriptTitle(comp.scriptToken.text);
     scriptW = ctx.measureText(scriptText).width;
   }
 
@@ -476,13 +482,15 @@ export function renderWinnerCaptions(opts: RenderWinnerCaptionsOptions): void {
 
     // Deep soft drop shadow
     if (options.isScript) {
-      ctx.shadowColor = isActive ? "rgba(229, 9, 20, 0.65)" : "rgba(0, 0, 0, 0.95)";
-      ctx.shadowBlur = isActive ? 16 : 10;
-      ctx.shadowOffsetY = Math.round(minorFontSize * 0.12);
+      ctx.shadowColor = isActive ? "rgba(255, 0, 34, 0.70)" : "rgba(0, 0, 0, 0.95)";
+      ctx.shadowBlur = isActive ? 16 : 12;
+      ctx.shadowOffsetY = Math.max(2, Math.round(minorFontSize * 0.16));
+      ctx.shadowOffsetX = Math.max(1, Math.round(minorFontSize * 0.08));
     } else {
       ctx.shadowColor = "rgba(0, 0, 0, 0.92)";
       ctx.shadowBlur = 14;
       ctx.shadowOffsetY = Math.round(minorFontSize * 0.15);
+      ctx.shadowOffsetX = 0;
     }
 
     // Stroke
@@ -557,22 +565,22 @@ export function renderWinnerCaptions(opts: RenderWinnerCaptionsOptions): void {
       }
     }
 
-    // 2. Script Calligraphy Overlay (Sweeps across the anchor word with -5.5deg slant)
+    // 2. Script Calligraphy Overlay (Sweeps across the anchor word with -6deg slant)
     if (comp.scriptToken && scriptText) {
-      const scriptX = anchorX + anchorW * 0.12;
+      const scriptX = anchorX - anchorW * 0.02;
       const scriptY = anchorY + anchorFontSize * 0.16;
       drawWord(
         comp.scriptToken,
         scriptText,
-        `700 ${scriptFontSize}px ${secondaryFamily}`,
-        "#E50914",
+        `500 ${scriptFontSize}px ${secondaryFamily}`,
+        template.colors.secondaryText || "#FF0022",
         scriptX,
         scriptY,
         {
           isScript: true,
-          tiltDeg: -5.5,
+          tiltDeg: -6.0,
           strokeColor: "rgba(0, 0, 0, 0.88)",
-          strokeWidth: Math.max(2, Math.round(canvasHeight * 0.0035)),
+          strokeWidth: Math.max(1.8, Math.round(canvasHeight * 0.003)),
         }
       );
     }

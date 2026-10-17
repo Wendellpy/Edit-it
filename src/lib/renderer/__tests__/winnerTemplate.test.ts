@@ -29,15 +29,15 @@ describe("Winner Caption Style Specification & Rendering Suite", () => {
 
     // Typographic hierarchy: Huge Montserrat 900 bold punch + Cursive handwriting script
     expect(tmpl.typography.primaryFont).toContain("Montserrat");
-    expect(tmpl.typography.secondaryFont).toContain("Caveat");
+    expect(tmpl.typography.secondaryFont).toContain("Birthstone Bounce");
     expect(tmpl.typography.primaryWeight).toBe("900");
     expect(tmpl.typography.textTransform).toBe("lowercase");
     expect(tmpl.typography.fontSizeBasePercent).toBeGreaterThanOrEqual(0.08);
 
-    // Color palette: Crisp white #FFFFFF + Vibrant crimson red #E50914 accent
+    // Color palette: Crisp white #FFFFFF + Vibrant scarlet red #FF0022 accent
     expect(tmpl.colors.primaryText).toBe("#FFFFFF");
-    expect(tmpl.colors.secondaryText).toBe("#E50914");
-    expect(tmpl.colors.activeWordText).toBe("#E50914");
+    expect(tmpl.colors.secondaryText).toBe("#FF0022");
+    expect(tmpl.colors.activeWordText).toBe("#FF0022");
 
     // Layout: Safe vertical centering with 3D depth support
     expect(tmpl.layout.yPositionPercent).toBe(0.50);
@@ -197,7 +197,7 @@ describe("Winner Caption Style Specification & Rendering Suite", () => {
       };
     }
 
-    it("MUST render dual-font hierarchy: 900 Montserrat anchor + Caveat cursive script overlay", () => {
+    it("MUST render dual-font hierarchy: 900 Montserrat anchor + Birthstone Bounce cursive script overlay", () => {
       const ctx = createMockCtx();
       const tmpl = getTemplateById("winner");
       const tokens: WordToken[] = [
@@ -218,16 +218,16 @@ describe("Winner Caption Style Specification & Rendering Suite", () => {
       const hasMontserratBold = ctx.fontsSet.some(
         (f) => f.includes("900") && f.includes("Montserrat")
       );
-      const hasCaveatScript = ctx.fontsSet.some(
-        (f) => f.includes("700") && (f.includes("Caveat") || f.includes("Playfair Display"))
+      const hasScript = ctx.fontsSet.some(
+        (f) => f.includes("Birthstone Bounce") || f.includes("Alex Brush") || f.includes("Great Vibes")
       );
 
       expect(hasMontserratBold, "Winner must use Montserrat 900 for punch anchor word").toBe(true);
-      expect(hasCaveatScript, "Winner must use Caveat / cursive script for accent calligraphy").toBe(true);
+      expect(hasScript, "Winner must use Birthstone Bounce / cursive script for accent calligraphy").toBe(true);
 
       expect(ctx.filledTexts).toContain("only");
-      expect(ctx.filledTexts).toContain("consequence");
-      expect(ctx.fillStyles).toContain("#E50914");
+      expect(ctx.filledTexts).toContain("Consequence");
+      expect(ctx.fillStyles).toContain("#FF0022");
     });
 
     it("MUST support 3D Behind-the-Subject Compositing in sandwich depth mode", () => {
@@ -273,8 +273,8 @@ describe("Winner Caption Style Specification & Rendering Suite", () => {
       const ass = generateAss(tokens, tmpl, 1080, 1920, 3);
       expect(ass).toContain("[Script Info]");
       expect(ass).toContain("Montserrat");
-      expect(ass).toContain("\\fnCaveat");
-      expect(ass).toContain("&H001409E5&"); // ASS representation of #E50914 (alpha=00, B=14, G=09, R=E5)
+      expect(ass).toContain("\\fnBirthstone Bounce");
+      expect(ass).toContain("&H002200FF&"); // ASS representation of #FF0022
     });
   });
 });

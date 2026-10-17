@@ -268,12 +268,16 @@ export function generateAss(
   const rawFont = template.typography?.primaryFont || 'Arial';
   const cleanFont = rawFont.split(',')[0].replace(/['"]/g, '').trim() || 'Arial';
   const rawSecondaryFont = template.typography?.secondaryFont || '';
-  const cleanSecondaryFont = rawSecondaryFont.split(',')[0].replace(/['"]/g, '').trim() || 'Caveat';
+  const cleanSecondaryFont = rawSecondaryFont.split(',')[0].replace(/['"]/g, '').trim() || 'Birthstone Bounce';
 
   // Apply typography transform (MrBeast is UPPERCASE)
   const textTransform = template.typography?.textTransform || 'none';
-  const applyTransform = (text: string): string => {
+  const applyTransform = (text: string, isScript = false): string => {
     if (!text) return '';
+    if (isScript) {
+      const clean = text.trim();
+      return clean.charAt(0).toUpperCase() + clean.slice(1).toLowerCase();
+    }
     if (textTransform === 'uppercase') return text.toUpperCase();
     if (textTransform === 'lowercase') return text.toLowerCase();
     if (textTransform === 'capitalize') {
@@ -407,7 +411,7 @@ export function generateAss(
           const isActiveWinnerScript = template.id === 'winner' && (w.id === winnerScriptId || w.isKeyword);
           const activeFontTag = template.id === 'winner' ? (isActiveWinnerScript ? `\\fn${cleanSecondaryFont}\\i1` : `\\fn${cleanFont}\\i0`) : '';
           const activeCol = isActiveWinnerScript ? secondaryColorAss : activeColorAss;
-          lineText = `{${activeFontTag}\\c${activeCol}\\fscx${activeScalePct}\\fscy${activeScalePct}}${applyTransform(w.text)}`;
+          lineText = `{${activeFontTag}\\c${activeCol}\\fscx${activeScalePct}\\fscy${activeScalePct}}${applyTransform(w.text, isActiveWinnerScript)}`;
         } else {
           const parts: string[] = [];
           for (let j = 0; j < i; j++) {
@@ -415,12 +419,12 @@ export function generateAss(
             const isWinnerScript = template.id === 'winner' && (prevW.id === winnerScriptId || prevW.isKeyword);
             const fontTag = template.id === 'winner' ? (isWinnerScript ? `\\fn${cleanSecondaryFont}\\i1` : `\\fn${cleanFont}\\i0`) : '';
             const cAss = (isWinnerScript || prevW.isKeyword) ? secondaryColorAss : primaryColorAss;
-            parts.push(`{${fontTag}\\c${cAss}\\fscx100\\fscy100}${applyTransform(prevW.text)}`);
+            parts.push(`{${fontTag}\\c${cAss}\\fscx100\\fscy100}${applyTransform(prevW.text, isWinnerScript)}`);
           }
           const isActiveWinnerScript = template.id === 'winner' && (w.id === winnerScriptId || w.isKeyword);
           const activeFontTag = template.id === 'winner' ? (isActiveWinnerScript ? `\\fn${cleanSecondaryFont}\\i1` : `\\fn${cleanFont}\\i0`) : '';
           const activeCol = isActiveWinnerScript ? secondaryColorAss : activeColorAss;
-          parts.push(`{${activeFontTag}\\c${activeCol}\\fscx${activeScalePct}\\fscy${activeScalePct}}${applyTransform(w.text)}`);
+          parts.push(`{${activeFontTag}\\c${activeCol}\\fscx${activeScalePct}\\fscy${activeScalePct}}${applyTransform(w.text, isActiveWinnerScript)}`);
           lineText = parts.join(' ');
         }
         events.push(
@@ -438,7 +442,7 @@ export function generateAss(
           const isWinnerScript = template.id === 'winner' && (prevW.id === winnerScriptId || prevW.isKeyword);
           const fontTag = template.id === 'winner' ? (isWinnerScript ? `\\fn${cleanSecondaryFont}\\i1` : `\\fn${cleanFont}\\i0`) : '';
           const cAss = (isWinnerScript || prevW.isKeyword) ? secondaryColorAss : primaryColorAss;
-          parts.push(`{${fontTag}\\c${cAss}\\fscx100\\fscy100}${applyTransform(prevW.text)}`);
+          parts.push(`{${fontTag}\\c${cAss}\\fscx100\\fscy100}${applyTransform(prevW.text, isWinnerScript)}`);
         }
         events.push(
           `Dialogue: 0,${formatAssTime(pauseStart)},${formatAssTime(pauseEnd)},Default,,0,0,0,,${parts.join(' ')}`
