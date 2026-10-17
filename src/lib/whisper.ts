@@ -40,9 +40,9 @@ export class LocalWhisperPipeline {
   private static transcriberCache: Map<string, any> = new Map();
 
   /**
-   * Detects the best available execution provider (WebGPU vs WASM SIMD).
+   * Detects the best available execution provider (WASM SIMD q8 for maximum precision vs WebGPU).
    */
-  static async resolveExecutionDevice(preferWebGPU = true): Promise<"webgpu" | "wasm"> {
+  static async resolveExecutionDevice(preferWebGPU = false): Promise<"webgpu" | "wasm"> {
     if (typeof window === "undefined" || !preferWebGPU) return "wasm";
     try {
       const nav = navigator as unknown as { gpu?: { requestAdapter: () => Promise<unknown> } };
@@ -64,9 +64,9 @@ export class LocalWhisperPipeline {
     options: TranscriptionOptions = {}
   ): Promise<TranscriptionResult> {
     const {
-      tierId = "balanced",
+      tierId = "best",
       language = "auto",
-      preferWebGPU = true,
+      preferWebGPU = false,
       onProgress,
       onChunkTokens,
     } = options;
@@ -74,7 +74,7 @@ export class LocalWhisperPipeline {
     const durationSeconds = audioBuffer.length / 16000;
     const device = await this.resolveExecutionDevice(preferWebGPU);
     this.activeDevice = device;
-    const tier = MODEL_TIERS[tierId] || MODEL_TIERS.balanced;
+    const tier = MODEL_TIERS[tierId] || MODEL_TIERS.best;
 
     onProgress?.({
       status: "loading_model",
@@ -152,10 +152,10 @@ export class LocalWhisperPipeline {
         message: `Analyzing speech audio...`,
       });
 
-      // Split long audio into manageable 20-second non-overlapping chunks
-      const windowSeconds = 20;
-      let chunks = chunkAudio(audioBuffer, 16000, windowSeconds, 0);
-      if (chunks.length === 0) {
+      // For audio up to 90 seconds (standard clips, reels, shorts), transcribe contiguously
+      // This prevents cutting words in half across arbitrary window edges
+      let chunks: Array<{ chunkIndex: number; startSecond: number; endSecond: number; data: Float32Array; isLast: boolean }>;
+      if (durationSeconds <= 90) {
         chunks = [{
           chunkIndex: 0,
           startSecond: 0,
@@ -163,9 +163,21 @@ export class LocalWhisperPipeline {
           data: audioBuffer,
           isLast: true,
         }];
+      } else {
+        // For long recordings, chunk with 30-second windows and 3s overlap
+        chunks = chunkAudio(audioBuffer, 16000, 30, 3);
+        if (chunks.length === 0) {
+          chunks = [{
+            chunkIndex: 0,
+            startSecond: 0,
+            endSecond: durationSeconds,
+            data: audioBuffer,
+            isLast: true,
+          }];
+        }
       }
 
-      const detectedLanguage = language === "auto" ? "hi" : language;
+      const detectedLanguage = language && language !== "auto" ? language : "en";
       const rawWords: WordToken[] = [];
       const collectedTexts: string[] = [];
 
@@ -184,17 +196,17 @@ export class LocalWhisperPipeline {
 
         const transcribeKwargs: Record<string, unknown> = {
           task: "transcribe",
-          return_timestamps: "word",
+          return_timestamps: true,
           chunk_length_s: 30,
           stride_length_s: 4,
           temperature: 0.0,
-          repetition_penalty: 1.15,
-          no_speech_threshold: 0.6,
           condition_on_previous_text: false,
-          initial_prompt: "YouTube video captions, spoken English, Hindi, and Hinglish dialogue with clear words.",
         };
         if (language && language !== "auto") {
           transcribeKwargs.language = language;
+        }
+        if (language === "hi") {
+          transcribeKwargs.initial_prompt = "YouTube video captions, spoken English, Hindi, and Hinglish dialogue with clear words.";
         }
 
         let output: any;
@@ -202,8 +214,12 @@ export class LocalWhisperPipeline {
           output = await transcriber(chunk.data, transcribeKwargs);
         } catch {
           output = await transcriber(chunk.data, {
-            ...transcribeKwargs,
+            task: "transcribe",
             return_timestamps: true,
+            chunk_length_s: 30,
+            stride_length_s: 4,
+            temperature: 0.0,
+            condition_on_previous_text: false,
           });
         }
         const textResult = (typeof output === "string" ? output : output?.text || "").trim();
@@ -213,23 +229,54 @@ export class LocalWhisperPipeline {
 
           const chunkWords: WordToken[] = [];
 
-          // If Whisper returned timestamped segments, use the precise segment bounds
-          if (output?.chunks && Array.isArray(output.chunks) && output.chunks.length > 0) {
+          // 1. Check if direct word-level timestamps were returned at root of output
+          if (Array.isArray(output?.words) && output.words.length > 0) {
+            output.words.forEach((w: any, wIdx: number) => {
+              const rawWord = (w.word || w.text || "").trim();
+              const cleaned = cleanCaptionWord(rawWord);
+              if (!cleaned || isArtifactWord(cleaned)) return;
+              let relStart = 0;
+              let relEnd: number | null = null;
+              if (Array.isArray(w.timestamp)) {
+                relStart = typeof w.timestamp[0] === "number" ? w.timestamp[0] : 0;
+                relEnd = typeof w.timestamp[1] === "number" ? w.timestamp[1] : null;
+              } else {
+                relStart = typeof w.start === "number" ? w.start : 0;
+                relEnd = typeof w.end === "number" ? w.end : null;
+              }
+              const estDur = Math.max(0.10, Math.min(0.40, cleaned.length * 0.05 + 0.05));
+              const finalRelEnd = relEnd !== null ? relEnd : relStart + estDur;
+              const wStart = chunk.startSecond + relStart;
+              const wEnd = chunk.startSecond + Math.max(relStart + 0.08, finalRelEnd);
+              chunkWords.push({
+                id: `tok_${i}_root_${wIdx}_${Date.now()}`,
+                text: censorCurseWord(cleaned),
+                start: parseFloat(wStart.toFixed(3)),
+                end: parseFloat(wEnd.toFixed(3)),
+                confidence: 0.99,
+              });
+            });
+          }
+          // 2. If Whisper returned timestamped segments/chunks, extract precise bounds
+          else if (output?.chunks && Array.isArray(output.chunks) && output.chunks.length > 0) {
             output.chunks.forEach((seg: any, sIdx: number) => {
-              // 1. Direct word-level timestamps from Whisper cross-attention
+              // 2a. Direct word-level timestamps from Whisper cross-attention inside segment
               if (Array.isArray(seg.words) && seg.words.length > 0) {
                 seg.words.forEach((w: any, wIdx: number) => {
                   const rawWord = (w.word || w.text || "").trim();
                   const cleaned = cleanCaptionWord(rawWord);
                   if (!cleaned || isArtifactWord(cleaned)) return;
-                  const [relStart, relEnd] = w.timestamp || [0, 0.1];
-                  const wStart = chunk.startSecond + (typeof relStart === "number" ? relStart : 0);
-                  const wEnd = chunk.startSecond + (typeof relEnd === "number" ? relEnd : wStart + 0.1);
+                  const [relStart, relEnd] = Array.isArray(w.timestamp) ? w.timestamp : [0, null];
+                  const rStart = typeof relStart === "number" ? relStart : 0;
+                  const estDur = Math.max(0.10, Math.min(0.40, cleaned.length * 0.05 + 0.05));
+                  const rEnd = typeof relEnd === "number" ? relEnd : rStart + estDur;
+                  const wStart = chunk.startSecond + rStart;
+                  const wEnd = chunk.startSecond + Math.max(rStart + 0.08, rEnd);
                   chunkWords.push({
                     id: `tok_${i}_${sIdx}_${wIdx}_${Date.now()}`,
                     text: censorCurseWord(cleaned),
                     start: parseFloat(wStart.toFixed(3)),
-                    end: parseFloat(Math.max(wStart + 0.08, wEnd).toFixed(3)),
+                    end: parseFloat(wEnd.toFixed(3)),
                     confidence: 0.98,
                   });
                 });
@@ -240,11 +287,25 @@ export class LocalWhisperPipeline {
               if (!segText) return;
 
               const segTokens = segText.split(/\s+/).filter(Boolean);
-              const [relStart, relEnd] = seg.timestamp || [0, 1];
+              const [relStart, relEnd] = Array.isArray(seg.timestamp) ? seg.timestamp : [0, null];
               const sStart = chunk.startSecond + (typeof relStart === "number" ? relStart : 0);
-              const sEnd = chunk.startSecond + (typeof relEnd === "number" ? relEnd : sStart + 1);
 
-              // 2. Single-word segment: exactly snaps to Whisper segment
+              // Look ahead to next segment to get exact boundary if relEnd is null
+              let nextRelStart: number | null = null;
+              const nextSeg = output.chunks[sIdx + 1];
+              if (nextSeg && Array.isArray(nextSeg.timestamp) && typeof nextSeg.timestamp[0] === "number") {
+                nextRelStart = nextSeg.timestamp[0];
+              }
+
+              const estDur = Math.max(0.12, Math.min(0.50, segTokens.length * 0.22));
+              const rawEnd = typeof relEnd === "number"
+                ? relEnd
+                : (nextRelStart !== null && nextRelStart > (relStart || 0)
+                    ? nextRelStart
+                    : (typeof relStart === "number" ? relStart + estDur : sStart + estDur));
+              const sEnd = chunk.startSecond + rawEnd;
+
+              // 2b. Single-word segment: exactly snaps to Whisper segment
               if (segTokens.length === 1) {
                 const cleaned = cleanCaptionWord(segTokens[0]);
                 if (cleaned && !isArtifactWord(cleaned)) {
@@ -259,7 +320,7 @@ export class LocalWhisperPipeline {
                 return;
               }
 
-              // 3. Multi-word phrase fallback with phonetic & syllable weighting
+              // 2c. Multi-word phrase fallback with phonetic & syllable weighting
               const sDuration = Math.max(0.1, sEnd - sStart);
               const weights = segTokens.map((tok: string) => {
                 const clean = tok.replace(/[^a-zA-Z0-9\u0900-\u097F]/g, "");
@@ -280,7 +341,7 @@ export class LocalWhisperPipeline {
                     id: `tok_${i}_${sIdx}_${tIdx}_${Date.now()}`,
                     text: censorCurseWord(cleaned),
                     start: wStart,
-                    end: Math.max(wStart + 0.08, wEnd),
+                    end: parseFloat(Math.max(wStart + 0.08, wEnd).toFixed(3)),
                     confidence: 0.95,
                   });
                 }
@@ -355,3 +416,8 @@ export class LocalWhisperPipeline {
     }
   }
 }
+
+if (typeof window !== "undefined") {
+  (window as any).__LocalWhisperPipeline = LocalWhisperPipeline;
+}
+

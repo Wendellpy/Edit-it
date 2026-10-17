@@ -58,8 +58,8 @@ export function refineWordTimestamps(
         const first = overlappingWords[0];
         const last = overlappingWords[overlappingWords.length - 1];
 
-        // Snap or clamp first word start so it aligns with audible speech
-        if (Math.abs(first.start - seg.start) <= snapThresholdSeconds || first.start < seg.start) {
+        // Snap first word start if within threshold of VAD speech onset
+        if (Math.abs(first.start - seg.start) <= snapThresholdSeconds) {
           first.start = seg.start;
         }
 
@@ -72,12 +72,13 @@ export function refineWordTimestamps(
   }
 
   // 2. Fix overlaps & enforce strict monotonicity: start[i] >= end[i-1]
+  // Speech word onset (current.start) is the acoustic anchor and must NOT be delayed by trailing previous word duration
   for (let i = 0; i < refined.length; i++) {
     const current = refined[i];
 
     // Ensure current word has valid minimum length
     if (current.end <= current.start) {
-      current.end = current.start + minWordDurationSeconds;
+      current.end = parseFloat((current.start + minWordDurationSeconds).toFixed(3));
     }
 
     if (i > 0) {
@@ -85,17 +86,15 @@ export function refineWordTimestamps(
 
       // Overlap detected: prev.end > current.start
       if (prev.end > current.start) {
-        // If there's enough room, split the boundary at midpoint
-        const midpoint = (prev.end + current.start) / 2;
-
-        if (midpoint - prev.start >= minWordDurationSeconds && current.end - midpoint >= minWordDurationSeconds) {
-          prev.end = parseFloat(midpoint.toFixed(3));
-          current.start = prev.end;
+        // Clamp previous word's trailing duration to the onset of the current word
+        if (current.start - prev.start >= minWordDurationSeconds) {
+          prev.end = current.start;
         } else {
-          // Push current start to prev.end
+          // If words are extremely close (< minWordDurationSeconds), partition minimally
+          prev.end = parseFloat((prev.start + minWordDurationSeconds).toFixed(3));
           current.start = prev.end;
           if (current.end <= current.start) {
-            current.end = current.start + minWordDurationSeconds;
+            current.end = parseFloat((current.start + minWordDurationSeconds).toFixed(3));
           }
         }
       }

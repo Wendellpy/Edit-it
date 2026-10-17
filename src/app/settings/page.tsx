@@ -16,7 +16,7 @@ import { LocalModelManager, MODEL_TIERS, type ModelTierId } from "@/lib/modelMan
 import { detectSystemCapabilities, type SystemCapabilities } from "@/lib/capabilities";
 
 export default function SettingsPage() {
-  const [selectedTier, setSelectedTier] = useState<ModelTierId>("balanced");
+  const [selectedTier, setSelectedTier] = useState<ModelTierId>("best");
   const [caps, setCaps] = useState<SystemCapabilities | null>(null);
   const [storage, setStorage] = useState({ usedMb: 0, totalQuotaMb: 5000 });
   const [userWords, setUserWords] = useState<Array<{ devanagari: string; roman: string }>>([

@@ -36,6 +36,7 @@ export function detectSpeechSegments(
   const numWindows = Math.floor(audioData.length / windowSize);
 
   const isSpeech = new Uint8Array(numWindows);
+  const rmsValues = new Float32Array(numWindows);
 
   // Compute energy per 20ms frame
   for (let i = 0; i < numWindows; i++) {
@@ -45,8 +46,19 @@ export function detectSpeechSegments(
       const val = audioData[offset + j];
       sum += val * val;
     }
-    const rms = Math.sqrt(sum / windowSize);
-    isSpeech[i] = rms >= energyThreshold ? 1 : 0;
+    rmsValues[i] = Math.sqrt(sum / windowSize);
+  }
+
+  // Adaptive threshold based on ambient noise floor
+  let effectiveThreshold = energyThreshold;
+  if (options.energyThreshold === undefined && numWindows > 0) {
+    const sortedRms = Float32Array.from(rmsValues).sort();
+    const noiseFloor = sortedRms[Math.floor(numWindows * 0.15)] || 0;
+    effectiveThreshold = Math.max(energyThreshold, Math.min(0.06, noiseFloor * 2.2 + 0.008));
+  }
+
+  for (let i = 0; i < numWindows; i++) {
+    isSpeech[i] = rmsValues[i] >= effectiveThreshold ? 1 : 0;
   }
 
   // Smooth frames with hangover logic (bridge micro-silences under 150ms)

@@ -534,3 +534,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     }
   },
 }));
+
+if (typeof window !== "undefined") {
+  (window as any).__editorStore = useEditorStore;
+}

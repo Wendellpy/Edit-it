@@ -94,7 +94,7 @@ export default function ClipsPage() {
   // Auto Pipeline & UI settings
   const [autoRunOnPaste, setAutoRunOnPaste] = useState(true);
   const [showToolDetails, setShowToolDetails] = useState(false);
-  const [transcriptionTier, setTranscriptionTier] = useState<ModelTierId>("balanced");
+  const [transcriptionTier, setTranscriptionTier] = useState<ModelTierId>("best");
   const [downloadQuality, setDownloadQuality] = useState<"720p" | "1080p">("720p");
 
   // Cache & Memory Management state
@@ -1234,6 +1234,18 @@ export default function ClipsPage() {
               <div className="inline-flex rounded-xl p-1 bg-[var(--bg-canvas)] border-2 border-[var(--border-main)] gap-1 shadow-[2px_2px_0px_var(--border-main)]">
                 <button
                   type="button"
+                  onClick={() => setTranscriptionTier("best")}
+                  className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                    transcriptionTier === "best"
+                      ? "bg-[#A3E635] text-[#142218] shadow-sm"
+                      : "text-[var(--text-muted)] hover:text-[var(--text-main)]"
+                  }`}
+                  title="Whisper Small: Maximum phonetic accuracy and dialect resolution (Default & Recommended)"
+                >
+                  ⚡ High Accuracy (Whisper Small · Default)
+                </button>
+                <button
+                  type="button"
                   onClick={() => setTranscriptionTier("balanced")}
                   className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                     transcriptionTier === "balanced"
@@ -1243,18 +1255,6 @@ export default function ClipsPage() {
                   title="Whisper Base: High accuracy on code-mixed Hinglish & English dialogue"
                 >
                   Balanced (Whisper Base 145MB)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setTranscriptionTier("best")}
-                  className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                    transcriptionTier === "best"
-                      ? "bg-[#A3E635] text-[#142218] shadow-sm"
-                      : "text-[var(--text-muted)] hover:text-[var(--text-main)]"
-                  }`}
-                  title="Whisper Small: Maximum phonetic accuracy and dialect resolution"
-                >
-                  ⚡ Super Accurate (Whisper Small 465MB)
                 </button>
                 <button
                   type="button"
@@ -1954,8 +1954,6 @@ export default function ClipsPage() {
 
                                         // In single-word mode: ONLY show the currently spoken word
                                         if (isSingleWord && !isSpeakingNow) return null;
-                                        // Frame-accurate timing: do NOT display upcoming words before the audio speaks them
-                                        if (isUpcoming) return null;
 
                                         const isKeyword = word.isKeyword;
 

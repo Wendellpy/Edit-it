@@ -28,8 +28,8 @@ export async function detectSystemCapabilities(): Promise<SystemCapabilities> {
       cpuCores: 8,
       storageQuotaMb: 10000,
       storageUsedMb: 0,
-      recommendedTier: "balanced",
-      tierReason: "Default server environment estimation",
+      recommendedTier: "best",
+      tierReason: "Default high accuracy Whisper Small tier",
     };
   }
 
@@ -121,15 +121,15 @@ export async function detectSystemCapabilities(): Promise<SystemCapabilities> {
   let recommendedTier: "fast" | "balanced" | "best" = "fast";
   let tierReason = "";
 
-  if (webGpu && deviceMemoryGb >= 8 && cpuCores >= 8) {
+  if (webGpu || (deviceMemoryGb >= 4 && cpuCores >= 4)) {
     recommendedTier = "best";
-    tierReason = "High-performance GPU detected with ample memory. Optimal for whisper-large-v3-turbo.";
-  } else if (webGpu || (deviceMemoryGb >= 4 && cpuCores >= 4)) {
+    tierReason = "High accuracy Whisper Small tier recommended for maximum speech and timestamp accuracy.";
+  } else if (deviceMemoryGb >= 2 && cpuCores >= 2) {
     recommendedTier = "balanced";
-    tierReason = "WebGPU or solid multi-core CPU detected. Recommended for whisper-small (ideal Hinglish balance).";
+    tierReason = "Balanced Whisper Base tier recommended for moderate hardware.";
   } else {
     recommendedTier = "fast";
-    tierReason = "Lightweight hardware profile detected. Whisper-tiny/base will deliver fastest transcription.";
+    tierReason = "Lightweight hardware profile detected. Whisper-tiny will deliver fastest transcription.";
   }
 
   return {

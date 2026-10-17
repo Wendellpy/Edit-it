@@ -51,7 +51,7 @@ export class ClipsTranscriptionPipeline {
   static async ingestAndTranscribe(options: ClipsIngestionOptions): Promise<ClipsIngestionResult> {
     const {
       url,
-      tierId = "balanced",
+      tierId = "best",
       language = "auto",
       preferWebGPU = true,
       onProgress,

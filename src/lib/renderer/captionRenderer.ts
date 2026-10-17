@@ -71,7 +71,7 @@ export function buildCaptionCues(tokens: WordToken[], maxWords: number): Caption
       endsSentence ||
       (endsClause && currentWords.length >= 2);
 
-    if (shouldBreak || i === tokens.length - 1) {
+    if (shouldBreak || i === validTokens.length - 1) {
       if (currentWords.length > 0) {
         cues.push({
           id: `cue_${cues.length + 1}`,
@@ -447,11 +447,7 @@ export function renderWinnerCaptions(opts: RenderWinnerCaptionsOptions): void {
     } = {}
   ) => {
     if (!text) return;
-    const isSpoken = effectiveTime >= token.start;
     const isActive = effectiveTime >= token.start && effectiveTime <= token.end;
-
-    // Cumulative reveal: words before their start time remain hidden
-    if (!isSpoken) return;
 
     ctx.save();
     ctx.font = font;

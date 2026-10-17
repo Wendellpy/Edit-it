@@ -52,7 +52,7 @@ const NAV_ITEMS: NavItem[] = [
 
 export function Navbar() {
   const [isModelModalOpen, setIsModelModalOpen] = useState(false);
-  const [selectedTier, setSelectedTier] = useState<ModelTierId>("balanced");
+  const [selectedTier, setSelectedTier] = useState<ModelTierId>("best");
   const pathname = usePathname();
 
   return (

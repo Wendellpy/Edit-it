@@ -40,7 +40,7 @@ export function TranscribeModal({ isOpen, onClose, autoStart = false }: Transcri
   } = useEditorStore();
 
   const [language, setLanguage] = useState<"auto" | "hi" | "en" | "mr">("auto");
-  const [modelTier, setModelTier] = useState<"fast" | "balanced" | "best">("fast");
+  const [modelTier, setModelTier] = useState<"fast" | "balanced" | "best">("best");
   const [isProcessing, setIsProcessing] = useState(false);
   const [currentStep, setCurrentStep] = useState<number>(0);
   const [progressPercent, setProgressPercent] = useState<number>(0);
@@ -277,9 +277,9 @@ export function TranscribeModal({ isOpen, onClose, autoStart = false }: Transcri
                     onChange={(e) => setModelTier(e.target.value as any)}
                     className="w-full bg-[var(--bg-panel)] border-2 border-[var(--border-main)] rounded-xl px-3 py-2 text-xs text-[var(--text-main)] font-semibold focus:outline-none shadow-[2px_2px_0px_var(--border-main)] cursor-pointer"
                   >
+                    <option value="best">High Accuracy (Whisper Small · 465MB · Default & Recommended)</option>
+                    <option value="balanced">Balanced (Whisper Base · 145MB)</option>
                     <option value="fast">Fast (Whisper Tiny · 39MB · Instant)</option>
-                    <option value="balanced">Balanced (Whisper Base · 145MB · Recommended)</option>
-                    <option value="best">High Accuracy (Whisper Small · 465MB)</option>
                   </select>
                 </div>
               </div>
