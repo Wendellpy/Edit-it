@@ -359,7 +359,6 @@ export default function WatermarkRemoverPage() {
           videoFile: file,
           rois: detResult.rois,
           options: inpaintOpts,
-          fps: 30,
           onProgress: (prog) => {
             setExportProgress(prog);
             setPipelineState((prev) => ({
@@ -984,7 +983,6 @@ export default function WatermarkRemoverPage() {
           videoFile: mediaFile,
           rois,
           options: inpaintOpts,
-          fps: 30,
           onProgress: (prog) => setExportProgress(prog),
           signal: abortControllerRef.current.signal,
         });

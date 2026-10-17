@@ -124,7 +124,7 @@ export function resolveGeminiWatermarkConfig(
     logoSize = 48;
     marginRight = 32;
     marginBottom = 32;
-    alphaGain = 0.60;
+    alphaGain = 1.02;
   } else if (longSide <= 1408) {
     // 1k standard tier (e.g. 720x1280 vertical video, 1024x1024, 1376x768)
     if (isVertical && shortSide <= 768) {
@@ -132,25 +132,25 @@ export function resolveGeminiWatermarkConfig(
       logoSize = 48;
       marginRight = 96;
       marginBottom = 96;
-      alphaGain = 0.60;
+      alphaGain = 1.02;
     } else {
       logoSize = 48;
       marginRight = 32;
       marginBottom = 32;
-      alphaGain = 0.85;
+      alphaGain = 1.02;
     }
   } else if (longSide <= 2816) {
     // 2k tier
     logoSize = 96;
     marginRight = 64;
     marginBottom = 64;
-    alphaGain = 1.0;
+    alphaGain = 1.02;
   } else {
     // 4k tier
     logoSize = 96;
     marginRight = 64;
     marginBottom = 64;
-    alphaGain = 1.0;
+    alphaGain = 1.02;
   }
 
   const x = Math.max(0, width - marginRight - logoSize);
@@ -204,6 +204,7 @@ export function refineGeminiPosition(
   let bestX = baseX;
   let bestY = baseY;
 
+  // Pass 1: Coarse search stepping by 2
   for (let dy = -searchRadius; dy <= searchRadius; dy += 2) {
     const curY = baseY + dy;
     if (curY < 0 || curY + size > imgH) continue;
@@ -216,7 +217,6 @@ export function refineGeminiPosition(
       let pSq = 0;
       const n = size * size;
 
-      // First pass: mean & std of patch
       for (let r = 0; r < size; r++) {
         const rowOff = (curY + r) * imgW;
         for (let c = 0; c < size; c++) {
@@ -232,7 +232,56 @@ export function refineGeminiPosition(
 
       if (pStd < 2.0) continue;
 
-      // Second pass: cross correlation
+      let cross = 0;
+      for (let r = 0; r < size; r++) {
+        const rowOff = (curY + r) * imgW;
+        const aRowOff = r * size;
+        for (let c = 0; c < size; c++) {
+          const idx = (rowOff + (curX + c)) * 4;
+          const lum = 0.299 * data[idx] + 0.587 * data[idx + 1] + 0.114 * data[idx + 2];
+          cross += (lum - pMean) * (alphaMap[aRowOff + c] - aMean);
+        }
+      }
+      const ncc = cross / (n * pStd * aStd);
+      if (ncc > bestNcc) {
+        bestNcc = ncc;
+        bestX = curX;
+        bestY = curY;
+      }
+    }
+  }
+
+  // Pass 2: Fine 1-pixel neighborhood search around coarse peak
+  const fineX = bestX;
+  const fineY = bestY;
+  for (let fdy = -1; fdy <= 1; fdy++) {
+    const curY = fineY + fdy;
+    if (curY < 0 || curY + size > imgH) continue;
+
+    for (let fdx = -1; fdx <= 1; fdx++) {
+      if (fdx === 0 && fdy === 0) continue;
+      const curX = fineX + fdx;
+      if (curX < 0 || curX + size > imgW) continue;
+
+      let pSum = 0;
+      let pSq = 0;
+      const n = size * size;
+
+      for (let r = 0; r < size; r++) {
+        const rowOff = (curY + r) * imgW;
+        for (let c = 0; c < size; c++) {
+          const idx = (rowOff + (curX + c)) * 4;
+          const lum = 0.299 * data[idx] + 0.587 * data[idx + 1] + 0.114 * data[idx + 2];
+          pSum += lum;
+          pSq += lum * lum;
+        }
+      }
+      const pMean = pSum / n;
+      const pVar = Math.max(0, pSq / n - pMean * pMean);
+      const pStd = Math.sqrt(pVar);
+
+      if (pStd < 2.0) continue;
+
       let cross = 0;
       for (let r = 0; r < size; r++) {
         const rowOff = (curY + r) * imgW;

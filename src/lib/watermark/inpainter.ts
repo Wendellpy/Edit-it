@@ -181,6 +181,43 @@ export function inpaintImageData(
       { x: targetX, y: targetY, width: targetSize, height: targetSize },
       { alphaGain: config.alphaGain }
     );
+
+    // Post-pass: eliminate video compression / DCT ringing around diamond perimeter
+    const mapLen = targetSize;
+    for (let r = 0; r < mapLen; r++) {
+      for (let c = 0; c < mapLen; c++) {
+        const aVal = config.alphaMap[r * mapLen + c];
+        if (aVal > 0.02 && aVal < 0.48) {
+          const cy = targetY + r;
+          const cx = targetX + c;
+          if (cy >= 0 && cy < imgH && cx >= 0 && cx < imgW) {
+            const nbrsR: number[] = [];
+            const nbrsG: number[] = [];
+            const nbrsB: number[] = [];
+            for (let dy = -1; dy <= 1; dy++) {
+              for (let dx = -1; dx <= 1; dx++) {
+                const ny = cy + dy;
+                const nx = cx + dx;
+                if (ny >= 0 && ny < imgH && nx >= 0 && nx < imgW) {
+                  const idx = (ny * imgW + nx) * 4;
+                  nbrsR.push(data[idx]);
+                  nbrsG.push(data[idx + 1]);
+                  nbrsB.push(data[idx + 2]);
+                }
+              }
+            }
+            nbrsR.sort((a, b) => a - b);
+            nbrsG.sort((a, b) => a - b);
+            nbrsB.sort((a, b) => a - b);
+            const medIdx = Math.floor(nbrsR.length / 2);
+            const curIdx = (cy * imgW + cx) * 4;
+            data[curIdx] = nbrsR[medIdx];
+            data[curIdx + 1] = nbrsG[medIdx];
+            data[curIdx + 2] = nbrsB[medIdx];
+          }
+        }
+      }
+    }
     return;
   }
 

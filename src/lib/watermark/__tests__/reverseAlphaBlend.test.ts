@@ -37,7 +37,7 @@ describe("Reverse Alpha Blending Engine (Gemini / Veo Ground Truth)", () => {
     expect(config.logoSize).toBe(48);
     expect(config.marginRight).toBe(96);
     expect(config.marginBottom).toBe(96);
-    expect(config.alphaGain).toBe(0.60);
+    expect(config.alphaGain).toBe(1.02);
     expect(config.x).toBe(720 - 96 - 48); // 576
     expect(config.y).toBe(1280 - 96 - 48); // 1136
   });

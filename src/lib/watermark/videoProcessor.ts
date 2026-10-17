@@ -174,6 +174,129 @@ async function extractAudioBuffer(videoFile: File | Blob): Promise<AudioBuffer |
 import { encodeAndMuxAudioWithWebCodecs } from "@/lib/export/webcodecsExport";
 
 /**
+ * Fast client-side MP4 header parser: extracts native FPS and total frame count from stts & mdhd boxes.
+ */
+export async function parseMp4VideoInfo(
+  file: File | Blob
+): Promise<{ fps: number; totalFrames?: number } | null> {
+  try {
+    const sliceSize = Math.min(file.size, 512 * 1024);
+    const slice = await file.slice(0, sliceSize).arrayBuffer();
+    const u8 = new Uint8Array(slice);
+    const view = new DataView(slice);
+
+    const findBox = (buf: Uint8Array, tag: string): number => {
+      const b0 = tag.charCodeAt(0), b1 = tag.charCodeAt(1), b2 = tag.charCodeAt(2), b3 = tag.charCodeAt(3);
+      for (let i = 0; i < buf.length - 8; i++) {
+        if (buf[i] === b0 && buf[i + 1] === b1 && buf[i + 2] === b2 && buf[i + 3] === b3) {
+          return i;
+        }
+      }
+      return -1;
+    };
+
+    let sttsIdx = findBox(u8, "stts");
+    let mdhdIdx = findBox(u8, "mdhd");
+
+    // If not found in first slice and file is small enough (< 30MB), read whole buffer
+    if ((sttsIdx === -1 || mdhdIdx === -1) && file.size <= 30 * 1024 * 1024) {
+      const full = await file.arrayBuffer();
+      const fullU8 = new Uint8Array(full);
+      const fullView = new DataView(full);
+      sttsIdx = findBox(fullU8, "stts");
+      mdhdIdx = findBox(fullU8, "mdhd");
+      if (sttsIdx !== -1 && mdhdIdx !== -1) {
+        const entryCount = fullView.getUint32(sttsIdx + 8);
+        if (entryCount > 0) {
+          const sampleCount = fullView.getUint32(sttsIdx + 12);
+          const sampleDelta = fullView.getUint32(sttsIdx + 16);
+          const version = fullU8[mdhdIdx + 4];
+          const timescale = version === 1 ? fullView.getUint32(mdhdIdx + 28) : fullView.getUint32(mdhdIdx + 16);
+          if (sampleDelta > 0 && timescale > 0) {
+            const rawFps = timescale / sampleDelta;
+            let fps = Math.round(rawFps * 100) / 100;
+            if (Math.abs(rawFps - 23.976) < 0.1 || Math.abs(rawFps - 24) < 0.1) fps = 24;
+            else if (Math.abs(rawFps - 25) < 0.1) fps = 25;
+            else if (Math.abs(rawFps - 29.97) < 0.1 || Math.abs(rawFps - 30) < 0.1) fps = 30;
+            else if (Math.abs(rawFps - 60) < 0.1) fps = 60;
+            return { fps, totalFrames: sampleCount };
+          }
+        }
+      }
+    } else if (sttsIdx !== -1 && mdhdIdx !== -1) {
+      const entryCount = view.getUint32(sttsIdx + 8);
+      if (entryCount > 0) {
+        const sampleCount = view.getUint32(sttsIdx + 12);
+        const sampleDelta = view.getUint32(sttsIdx + 16);
+        const version = u8[mdhdIdx + 4];
+        const timescale = version === 1 ? view.getUint32(mdhdIdx + 28) : view.getUint32(mdhdIdx + 16);
+        if (sampleDelta > 0 && timescale > 0) {
+          const rawFps = timescale / sampleDelta;
+          let fps = Math.round(rawFps * 100) / 100;
+          if (Math.abs(rawFps - 23.976) < 0.1 || Math.abs(rawFps - 24) < 0.1) fps = 24;
+          else if (Math.abs(rawFps - 25) < 0.1) fps = 25;
+          else if (Math.abs(rawFps - 29.97) < 0.1 || Math.abs(rawFps - 30) < 0.1) fps = 30;
+          else if (Math.abs(rawFps - 60) < 0.1) fps = 60;
+          return { fps, totalFrames: sampleCount };
+        }
+      }
+    }
+  } catch (err) {
+    console.warn("Could not parse MP4 frame rate header:", err);
+  }
+  return null;
+}
+
+/**
+ * Seeks a video element to a designated timestamp and ensures the browser compositor
+ * has fully decoded and rendered the new video frame into the backing texture before resolving.
+ */
+export async function seekVideoAccurate(video: HTMLVideoElement, targetTime: number): Promise<void> {
+  const maxDur = isFinite(video.duration) && video.duration > 0 ? video.duration : 10000;
+  const clampedTarget = Math.min(Math.max(0, targetTime), Math.max(0, maxDur - 0.001));
+
+  if (!video.seeking && Math.abs(video.currentTime - clampedTarget) < 0.002) {
+    return;
+  }
+
+  return new Promise<void>((resolve) => {
+    let isDone = false;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+
+    const onDone = () => {
+      if (isDone) return;
+      isDone = true;
+      video.removeEventListener("seeked", onSeeked);
+      video.removeEventListener("error", onDone);
+      if (timer) clearTimeout(timer);
+      resolve();
+    };
+
+    const onSeeked = () => {
+      if ("requestVideoFrameCallback" in video && typeof (video as any).requestVideoFrameCallback === "function") {
+        try {
+          (video as any).requestVideoFrameCallback(() => onDone());
+          return;
+        } catch {}
+      }
+      onDone();
+    };
+
+    video.addEventListener("seeked", onSeeked, { once: true });
+    video.addEventListener("error", onDone, { once: true });
+
+    // 400ms safety timeout: ensures slow frames have enough decoding time and are not skipped
+    timer = setTimeout(onDone, 400);
+
+    try {
+      video.currentTime = clampedTarget;
+    } catch {
+      onDone();
+    }
+  });
+}
+
+/**
  * Removes watermark from a video frame-by-frame and exports clean MP4 with hardware acceleration.
  */
 export async function processWatermarkVideo({
@@ -207,6 +330,10 @@ export async function processWatermarkVideo({
       fps: 0,
     });
 
+    // Detect exact native frame rate from MP4 metadata if available
+    const mp4Info = await parseMp4VideoInfo(videoFile);
+    const targetFps = mp4Info?.fps || (fps && fps > 0 ? fps : 30);
+
     // Wait for metadata
     if (videoEl.readyState < 1 || !videoEl.videoWidth) {
       await new Promise<void>((resolve, reject) => {
@@ -230,7 +357,9 @@ export async function processWatermarkVideo({
     width = width - (width % 2);
     height = height - (height % 2);
 
-    const totalFrames = Math.max(1, Math.round(duration * fps));
+    const totalFrames = mp4Info?.totalFrames && Math.abs(mp4Info.totalFrames / targetFps - duration) < 0.6
+      ? mp4Info.totalFrames
+      : Math.max(1, Math.round(duration * targetFps));
 
     const canvas = document.createElement("canvas");
     canvas.width = width;
@@ -324,7 +453,7 @@ export async function processWatermarkVideo({
         width,
         height,
         bitrate: Math.min(25_000_000, Math.max(8_000_000, width * height * 4)),
-        framerate: fps,
+        framerate: targetFps,
         hardwareAcceleration: "prefer-hardware",
         avc: { format: "avc" },
       });
@@ -349,28 +478,20 @@ export async function processWatermarkVideo({
         }
 
         const targetTime = (i / totalFrames) * duration;
-        videoEl.currentTime = targetTime;
-
-        await new Promise<void>((resolve) => {
-          const onSeeked = () => {
-            videoEl.removeEventListener("seeked", onSeeked);
-            resolve();
-          };
-          videoEl.addEventListener("seeked", onSeeked, { once: true });
-          setTimeout(resolve, 80);
-        });
+        await seekVideoAccurate(videoEl, targetTime);
 
         // Draw video frame & inpaint designated watermark ROIs
         ctx.drawImage(videoEl, 0, 0, width, height);
         inpaintCanvasROIs(ctx, width, height, rois, options, explicitMasks);
 
-        const timestampUs = Math.round((i / fps) * 1_000_000);
+        const frameDurationUs = Math.round(1_000_000 / targetFps);
+        const timestampUs = Math.round(i * frameDurationUs);
         const videoFrame = new VideoFrame(canvas, {
           timestamp: timestampUs,
-          duration: Math.round((1 / fps) * 1_000_000),
+          duration: frameDurationUs,
         });
 
-        encoder.encode(videoFrame, { keyFrame: i % (fps * 2) === 0 });
+        encoder.encode(videoFrame, { keyFrame: i % Math.round(targetFps * 2) === 0 });
         videoFrame.close();
 
         // Update progress stats
@@ -410,7 +531,7 @@ export async function processWatermarkVideo({
       return new Blob([target.buffer], { type: "video/mp4" });
     } else {
       // MediaRecorder fallback for browsers without WebCodecs
-      return await exportWithMediaRecorder(videoEl, canvas, ctx, rois, options, duration, fps, onProgress, signal, explicitMasks);
+      return await exportWithMediaRecorder(videoEl, canvas, ctx, rois, options, duration, targetFps, onProgress, signal, explicitMasks);
     }
   } finally {
     document.body.removeChild(videoEl);
@@ -463,8 +584,8 @@ async function exportWithMediaRecorder(
           throw new Error("Cancelled by user");
         }
 
-        videoEl.currentTime = (i / totalFrames) * duration;
-        await new Promise((r) => setTimeout(r, 1000 / fps));
+        const targetTime = (i / totalFrames) * duration;
+        await seekVideoAccurate(videoEl, targetTime);
 
         ctx.drawImage(videoEl, 0, 0, canvas.width, canvas.height);
         inpaintCanvasROIs(ctx, canvas.width, canvas.height, rois, options, explicitMasks);

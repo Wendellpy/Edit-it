@@ -14,6 +14,7 @@ import {
 } from "./types";
 import { clampNormalizedROI } from "./inpainter";
 import { AI_WATERMARK_DATASET, computeTemplateCorrelation } from "./logoDataset";
+import { resolveGeminiWatermarkConfig, refineGeminiPosition } from "./geminiAlphaMaps";
 
 /**
  * Determines aspect ratio category and human-readable label from frame dimensions.
@@ -211,7 +212,7 @@ export function scanCornerWatermarks(
         const gradX = Math.abs(lumR - lumL);
         if (gradX > 38) {
           edgeCount++;
-          if (lum > 140) {
+          if (lum > 70) {
             highContrastPixels++;
             if (x < minX) minX = x;
             if (x > maxX) maxX = x;
@@ -321,6 +322,28 @@ export function autoDetectMediaWatermark(params: {
 
   // 2. Visual scan on canvas if rendering context is provided
   if (ctx && width > 0 && height > 0) {
+    try {
+      const imgData = ctx.getImageData(0, 0, width, height);
+      const geminiCfg = resolveGeminiWatermarkConfig(width, height);
+      const geminiCheck = refineGeminiPosition(imgData, geminiCfg, 14);
+      if (geminiCheck.confidence >= 0.70) {
+        const preset = WATERMARK_PRESETS.gemini;
+        const adaptedRois = getDynamicRoisForPreset("gemini", width, height);
+        return {
+          presetId: "gemini",
+          platformName: preset.name,
+          confidence: geminiCheck.confidence,
+          detectionSource: "visual_scan",
+          aspectRatioCategory: category,
+          aspectRatioLabel,
+          rois: adaptedRois,
+          explanation: `Identified ${preset.name} diamond watermark via spatial correlation (${Math.round(geminiCheck.confidence * 100)}% confidence) • Adapted for ${aspectRatioLabel}.`,
+        };
+      }
+    } catch {
+      // Fall through to general corner scanner
+    }
+
     const scan = scanCornerWatermarks(ctx, width, height);
     if (scan.detected && scan.candidateRoi) {
       const recognizedPresetId = scan.platformHint || "kling";
