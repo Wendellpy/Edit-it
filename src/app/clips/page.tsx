@@ -51,6 +51,7 @@ import {
 import type { ModelTierId } from "@/lib/modelManager";
 import { parseAndValidateYouTubeUrl } from "@/lib/clips/urlValidator";
 import { findClipCandidates, type ClipCandidate } from "@/lib/clips/clipFinder";
+import { recordClipFeedback } from "@/lib/clips/feedbackStore";
 import type { ClipStylePreset } from "@/lib/clips/scoringConfig";
 import {
   selectCaptionTemplate,
@@ -115,6 +116,7 @@ export default function ClipsPage() {
   // Clips Candidate Discovery state
   const [selectedPreset, setSelectedPreset] = useState<ClipStylePreset>("viral");
   const [discoveredClips, setDiscoveredClips] = useState<ClipCandidate[]>([]);
+  const [feedbackGiven, setFeedbackGiven] = useState<Record<string, string>>({});
 
   // Phase 4: Selected Clip & 9:16 Reframe / Caption Styling state
   const [selectedClipId, setSelectedClipId] = useState<string | null>(null);
@@ -1733,6 +1735,12 @@ export default function ClipsPage() {
                               <h5 className="font-extrabold text-xs line-clamp-2">
                                 "{clip.headline}"
                               </h5>
+                              {clip.reasons && clip.reasons.length > 0 && (
+                                <p className="text-[10px] text-[#A3E635] font-semibold line-clamp-1 opacity-90 flex items-center gap-1">
+                                  <span>✦</span>
+                                  <span>{clip.reasons[0]}</span>
+                                </p>
+                              )}
 
                               {/* Timestamps & Duration */}
                               <div className="text-[10px] text-[var(--text-muted)] flex items-center justify-between font-mono">
@@ -2229,6 +2237,79 @@ export default function ClipsPage() {
                                       {t.text}
                                     </span>
                                   ))}
+                                </div>
+                              </div>
+
+                              {/* Phase 8: Local-First Quality Feedback Record */}
+                              <div className="pt-2 border-t border-[var(--border-subtle)] flex flex-wrap items-center justify-between gap-2 text-xs">
+                                <div className="flex items-center gap-1.5 text-[11px] font-bold text-[var(--text-muted)]">
+                                  <Sparkles className="w-3.5 h-3.5 text-[#A3E635]" />
+                                  <span>Local Clip Quality Feedback:</span>
+                                </div>
+                                <div className="flex items-center gap-1.5">
+                                  <button
+                                    onClick={() => {
+                                      recordClipFeedback({
+                                        videoId: ingestResult?.fileId || "unknown",
+                                        clipId: activeClip.id,
+                                        start: activeClip.start,
+                                        end: activeClip.end,
+                                        feedbackType: "good_clip",
+                                        presetUsed: selectedPreset,
+                                      });
+                                      setFeedbackGiven((prev) => ({ ...prev, [activeClip.id]: "good" }));
+                                    }}
+                                    className={`px-2.5 py-1 rounded-lg text-[10px] font-bold border transition-all cursor-pointer flex items-center gap-1 ${
+                                      feedbackGiven[activeClip.id] === "good"
+                                        ? "bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border-emerald-500/40 shadow-xs"
+                                        : "bg-[var(--bg-panel)] text-[var(--text-muted)] hover:text-[var(--text-main)] border-[var(--border-subtle)]"
+                                    }`}
+                                    title="Save local rating: Genuinely entertaining moment"
+                                  >
+                                    <span>👍 Great Pick</span>
+                                  </button>
+                                  <button
+                                    onClick={() => {
+                                      recordClipFeedback({
+                                        videoId: ingestResult?.fileId || "unknown",
+                                        clipId: activeClip.id,
+                                        start: activeClip.start,
+                                        end: activeClip.end,
+                                        feedbackType: "bad_clip",
+                                        presetUsed: selectedPreset,
+                                      });
+                                      setFeedbackGiven((prev) => ({ ...prev, [activeClip.id]: "bad" }));
+                                    }}
+                                    className={`px-2.5 py-1 rounded-lg text-[10px] font-bold border transition-all cursor-pointer flex items-center gap-1 ${
+                                      feedbackGiven[activeClip.id] === "bad"
+                                        ? "bg-rose-500/20 text-rose-600 dark:text-rose-400 border-rose-500/40 shadow-xs"
+                                        : "bg-[var(--bg-panel)] text-[var(--text-muted)] hover:text-[var(--text-main)] border-[var(--border-subtle)]"
+                                    }`}
+                                    title="Save local rating: Boring or uninteresting moment"
+                                  >
+                                    <span>👎 Boring</span>
+                                  </button>
+                                  <button
+                                    onClick={() => {
+                                      recordClipFeedback({
+                                        videoId: ingestResult?.fileId || "unknown",
+                                        clipId: activeClip.id,
+                                        start: activeClip.start,
+                                        end: activeClip.end,
+                                        feedbackType: "bad_boundaries",
+                                        presetUsed: selectedPreset,
+                                      });
+                                      setFeedbackGiven((prev) => ({ ...prev, [activeClip.id]: "cut" }));
+                                    }}
+                                    className={`px-2.5 py-1 rounded-lg text-[10px] font-bold border transition-all cursor-pointer flex items-center gap-1 ${
+                                      feedbackGiven[activeClip.id] === "cut"
+                                        ? "bg-amber-500/20 text-amber-600 dark:text-amber-400 border-amber-500/40 shadow-xs"
+                                        : "bg-[var(--bg-panel)] text-[var(--text-muted)] hover:text-[var(--text-main)] border-[var(--border-subtle)]"
+                                    }`}
+                                    title="Save local rating: Good moment, but start/end cut needs adjustment"
+                                  >
+                                    <span>✂️ Timing Needs Tuning</span>
+                                  </button>
                                 </div>
                               </div>
 

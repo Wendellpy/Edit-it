@@ -159,7 +159,31 @@ export class ClipsTranscriptionPipeline {
         }))
         .filter((tw) => tw.text && !isArtifactWord(tw.text));
 
-      wordsTokens = validTimedWords.map((tw, idx) => ({
+      // Sort strictly chronologically
+      validTimedWords.sort((a, b) => a.start - b.start || a.end - b.end);
+
+      // Deduplicate identical words within sliding temporal window (0.45s)
+      const dedupedTimedWords: typeof validTimedWords = [];
+      for (const tw of validTimedWords) {
+        const norm = tw.text.toLowerCase().replace(/[^a-z0-9]/g, "");
+        if (!norm) continue;
+
+        let isDup = false;
+        for (let j = dedupedTimedWords.length - 1; j >= 0; j--) {
+          const prev = dedupedTimedWords[j];
+          if (tw.start - prev.start > 0.45) break;
+          if (prev.text.toLowerCase().replace(/[^a-z0-9]/g, "") === norm) {
+            isDup = true;
+            break;
+          }
+        }
+
+        if (!isDup) {
+          dedupedTimedWords.push(tw);
+        }
+      }
+
+      wordsTokens = dedupedTimedWords.map((tw, idx) => ({
         id: `yt_tok_${idx}_${Date.now()}`,
         text: censorCurseWord(tw.text),
         start: tw.start,

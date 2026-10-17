@@ -225,7 +225,9 @@ function decodeHtmlEntities(text) {
 
 function cleanVttWord(word) {
   if (!word || typeof word !== "string") return "";
-  let clean = decodeHtmlEntities(word).trim();
+  let clean = decodeHtmlEntities(word)
+    .replace(/[\u200B-\u200D\uFEFF]/g, "")
+    .trim();
   // Strip leading/trailing speaker change chevrons (e.g. >>Hello -> Hello)
   clean = clean.replace(/^[>\s]+/, "").replace(/[<\s]+$/, "").trim();
 
@@ -243,20 +245,18 @@ function cleanVttWord(word) {
   return clean;
 }
 
-function parseVttTimedWords(vttContent) {
-  const blocks = vttContent.split(/\r?\n\r?\n/);
-  const words = [];
+function normalizeVttWordForDedup(text) {
+  return (text || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+}
 
-  const pushCleanWord = (rawText, start, end) => {
-    const cleanText = cleanVttWord(rawText);
-    if (cleanText) {
-      words.push({
-        text: cleanText,
-        start,
-        end,
-      });
-    }
-  };
+function parseVttTimedWords(vttContent) {
+  if (!vttContent || typeof vttContent !== "string") return [];
+
+  const hasWordLevelTags = /<\d{2}:\d{2}(?::\d{2})?\.\d{3}><c>/.test(vttContent);
+  const blocks = vttContent.split(/\r?\n\r?\n/);
+  const rawWords = [];
+
+  let lastSeenCueKey = "";
 
   for (const block of blocks) {
     const lines = block.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
@@ -271,8 +271,20 @@ function parseVttTimedWords(vttContent) {
     const cueStart = parseVttTime(timeMatch[1]);
     const cueEnd = parseVttTime(timeMatch[2]);
     const textLines = lines.slice(timeLineIdx + 1);
+    const textOnly = textLines.join(" ");
+
+    // Skip exact duplicate adjacent cue blocks (e.g. yt-dlp downloading duplicate subtitle tracks)
+    const cueKey = `${timeMatch[1]}_${timeMatch[2]}_${textOnly}`;
+    if (cueKey === lastSeenCueKey) continue;
+    lastSeenCueKey = cueKey;
 
     const hasWordTags = textLines.some((l) => l.includes("<c>") || l.includes("</c>"));
+
+    // In YouTube rolling captions: if the file has word-level tags, skip preliminary rolling lines that don't have word tags
+    if (hasWordLevelTags && !hasWordTags && (cueEnd - cueStart) < 0.4) {
+      continue;
+    }
+
     if (hasWordTags) {
       for (const line of textLines) {
         if (!line.includes("<c>") && !line.includes("</c>") && !line.includes("<")) continue;
@@ -286,14 +298,28 @@ function parseVttTimedWords(vttContent) {
           const wordEndTime = parseVttTime(m[1]);
           const nextWord = m[2].trim();
           if (currentWord) {
-            pushCleanWord(currentWord, prevTime, Math.max(prevTime + 0.08, wordEndTime));
+            const cleaned = cleanVttWord(currentWord);
+            if (cleaned) {
+              rawWords.push({
+                text: cleaned,
+                start: prevTime,
+                end: Math.max(prevTime + 0.08, wordEndTime),
+              });
+            }
           }
           currentWord = nextWord;
           prevTime = wordEndTime;
         }
 
         if (currentWord) {
-          pushCleanWord(currentWord, prevTime, Math.max(prevTime + 0.08, cueEnd));
+          const cleaned = cleanVttWord(currentWord);
+          if (cleaned) {
+            rawWords.push({
+              text: cleaned,
+              start: prevTime,
+              end: Math.max(prevTime + 0.08, cueEnd),
+            });
+          }
         }
       }
     } else {
@@ -303,24 +329,47 @@ function parseVttTimedWords(vttContent) {
         const cueDuration = Math.max(0.1, cueEnd - cueStart);
         const step = cueDuration / tokens.length;
         tokens.forEach((t, idx) => {
-          const wStart = parseFloat((cueStart + idx * step).toFixed(3));
-          const wEnd = parseFloat((cueStart + (idx + 1) * step).toFixed(3));
-          pushCleanWord(t, wStart, Math.max(wStart + 0.08, wEnd));
+          const cleaned = cleanVttWord(t);
+          if (cleaned) {
+            const wStart = parseFloat((cueStart + idx * step).toFixed(3));
+            const wEnd = parseFloat((cueStart + (idx + 1) * step).toFixed(3));
+            rawWords.push({
+              text: cleaned,
+              start: wStart,
+              end: Math.max(wStart + 0.08, wEnd),
+            });
+          }
         });
       }
     }
   }
 
-  // Deduplicate consecutive identical words at close timestamps (rolling captions in VTT)
+  // Sort words strictly by start time, then end time
+  rawWords.sort((a, b) => a.start - b.start || a.end - b.end);
+
+  // Robust Deduplication:
+  // Discard duplicate occurrences of the same word within 0.45s of each other (rolling lines / duplicate cues)
   const deduplicated = [];
-  for (const w of words) {
-    if (!w.text) continue;
-    const last = deduplicated[deduplicated.length - 1];
-    if (last && last.text.toLowerCase() === w.text.toLowerCase() && Math.abs(last.start - w.start) < 0.25) {
-      continue;
+  for (let i = 0; i < rawWords.length; i++) {
+    const w = rawWords[i];
+    const norm = normalizeVttWordForDedup(w.text);
+    if (!norm) continue;
+
+    let isDup = false;
+    for (let j = deduplicated.length - 1; j >= 0; j--) {
+      const prev = deduplicated[j];
+      if (w.start - prev.start > 0.45) break;
+      if (normalizeVttWordForDedup(prev.text) === norm) {
+        isDup = true;
+        break;
+      }
     }
-    deduplicated.push(w);
+
+    if (!isDup) {
+      deduplicated.push(w);
+    }
   }
+
   return deduplicated;
 }
 
@@ -969,6 +1018,7 @@ const server = http.createServer(async (req, res) => {
         "-i", sourceMp4,
         "-t", duration.toFixed(3),
         "-avoid_negative_ts", "make_zero",
+        "-sn",
       ];
 
       if (reframeMode === "16:9_fit_blur") {

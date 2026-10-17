@@ -32,12 +32,35 @@ export function groupWordsIntoCues(
 
   if (sanitizedWords.length === 0) return [];
 
+  // Sort chronologically and deduplicate identical words within a 0.45s window
+  sanitizedWords.sort((a, b) => a.start - b.start || a.end - b.end);
+  const dedupedWords: WordToken[] = [];
+  for (const w of sanitizedWords) {
+    const norm = w.text.toLowerCase().replace(/[^a-z0-9]/g, '');
+    if (!norm) continue;
+
+    let isDup = false;
+    for (let j = dedupedWords.length - 1; j >= 0; j--) {
+      const prev = dedupedWords[j];
+      if (w.start - prev.start > 0.45) break;
+      if (prev.text.toLowerCase().replace(/[^a-z0-9]/g, '') === norm) {
+        isDup = true;
+        break;
+      }
+    }
+    if (!isDup) {
+      dedupedWords.push(w);
+    }
+  }
+
+  if (dedupedWords.length === 0) return [];
+
   const cues: SubtitleCue[] = [];
   let currentGroup: WordToken[] = [];
   let cueIndex = 1;
 
-  for (let i = 0; i < sanitizedWords.length; i++) {
-    const word = sanitizedWords[i];
+  for (let i = 0; i < dedupedWords.length; i++) {
+    const word = dedupedWords[i];
     const prevWord = currentGroup[currentGroup.length - 1];
 
     const groupDuration = currentGroup.length > 0 
@@ -73,6 +96,21 @@ export function groupWordsIntoCues(
       text: currentGroup.map((w) => w.text).join(' '),
       words: [...currentGroup],
     });
+  }
+
+  // Ensure adjacent cues never overlap in time (overlapping ASS Dialogue causes double-stacked subtitles!)
+  for (let i = 0; i < cues.length - 1; i++) {
+    const current = cues[i];
+    const next = cues[i + 1];
+    if (current.end > next.start) {
+      current.end = Math.max(current.start + 0.05, next.start);
+      if (current.words.length > 0) {
+        const lastW = current.words[current.words.length - 1];
+        if (lastW.end > current.end) {
+          lastW.end = current.end;
+        }
+      }
+    }
   }
 
   return cues;
@@ -371,7 +409,7 @@ export function generateAss(
 
       // 2. Pause interval before next word starts (or until cue end)
       const pauseStart = activeEnd;
-      const pauseEnd = nextWordStart;
+      const pauseEnd = Math.max(pauseStart, nextWordStart);
       if (pauseEnd - pauseStart >= 0.05 && !isSingleWord) {
         const parts: string[] = [];
         for (let j = 0; j <= i; j++) {

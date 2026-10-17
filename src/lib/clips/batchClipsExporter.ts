@@ -122,7 +122,7 @@ export function normalizeTokensForClip(
     return t.end >= clipStart - 0.1 && t.start <= clipEnd + 0.1;
   });
 
-  return windowTokens
+  const cleanedTokens = windowTokens
     .map((t) => {
       const cleaned = cleanCaptionWord(t.text);
       if (!cleaned || isArtifactWord(cleaned)) return null;
@@ -137,6 +137,33 @@ export function normalizeTokensForClip(
       };
     })
     .filter((t): t is HinglishWordToken => t !== null);
+
+  // Sort chronologically by start time, then end time
+  cleanedTokens.sort((a, b) => a.start - b.start || a.end - b.end);
+
+  // Robust Deduplication:
+  // Discard duplicate occurrences of identical words within a 0.45s window
+  const deduplicated: HinglishWordToken[] = [];
+  for (const token of cleanedTokens) {
+    const norm = token.text.toLowerCase().replace(/[^a-z0-9]/g, "");
+    if (!norm) continue;
+
+    let isDup = false;
+    for (let j = deduplicated.length - 1; j >= 0; j--) {
+      const prev = deduplicated[j];
+      if (token.start - prev.start > 0.45) break;
+      if (prev.text.toLowerCase().replace(/[^a-z0-9]/g, "") === norm) {
+        isDup = true;
+        break;
+      }
+    }
+
+    if (!isDup) {
+      deduplicated.push(token);
+    }
+  }
+
+  return deduplicated;
 }
 
 /**

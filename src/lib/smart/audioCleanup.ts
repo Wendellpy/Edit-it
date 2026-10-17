@@ -216,6 +216,7 @@ export function findSilenceGaps(
 export function decodeHtmlEntities(text: string): string {
   if (!text || typeof text !== 'string') return '';
   return text
+    .replace(/[\u200B-\u200D\uFEFF]/g, '')
     .replace(/&gt;/gi, '>')
     .replace(/&lt;/gi, '<')
     .replace(/&amp;/gi, '&')
@@ -236,11 +237,11 @@ export function decodeHtmlEntities(text: string): string {
  * Checks if a word token is an artifact/noise marker:
  * - Speaker change indicators: ">>", ">>>", ">", "&gt;&gt;", "&gt;&gt;&gt;", "> >"
  * - Closed-caption audio descriptions: "[Music]", "[Applause]", "[Laughter]", "[Inaudible]", "(music)", "(applause)"
- * - Blank or symbol-only artifacts
+ * - Blank, zero-width, or symbol-only artifacts
  */
 export function isArtifactWord(rawWord: string): boolean {
   if (!rawWord || typeof rawWord !== 'string') return true;
-  const decoded = decodeHtmlEntities(rawWord).trim();
+  const decoded = decodeHtmlEntities(rawWord).replace(/[\u200B-\u200D\uFEFF]/g, '').trim();
   if (!decoded) return true;
 
   // Speaker change markers e.g. ">>", ">>>", ">", ">>>>>", "> >", ">>-", "-->>"
@@ -262,18 +263,21 @@ export function isArtifactWord(rawWord: string): boolean {
 /**
  * Cleans a caption word token:
  * - Decodes HTML entities (e.g. &gt;&gt; -> >>)
+ * - Strips zero-width invisible characters
  * - Strips leading/trailing speaker change chevrons (e.g. ">>Hello" -> "Hello")
  * - Trims whitespace
  */
 export function cleanCaptionWord(rawWord: string): string {
   if (!rawWord || typeof rawWord !== 'string') return '';
-  let cleaned = decodeHtmlEntities(rawWord).trim();
+  let cleaned = decodeHtmlEntities(rawWord)
+    .replace(/[\u200B-\u200D\uFEFF]/g, '')
+    .trim();
 
   // Strip leading speaker change arrows e.g. ">>Hello" -> "Hello", "&gt;&gt;Hello" -> "Hello"
   cleaned = cleaned.replace(/^[>\s]+/, '').replace(/[<\s]+$/, '').trim();
 
   // If the word itself was an artifact marker or is now empty, return empty
-  if (isArtifactWord(cleaned)) {
+  if (!cleaned || isArtifactWord(cleaned)) {
     return '';
   }
 
