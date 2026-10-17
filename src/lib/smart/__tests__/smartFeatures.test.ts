@@ -177,7 +177,7 @@ describe('Smart Features Engine', () => {
       expect(result.stats.keywordsHighlighted).toBeGreaterThan(0);
       expect(result.tokens.some((t) => t.text.includes('🎥') || t.text.includes('🚀'))).toBe(true);
       expect(result.wpm).toBeGreaterThan(0);
-      expect(['behind_you_white', 'neon_sticker_lime', 'sunshine_impact_yellow']).toContain(result.recommendedTemplateId);
+      expect(['behind_you_white', 'winner', 'neon_sticker_lime', 'sunshine_impact_yellow']).toContain(result.recommendedTemplateId);
     });
   });
 });

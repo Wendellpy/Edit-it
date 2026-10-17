@@ -49,7 +49,7 @@ export function applyViralMode<T extends WordToken>(tokens: T[], durationSeconds
   // 4. Analyze pace & select optimal template
   const wpm = calculateWpm(withEmojis, durationSeconds);
   let paceCategory: 'slow' | 'optimal' | 'rapid' = 'optimal';
-  let recommendedTemplateId = 'neon_sticker_lime';
+  let recommendedTemplateId = 'winner';
 
   if (wpm < 135) {
     paceCategory = 'slow';
@@ -61,8 +61,8 @@ export function applyViralMode<T extends WordToken>(tokens: T[], durationSeconds
     recommendedTemplateId = 'behind_you_white';
   } else {
     paceCategory = 'optimal';
-    // Sweet spot 135-185 WPM: neon sticker box with italic condensed typography
-    recommendedTemplateId = 'neon_sticker_lime';
+    // Sweet spot 135-185 WPM: Winner podcast editorial style with giant punch & cursive script
+    recommendedTemplateId = 'winner';
   }
 
   return {

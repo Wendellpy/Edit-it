@@ -218,6 +218,439 @@ export function splitAuraLines(currentChunk: WordToken[]): WordToken[][] {
 }
 
 /**
+ * Winner Typographic Classification & Layering
+ * Replicating ScreenRecording_10-17-2026 21-42-16_1 (1).MP4 styling:
+ * 1. Giant Punch Anchor Word: Ultra-bold geometric sans-serif (Montserrat 900 Black),
+ *    lowercase, ~0.088 - 0.095 canvas height, crisp white #FFFFFF with soft drop shadow.
+ * 2. Accent Script Calligraphy Overlay: Elegant cursive handwriting (Caveat / Playfair Display italic 700),
+ *    vibrant crimson red #E50914, overlaid across anchor word with ~ -5.5deg upward slant.
+ * 3. Context Satellite Words: Crisp white Montserrat 900 lowercase, ~0.034 canvas height,
+ *    positioned above (prefix) or below (suffix) the anchor word.
+ */
+export const WINNER_MINOR_WORDS = new Set([
+  "the", "a", "an", "is", "it", "in", "on", "at", "to", "of", "for", "that",
+  "this", "not", "i", "we", "you", "he", "she", "me", "my", "your", "wanna",
+  "gonna", "and", "or", "but", "so", "be", "do", "if", "as", "by", "all"
+]);
+
+export interface WinnerComposition {
+  anchorToken: WordToken;
+  scriptToken?: WordToken;
+  topTokens: WordToken[];
+  bottomTokens: WordToken[];
+  sideTokens: WordToken[];
+}
+
+export function decomposeWinnerCue(tokens: WordToken[]): WinnerComposition {
+  if (!tokens || tokens.length === 0) {
+    throw new Error("Cannot decompose empty tokens");
+  }
+  if (tokens.length === 1) {
+    return {
+      anchorToken: tokens[0],
+      topTokens: [],
+      bottomTokens: [],
+      sideTokens: [],
+    };
+  }
+
+  // 1. Look for explicit keyword or emphatic word for scriptToken
+  let scriptIdx = tokens.findIndex((t) => (t as any).isKeyword);
+
+  // Content words = tokens that are not stopwords (or all tokens if all are stopwords)
+  const contentIndices: number[] = [];
+  for (let i = 0; i < tokens.length; i++) {
+    const clean = tokens[i].text.toLowerCase().replace(/[^a-z0-9]/g, "");
+    if (!WINNER_MINOR_WORDS.has(clean) || tokens.length <= 2) {
+      contentIndices.push(i);
+    }
+  }
+
+  let anchorIdx = -1;
+
+  if (scriptIdx !== -1) {
+    const otherCandidates = contentIndices.filter((idx) => idx !== scriptIdx);
+    if (otherCandidates.length > 0) {
+      anchorIdx = otherCandidates[0];
+    } else {
+      anchorIdx = tokens.findIndex((_, idx) => idx !== scriptIdx);
+      if (anchorIdx === -1) anchorIdx = 0;
+    }
+  } else {
+    if (contentIndices.length >= 2) {
+      // e.g. ["trying", "failing"] or ["only", "consequence"] or ["make", "very"] or ["let", "try"]
+      anchorIdx = contentIndices[0];
+      scriptIdx = contentIndices[1];
+    } else if (contentIndices.length === 1) {
+      anchorIdx = contentIndices[0];
+      scriptIdx = tokens.findIndex((_, idx) => idx !== anchorIdx);
+    } else {
+      anchorIdx = 0;
+      scriptIdx = 1;
+    }
+  }
+
+  const anchorToken = tokens[anchorIdx];
+  const scriptToken = scriptIdx !== -1 ? tokens[scriptIdx] : undefined;
+
+  const topTokens: WordToken[] = [];
+  const bottomTokens: WordToken[] = [];
+  const sideTokens: WordToken[] = [];
+
+  for (let i = 0; i < tokens.length; i++) {
+    if (i === anchorIdx || i === scriptIdx) continue;
+    const token = tokens[i];
+    if (i < anchorIdx) {
+      topTokens.push(token);
+    } else if (tokens.length === 4 && i === anchorIdx + 1 && i < scriptIdx && scriptIdx < tokens.length - 1) {
+      sideTokens.push(token);
+    } else {
+      bottomTokens.push(token);
+    }
+  }
+
+  return {
+    anchorToken,
+    scriptToken,
+    topTokens,
+    bottomTokens,
+    sideTokens,
+  };
+}
+
+export interface RenderWinnerCaptionsOptions {
+  ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D;
+  canvasWidth: number;
+  canvasHeight: number;
+  effectiveTime: number;
+  currentChunk: WordToken[];
+  activeWord: WordToken | null;
+  template: CaptionTemplate;
+  videoSource?: CanvasImageSource | null;
+  segmentationMask?: Uint8Array | null;
+  maskWidth?: number;
+  maskHeight?: number;
+  showMaskOverlay?: boolean;
+  layerOrder?: "behind" | "front" | "sandwich";
+  fitMode?: "fit" | "cover" | "stretch";
+  isPortraitMobile: boolean;
+  isWidescreen: boolean;
+  safeMarginX: number;
+  safeMarginTop: number;
+  safeMarginBottom: number;
+  showBehindBadge?: boolean;
+}
+
+export function renderWinnerCaptions(opts: RenderWinnerCaptionsOptions): void {
+  const {
+    ctx,
+    canvasWidth,
+    canvasHeight,
+    effectiveTime,
+    currentChunk,
+    template,
+    videoSource,
+    segmentationMask,
+    maskWidth,
+    maskHeight,
+    showMaskOverlay,
+    layerOrder,
+    fitMode,
+    isPortraitMobile,
+    isWidescreen,
+    safeMarginX,
+    showBehindBadge,
+  } = opts;
+
+  if (!currentChunk || currentChunk.length === 0) return;
+
+  const comp = decomposeWinnerCue(currentChunk);
+
+  const primaryFamily = template.typography.primaryFont || "Montserrat, sans-serif";
+  const secondaryFamily = template.typography.secondaryFont || "'Caveat', 'Playfair Display', cursive, sans-serif";
+  const baseScale = template.typography.fontSizeBasePercent || 0.088;
+  const anchorFontSize = Math.round(
+    canvasHeight * (isPortraitMobile ? baseScale * 1.05 : isWidescreen ? baseScale * 0.95 : baseScale)
+  );
+  const minorFontSize = Math.round(anchorFontSize * 0.38);
+  const scriptFontSize = Math.round(anchorFontSize * 0.76);
+
+  const fmt = (str: string) => {
+    if (!str) return "";
+    return template.typography.textTransform === "lowercase"
+      ? str.toLowerCase()
+      : template.typography.textTransform === "uppercase"
+      ? str.toUpperCase()
+      : str;
+  };
+
+  ctx.save();
+
+  // 1. Measure Dimensions
+  ctx.font = `900 ${anchorFontSize}px ${primaryFamily}`;
+  const anchorText = fmt(comp.anchorToken.text);
+  const anchorW = ctx.measureText(anchorText).width;
+
+  ctx.font = `900 ${minorFontSize}px ${primaryFamily}`;
+  const topText = comp.topTokens.map((t) => fmt(t.text)).join(" ");
+  const topW = topText ? ctx.measureText(topText).width : 0;
+
+  const sideText = comp.sideTokens.map((t) => fmt(t.text)).join(" ");
+  const sideW = sideText ? ctx.measureText(sideText).width : 0;
+
+  const bottomText = comp.bottomTokens.map((t) => fmt(t.text)).join(" ");
+  const bottomW = bottomText ? ctx.measureText(bottomText).width : 0;
+
+  let scriptText = "";
+  let scriptW = 0;
+  if (comp.scriptToken) {
+    ctx.font = `700 ${scriptFontSize}px ${secondaryFamily}`;
+    scriptText = fmt(comp.scriptToken.text);
+    scriptW = ctx.measureText(scriptText).width;
+  }
+
+  // 2. Position Anchor (Left-anchored editorial lockup)
+  const yPercent = template.layout.yPositionPercent || 0.50;
+  const anchorY = Math.round(canvasHeight * yPercent);
+
+  let anchorX = Math.round(canvasWidth * 0.10);
+  const totalExtent = Math.max(
+    anchorW + (sideW ? sideW + minorFontSize * 0.4 : 0),
+    anchorW * 0.12 + scriptW,
+    topW,
+    bottomW
+  );
+  const maxAllowedX = canvasWidth - safeMarginX - totalExtent;
+  if (anchorX > maxAllowedX) {
+    anchorX = Math.max(safeMarginX, maxAllowedX);
+  }
+
+  // Helper for rendering words with spring pop entrance & drop shadow
+  const drawWord = (
+    token: WordToken,
+    text: string,
+    font: string,
+    color: string,
+    x: number,
+    y: number,
+    options: {
+      isScript?: boolean;
+      tiltDeg?: number;
+      strokeColor?: string;
+      strokeWidth?: number;
+    } = {}
+  ) => {
+    if (!text) return;
+    const isSpoken = effectiveTime >= token.start;
+    const isActive = effectiveTime >= token.start && effectiveTime <= token.end;
+
+    // Cumulative reveal: words before their start time remain hidden
+    if (!isSpoken) return;
+
+    ctx.save();
+    ctx.font = font;
+    ctx.textAlign = "left";
+    ctx.textBaseline = "middle";
+
+    const wordW = ctx.measureText(text).width;
+    const wordCenterX = x + wordW / 2;
+    const wordCenterY = y;
+
+    // Entrance pop kinetics
+    const wordElapsed = Math.max(0, effectiveTime - token.start);
+    let scale = 1.0;
+    if (isActive) {
+      const popDuration = 0.22;
+      if (wordElapsed < popDuration) {
+        const t = wordElapsed / popDuration;
+        scale = 1.0 + 0.16 * Math.sin(t * Math.PI * 1.6) * Math.exp(-t * 3.5);
+      }
+    }
+
+    ctx.translate(wordCenterX, wordCenterY);
+    if (options.tiltDeg) {
+      ctx.rotate((options.tiltDeg * Math.PI) / 180);
+    }
+    ctx.scale(scale, scale);
+    ctx.translate(-wordCenterX, -wordCenterY);
+
+    // Deep soft drop shadow
+    if (options.isScript) {
+      ctx.shadowColor = isActive ? "rgba(229, 9, 20, 0.65)" : "rgba(0, 0, 0, 0.95)";
+      ctx.shadowBlur = isActive ? 16 : 10;
+      ctx.shadowOffsetY = Math.round(minorFontSize * 0.12);
+    } else {
+      ctx.shadowColor = "rgba(0, 0, 0, 0.92)";
+      ctx.shadowBlur = 14;
+      ctx.shadowOffsetY = Math.round(minorFontSize * 0.15);
+    }
+
+    // Stroke
+    if (options.strokeColor && options.strokeWidth) {
+      ctx.strokeStyle = options.strokeColor;
+      ctx.lineWidth = options.strokeWidth;
+      ctx.lineJoin = "round";
+      ctx.strokeText(text, x, y);
+    }
+
+    // Fill
+    ctx.fillStyle = color;
+    ctx.fillText(text, x, y);
+
+    ctx.restore();
+  };
+
+  const hasDepth = Boolean(
+    segmentationMask &&
+    videoSource &&
+    (layerOrder === "behind" || layerOrder === "sandwich" || template.layout.behindSubjectDepth)
+  );
+
+  // Render Anchor
+  const renderAnchor = () => {
+    drawWord(
+      comp.anchorToken,
+      anchorText,
+      `900 ${anchorFontSize}px ${primaryFamily}`,
+      "#FFFFFF",
+      anchorX,
+      anchorY,
+      {
+        strokeColor: "#000000",
+        strokeWidth: Math.max(2, Math.round(canvasHeight * 0.003)),
+      }
+    );
+  };
+
+  // Render Top Satellites
+  const renderTopSatellites = () => {
+    if (comp.topTokens.length === 0) return;
+    const topY = anchorY - anchorFontSize * 0.50;
+    let currX = anchorX;
+    ctx.font = `900 ${minorFontSize}px ${primaryFamily}`;
+    const spaceW = Math.round(minorFontSize * 0.28);
+    for (const t of comp.topTokens) {
+      const wText = fmt(t.text);
+      drawWord(t, wText, `900 ${minorFontSize}px ${primaryFamily}`, "#FFFFFF", currX, topY, {
+        strokeColor: "#000000",
+        strokeWidth: Math.max(1, Math.round(canvasHeight * 0.002)),
+      });
+      currX += ctx.measureText(wText).width + spaceW;
+    }
+  };
+
+  // Render Foreground Overlays (Script Calligraphy + Side + Bottom Satellites)
+  const renderForegroundOverlays = () => {
+    // 1. Side Satellites (e.g. "me" beside "let")
+    if (comp.sideTokens.length > 0) {
+      let sideX = anchorX + anchorW + minorFontSize * 0.35;
+      const sideY = anchorY + anchorFontSize * 0.04;
+      ctx.font = `900 ${minorFontSize}px ${primaryFamily}`;
+      const spaceW = Math.round(minorFontSize * 0.28);
+      for (const t of comp.sideTokens) {
+        const wText = fmt(t.text);
+        drawWord(t, wText, `900 ${minorFontSize}px ${primaryFamily}`, "#FFFFFF", sideX, sideY, {
+          strokeColor: "#000000",
+          strokeWidth: Math.max(1, Math.round(canvasHeight * 0.002)),
+        });
+        sideX += ctx.measureText(wText).width + spaceW;
+      }
+    }
+
+    // 2. Script Calligraphy Overlay (Sweeps across the anchor word with -5.5deg slant)
+    if (comp.scriptToken && scriptText) {
+      const scriptX = anchorX + anchorW * 0.12;
+      const scriptY = anchorY + anchorFontSize * 0.16;
+      drawWord(
+        comp.scriptToken,
+        scriptText,
+        `700 ${scriptFontSize}px ${secondaryFamily}`,
+        "#E50914",
+        scriptX,
+        scriptY,
+        {
+          isScript: true,
+          tiltDeg: -5.5,
+          strokeColor: "rgba(0, 0, 0, 0.88)",
+          strokeWidth: Math.max(2, Math.round(canvasHeight * 0.0035)),
+        }
+      );
+    }
+
+    // 3. Bottom Satellites (e.g. "is failure" or "that clear")
+    if (comp.bottomTokens.length > 0) {
+      const bottomY = anchorY + anchorFontSize * 0.54;
+      let currX = anchorX + (comp.scriptToken ? Math.min(anchorW * 0.15, scriptW * 0.2) : 0);
+      ctx.font = `900 ${minorFontSize}px ${primaryFamily}`;
+      const spaceW = Math.round(minorFontSize * 0.28);
+      for (const t of comp.bottomTokens) {
+        const wText = fmt(t.text);
+        drawWord(t, wText, `900 ${minorFontSize}px ${primaryFamily}`, "#FFFFFF", currX, bottomY, {
+          strokeColor: "#000000",
+          strokeWidth: Math.max(1, Math.round(canvasHeight * 0.002)),
+        });
+        currX += ctx.measureText(wText).width + spaceW;
+      }
+    }
+  };
+
+  if (hasDepth) {
+    // PASS 1: Behind Subject (Giant Anchor word + Top satellites)
+    renderAnchor();
+    renderTopSatellites();
+
+    // PASS 2: Subject Cutout
+    if (videoSource && segmentationMask) {
+      drawSubjectCutout(
+        ctx,
+        videoSource,
+        segmentationMask,
+        maskWidth || canvasWidth,
+        maskHeight || canvasHeight,
+        canvasWidth,
+        canvasHeight,
+        fitMode || "fit"
+      );
+    }
+
+    // PASS 3: Foreground Overlays (Script Calligraphy in front of subject chest)
+    renderForegroundOverlays();
+  } else {
+    // Single-Pass Direct Foreground Rendering
+    renderAnchor();
+    renderTopSatellites();
+    renderForegroundOverlays();
+  }
+
+  // Optional Behind Badge
+  if (template.badge && showBehindBadge) {
+    const badgeHeight = Math.round(anchorFontSize * 0.38);
+    const badgeWidth = Math.round(badgeHeight * 3.8);
+    const badgeX = canvasWidth * 0.08;
+    const badgeY = canvasHeight * 0.08;
+
+    ctx.save();
+    ctx.fillStyle = "#E50914";
+    roundRect(ctx, badgeX, badgeY, badgeWidth, badgeHeight, badgeHeight / 2);
+    ctx.fill();
+
+    ctx.fillStyle = "#FFFFFF";
+    ctx.font = `bold ${Math.round(badgeHeight * 0.65)}px sans-serif`;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(template.badge, badgeX + badgeWidth / 2, badgeY + badgeHeight / 2);
+    ctx.restore();
+  }
+
+  // Optional Mask Preview Overlay
+  if (showMaskOverlay && segmentationMask) {
+    drawMaskOverlay(ctx, segmentationMask, maskWidth || canvasWidth, maskHeight || canvasHeight, canvasWidth, canvasHeight);
+  }
+
+  ctx.restore();
+}
+
+/**
  * Draws the masked cutout of the subject over the background canvas.
  * Draw order: 1. Video frame -> 2. Behind-subject caption -> 3. Subject cutout -> 4. Foreground text
  */
@@ -489,6 +922,32 @@ export function renderCaptionFrame(options: RenderCaptionFrameOptions): void {
 
   // In single-word mode, only show if there is an active spoken word or within hold window
   if (isSingleWordMode && !activeWord && effectiveTime > activeCue.end) return;
+
+  if (template.id === "winner") {
+    renderWinnerCaptions({
+      ctx,
+      canvasWidth,
+      canvasHeight,
+      effectiveTime,
+      currentChunk,
+      activeWord: activeWord || null,
+      template,
+      videoSource,
+      segmentationMask,
+      maskWidth,
+      maskHeight,
+      showMaskOverlay,
+      layerOrder,
+      fitMode,
+      isPortraitMobile,
+      isWidescreen,
+      safeMarginX,
+      safeMarginTop,
+      safeMarginBottom,
+      showBehindBadge,
+    });
+    return;
+  }
 
   // 5. Typography metrics with aspect ratio scaling
   const baseScale = template.typography.fontSizeBasePercent || 0.05;

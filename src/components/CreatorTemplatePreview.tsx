@@ -14,7 +14,7 @@ interface TemplateStyle {
     keyword: string;
     suffix?: string;
   };
-  styleType: "behind_you" | "neon_sticker" | "sunshine_impact" | "editorial_dual" | "crimson_glow" | "chrome_3d" | "hormozi_highlighter" | "ali_abdaal_karaoke" | "mr_beast_squash" | "single_word_flow";
+  styleType: "behind_you" | "neon_sticker" | "winner" | "sunshine_impact" | "editorial_dual" | "crimson_glow" | "chrome_3d" | "hormozi_highlighter" | "ali_abdaal_karaoke" | "mr_beast_squash" | "single_word_flow";
 }
 
 const TEMPLATES: TemplateStyle[] = [
@@ -79,16 +79,16 @@ const TEMPLATES: TemplateStyle[] = [
     styleType: "behind_you",
   },
   {
-    id: "neon_sticker_lime",
-    name: "Lime Sticker Box",
+    id: "winner",
+    name: "Winner",
     category: "Neon",
-    badge: "BEHIND YOU",
+    badge: "EDITORIAL",
     previewWords: {
-      prefix: "ek choose kiya,",
-      keyword: "template",
-      suffix: "",
+      prefix: "the",
+      keyword: "only",
+      suffix: "is failure",
     },
-    styleType: "neon_sticker",
+    styleType: "winner",
   },
   {
     id: "sunshine_impact_yellow",
@@ -371,19 +371,34 @@ export function CreatorTemplatePreview() {
                 </div>
               )}
 
-              {/* 2. Neon Lime Sticker Box */}
-              {selectedTemplate.styleType === "neon_sticker" && (
-                <div className="space-y-2">
-                  <div className="text-zinc-300 text-xs font-serif italic">
-                    {selectedTemplate.previewWords.prefix}
+              {/* 2. Winner Editorial Style */}
+              {(selectedTemplate.styleType === "winner" || selectedTemplate.styleType === "neon_sticker") && (
+                <div className="flex flex-col items-start justify-center pl-4 py-2 select-none relative">
+                  <span className="text-zinc-200 text-sm font-black lowercase tracking-tight mb-[-4px] drop-shadow-md">
+                    {selectedTemplate.previewWords.prefix || "the"}
+                  </span>
+                  <div className="relative inline-block my-1">
+                    <span
+                      className="text-white text-5xl sm:text-6xl font-black lowercase tracking-tighter drop-shadow-2xl"
+                      style={{ fontFamily: "Montserrat, sans-serif" }}
+                    >
+                      {selectedTemplate.previewWords.keyword || "only"}
+                    </span>
+                    <span
+                      className={`absolute left-3 top-5 sm:top-6 text-[#E50914] text-2xl sm:text-3xl font-bold tracking-wide -rotate-6 drop-shadow-lg transition-transform ${
+                        animatingWord ? "scale-110 -rotate-3" : "scale-100 -rotate-6"
+                      }`}
+                      style={{
+                        fontFamily: "'Caveat', 'Playfair Display', cursive, sans-serif",
+                        textShadow: "0 2px 8px rgba(0,0,0,0.9)",
+                      }}
+                    >
+                      consequence
+                    </span>
                   </div>
-                  <div
-                    className={`inline-block px-4 py-2 rounded-xl bg-[#39FF14] text-zinc-950 font-black italic uppercase tracking-tighter text-3xl sm:text-4xl shadow-xl shadow-lime-500/20 transition-transform ${
-                      animatingWord ? "scale-105 -rotate-1" : "scale-100 rotate-0"
-                    }`}
-                  >
-                    {selectedTemplate.previewWords.keyword}
-                  </div>
+                  <span className="text-zinc-200 text-sm font-black lowercase tracking-tight mt-[-2px] drop-shadow-md">
+                    {selectedTemplate.previewWords.suffix || "is failure"}
+                  </span>
                 </div>
               )}
 

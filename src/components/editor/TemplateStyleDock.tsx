@@ -425,6 +425,39 @@ export function TemplateStyleDock({ onOpenExportModal }: TemplateStyleDockProps)
                         const prefix = words.slice(0, -1).join(" ");
                         const hasBox = preset.colors.activeWordBg || preset.animation?.perWordEffect === "highlight_box";
 
+                        if (preset.id === "winner") {
+                          return (
+                            <span className="flex flex-col items-start justify-center pl-1.5 select-none relative z-10 w-full overflow-hidden leading-tight">
+                              <span className="text-[8px] font-black lowercase text-zinc-300 tracking-tight leading-none mb-0.5">
+                                the
+                              </span>
+                              <span className="relative inline-block leading-none">
+                                <span
+                                  className="text-base font-black lowercase text-white tracking-tighter leading-none"
+                                  style={{
+                                    fontFamily: "Montserrat, sans-serif",
+                                    textShadow: "0 2px 4px rgba(0,0,0,0.9)",
+                                  }}
+                                >
+                                  only
+                                </span>
+                                <span
+                                  className="absolute left-1 top-0 text-[10px] font-bold text-[#E50914] -rotate-6 tracking-normal whitespace-nowrap"
+                                  style={{
+                                    fontFamily: "'Caveat', 'Playfair Display', cursive, sans-serif",
+                                    textShadow: "0 1px 3px rgba(0,0,0,0.95)",
+                                  }}
+                                >
+                                  consequence
+                                </span>
+                              </span>
+                              <span className="text-[8px] font-black lowercase text-zinc-300 tracking-tight leading-none mt-0.5">
+                                is failure
+                              </span>
+                            </span>
+                          );
+                        }
+
                         if (preset.id === "aura" && userFirstLine === "VIRAL CAPTION") {
                           return (
                             <span

@@ -267,6 +267,8 @@ export function generateAss(
 
   const rawFont = template.typography?.primaryFont || 'Arial';
   const cleanFont = rawFont.split(',')[0].replace(/['"]/g, '').trim() || 'Arial';
+  const rawSecondaryFont = template.typography?.secondaryFont || '';
+  const cleanSecondaryFont = rawSecondaryFont.split(',')[0].replace(/['"]/g, '').trim() || 'Caveat';
 
   // Apply typography transform (MrBeast is UPPERCASE)
   const textTransform = template.typography?.textTransform || 'none';
@@ -380,6 +382,17 @@ export function generateAss(
     const words = cue.words;
     const n = words.length;
 
+    // Detect Winner script word
+    let winnerScriptId: string | null = null;
+    if (template.id === 'winner' && words.length > 1) {
+      const kw = words.find((w) => w.isKeyword);
+      if (kw) {
+        winnerScriptId = kw.id;
+      } else {
+        winnerScriptId = words[1]?.id || null;
+      }
+    }
+
     for (let i = 0; i < n; i++) {
       const w = words[i];
       const nextWordStart = i < n - 1 ? words[i + 1].start : cue.end;
@@ -391,15 +404,23 @@ export function generateAss(
       if (activeEnd > activeStart) {
         let lineText = '';
         if (isSingleWord) {
-          lineText = `{\\c${activeColorAss}\\fscx${activeScalePct}\\fscy${activeScalePct}}${applyTransform(w.text)}`;
+          const isActiveWinnerScript = template.id === 'winner' && (w.id === winnerScriptId || w.isKeyword);
+          const activeFontTag = template.id === 'winner' ? (isActiveWinnerScript ? `\\fn${cleanSecondaryFont}\\i1` : `\\fn${cleanFont}\\i0`) : '';
+          const activeCol = isActiveWinnerScript ? secondaryColorAss : activeColorAss;
+          lineText = `{${activeFontTag}\\c${activeCol}\\fscx${activeScalePct}\\fscy${activeScalePct}}${applyTransform(w.text)}`;
         } else {
           const parts: string[] = [];
           for (let j = 0; j < i; j++) {
             const prevW = words[j];
-            const cAss = prevW.isKeyword ? secondaryColorAss : primaryColorAss;
-            parts.push(`{\\c${cAss}\\fscx100\\fscy100}${applyTransform(prevW.text)}`);
+            const isWinnerScript = template.id === 'winner' && (prevW.id === winnerScriptId || prevW.isKeyword);
+            const fontTag = template.id === 'winner' ? (isWinnerScript ? `\\fn${cleanSecondaryFont}\\i1` : `\\fn${cleanFont}\\i0`) : '';
+            const cAss = (isWinnerScript || prevW.isKeyword) ? secondaryColorAss : primaryColorAss;
+            parts.push(`{${fontTag}\\c${cAss}\\fscx100\\fscy100}${applyTransform(prevW.text)}`);
           }
-          parts.push(`{\\c${activeColorAss}\\fscx${activeScalePct}\\fscy${activeScalePct}}${applyTransform(w.text)}`);
+          const isActiveWinnerScript = template.id === 'winner' && (w.id === winnerScriptId || w.isKeyword);
+          const activeFontTag = template.id === 'winner' ? (isActiveWinnerScript ? `\\fn${cleanSecondaryFont}\\i1` : `\\fn${cleanFont}\\i0`) : '';
+          const activeCol = isActiveWinnerScript ? secondaryColorAss : activeColorAss;
+          parts.push(`{${activeFontTag}\\c${activeCol}\\fscx${activeScalePct}\\fscy${activeScalePct}}${applyTransform(w.text)}`);
           lineText = parts.join(' ');
         }
         events.push(
@@ -414,8 +435,10 @@ export function generateAss(
         const parts: string[] = [];
         for (let j = 0; j <= i; j++) {
           const prevW = words[j];
-          const cAss = prevW.isKeyword ? secondaryColorAss : primaryColorAss;
-          parts.push(`{\\c${cAss}\\fscx100\\fscy100}${applyTransform(prevW.text)}`);
+          const isWinnerScript = template.id === 'winner' && (prevW.id === winnerScriptId || prevW.isKeyword);
+          const fontTag = template.id === 'winner' ? (isWinnerScript ? `\\fn${cleanSecondaryFont}\\i1` : `\\fn${cleanFont}\\i0`) : '';
+          const cAss = (isWinnerScript || prevW.isKeyword) ? secondaryColorAss : primaryColorAss;
+          parts.push(`{${fontTag}\\c${cAss}\\fscx100\\fscy100}${applyTransform(prevW.text)}`);
         }
         events.push(
           `Dialogue: 0,${formatAssTime(pauseStart)},${formatAssTime(pauseEnd)},Default,,0,0,0,,${parts.join(' ')}`

@@ -5,7 +5,8 @@ export * from "./schema";
 export * from "./presets";
 
 export function getTemplateById(id: string): CaptionTemplate {
-  const match = CAPTION_PRESETS.find((t) => t.id === id);
+  const targetId = id === "neon_sticker_lime" ? "winner" : id;
+  const match = CAPTION_PRESETS.find((t) => t.id === targetId || t.id === id);
   return match || CAPTION_PRESETS[0];
 }
 

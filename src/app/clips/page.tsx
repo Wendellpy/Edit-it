@@ -2107,7 +2107,7 @@ export default function ClipsPage() {
                                     { id: "mr_beast_bold", name: "MrBeast Squash", badge: "ENERGY" },
                                     { id: "die_cut_sticker", name: "Die-Cut Sticker", badge: "COMEDY" },
                                     { id: "sunshine_impact_yellow", name: "Sunshine Impact", badge: "CINEMA" },
-                                    { id: "neon_sticker_lime", name: "Neon Lime", badge: "NEON" },
+                                    { id: "winner", name: "Winner", badge: "EDITORIAL" },
                                     { id: "devanagari_calligraphy_bold", name: "Devanagari Royal", badge: "HINDI" },
                                     { id: "clean_sub_inter", name: "Clean Inter", badge: "MINIMAL" },
                                   ].map((preset) => {

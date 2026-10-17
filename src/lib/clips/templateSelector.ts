@@ -85,8 +85,8 @@ export function determineOptimalTemplateId(
   }
   if (preferredVibe === "neon") {
     return {
-      presetId: "neon_sticker_lime",
-      reason: "Neon aesthetic preference selected",
+      presetId: "winner",
+      reason: "Neon aesthetic preference selected — Winner",
     };
   }
   if (preferredVibe === "bollywood") {
@@ -148,8 +148,8 @@ export function determineOptimalTemplateId(
 
   if (peakRms >= 0.70) {
     return {
-      presetId: "neon_sticker_lime",
-      reason: "High audio intensity with punchy vocal delivery — Neon lime sticker",
+      presetId: "winner",
+      reason: "High audio intensity with punchy vocal delivery — Winner editorial",
     };
   }
 

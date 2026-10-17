@@ -336,38 +336,35 @@ export const CAPTION_PRESETS: CaptionTemplate[] = [
   // 2. NEON (10 Presets)
   // ==========================================
   {
-    id: "neon_sticker_lime",
-    name: "Lime Sticker Box",
+    id: "winner",
+    name: "Winner",
     vibe: "neon",
-    badge: "BEHIND YOU",
+    badge: "EDITORIAL",
     typography: {
-      primaryFont: "Impact, sans-serif",
-      secondaryFont: "Playfair Display, serif",
+      primaryFont: "Montserrat, sans-serif",
+      secondaryFont: "'Caveat', 'Playfair Display', cursive, sans-serif",
       primaryWeight: "900",
       textTransform: "lowercase",
-      fontSizeBasePercent: 0.046,
+      fontSizeBasePercent: 0.088,
     },
     colors: {
-      primaryText: "#09090B",
-      activeWordText: "#09090B",
-    },
-    box: {
-      enabled: true,
-      bgColor: "#39FF14",
-      paddingX: 18,
-      paddingY: 8,
-      borderRadius: 14,
-      rotationDeg: -2,
+      primaryText: "#FFFFFF",
+      secondaryText: "#E50914",
+      activeWordText: "#E50914",
+      strokeColor: "#000000",
+      strokeWidthPercent: 0.003,
+      shadowColor: "rgba(0, 0, 0, 0.92)",
+      shadowBlur: 14,
     },
     layout: {
-      yPositionPercent: 0.48,
+      yPositionPercent: 0.50,
       maxWordsPerLine: 2,
       maxLines: 2,
       behindSubjectDepth: true,
     },
     animation: {
       perWordEffect: "scale_pop",
-      scaleMagnitude: 1.1,
+      scaleMagnitude: 1.15,
     },
   },
   {
