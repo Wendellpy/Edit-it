@@ -204,9 +204,59 @@ function parseVttTime(str) {
   return parseFloat(sec.toFixed(3));
 }
 
+function decodeHtmlEntities(text) {
+  if (!text || typeof text !== "string") return "";
+  return text
+    .replace(/&gt;/gi, ">")
+    .replace(/&lt;/gi, "<")
+    .replace(/&amp;/gi, "&")
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;/gi, "'")
+    .replace(/&apos;/gi, "'")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&#(\d+);/g, (_, dec) => {
+      try {
+        return String.fromCharCode(parseInt(dec, 10));
+      } catch {
+        return "";
+      }
+    });
+}
+
+function cleanVttWord(word) {
+  if (!word || typeof word !== "string") return "";
+  let clean = decodeHtmlEntities(word).trim();
+  // Strip leading/trailing speaker change chevrons (e.g. >>Hello -> Hello)
+  clean = clean.replace(/^[>\s]+/, "").replace(/[<\s]+$/, "").trim();
+
+  // If word is pure speaker indicator, bracketed sound cue, or symbol noise
+  if (
+    !clean ||
+    (/[>]/.test(clean) && /^[\s>\-_.*~]+$/.test(clean)) ||
+    /&gt;/i.test(clean) && /^[\s&;gt\-_.*~]+$/i.test(clean) ||
+    /^[\[(][a-zA-Z0-9\s_.,:/-]+[\])]$/.test(clean) ||
+    /^[\[(]?(music|applause|laughter|inaudible|chuckle|cheering|gasp|sigh|sighs|groan|screaming|snicker|bell|applause|sound)[\])]?$/i.test(clean) ||
+    /^[*_~=\-–—.]+$/.test(clean)
+  ) {
+    return "";
+  }
+  return clean;
+}
+
 function parseVttTimedWords(vttContent) {
   const blocks = vttContent.split(/\r?\n\r?\n/);
   const words = [];
+
+  const pushCleanWord = (rawText, start, end) => {
+    const cleanText = cleanVttWord(rawText);
+    if (cleanText) {
+      words.push({
+        text: cleanText,
+        start,
+        end,
+      });
+    }
+  };
 
   for (const block of blocks) {
     const lines = block.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
@@ -236,22 +286,14 @@ function parseVttTimedWords(vttContent) {
           const wordEndTime = parseVttTime(m[1]);
           const nextWord = m[2].trim();
           if (currentWord) {
-            words.push({
-              text: currentWord,
-              start: prevTime,
-              end: Math.max(prevTime + 0.08, wordEndTime),
-            });
+            pushCleanWord(currentWord, prevTime, Math.max(prevTime + 0.08, wordEndTime));
           }
           currentWord = nextWord;
           prevTime = wordEndTime;
         }
 
         if (currentWord) {
-          words.push({
-            text: currentWord,
-            start: prevTime,
-            end: Math.max(prevTime + 0.08, cueEnd),
-          });
+          pushCleanWord(currentWord, prevTime, Math.max(prevTime + 0.08, cueEnd));
         }
       }
     } else {
@@ -263,11 +305,7 @@ function parseVttTimedWords(vttContent) {
         tokens.forEach((t, idx) => {
           const wStart = parseFloat((cueStart + idx * step).toFixed(3));
           const wEnd = parseFloat((cueStart + (idx + 1) * step).toFixed(3));
-          words.push({
-            text: t,
-            start: wStart,
-            end: Math.max(wStart + 0.08, wEnd),
-          });
+          pushCleanWord(t, wStart, Math.max(wStart + 0.08, wEnd));
         });
       }
     }
@@ -400,6 +438,14 @@ const server = http.createServer(async (req, res) => {
           cache,
         })
       );
+      return;
+    }
+
+    // GET /cache
+    if (req.method === "GET" && pathname === "/cache") {
+      const cache = await getCacheStats();
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ ok: true, cache }));
       return;
     }
 
@@ -707,6 +753,29 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
+    // DELETE /file/:id - Delete a specific file or exported clip
+    if (req.method === "DELETE" && pathname.startsWith("/file/")) {
+      const fileId = path.basename(pathname.replace("/file/", "")).replace(/[^a-zA-Z0-9_.-]/g, "");
+      const possibleFiles = [
+        path.join(CACHE_DIR, fileId),
+        path.join(CACHE_DIR, `${fileId}.mp4`),
+        path.join(CACHE_DIR, `${fileId}.wav`),
+      ];
+      let deleted = false;
+      for (const p of possibleFiles) {
+        if (fs.existsSync(p)) {
+          try {
+            await fsp.unlink(p);
+            deleted = true;
+          } catch {}
+        }
+      }
+      const stats = await getCacheStats();
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ success: true, deleted, cache: stats }));
+      return;
+    }
+
     // GET or HEAD /file/:id - Stream video or audio file with HTTP Range support
     if ((req.method === "GET" || req.method === "HEAD") && pathname.startsWith("/file/")) {
       const fileId = path.basename(pathname.replace("/file/", "")).replace(/[^a-zA-Z0-9_.-]/g, "");
@@ -969,6 +1038,94 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
+    // POST /remove-watermark-ffmpeg - Fast local hardware watermark removal via FFmpeg delogo filter
+    if (req.method === "POST" && pathname === "/remove-watermark-ffmpeg") {
+      const body = await parseJsonBody(req);
+      const fileId = (body.fileId || "").replace(/[^a-zA-Z0-9_.-]/g, "");
+      const sourceMp4 = path.join(CACHE_DIR, fileId.endsWith(".mp4") ? fileId : `${fileId}.mp4`);
+
+      if (!fs.existsSync(sourceMp4)) {
+        res.writeHead(404, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ error: "Source video file not found in cache." }));
+        return;
+      }
+
+      const binaries = await getDependencyStatus();
+      if (!binaries.ffmpeg.available) {
+        res.writeHead(503, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ error: "FFmpeg is missing: " + binaries.ffmpeg.installCommand }));
+        return;
+      }
+
+      const rois = Array.isArray(body.rois) ? body.rois : [];
+      if (rois.length === 0) {
+        res.writeHead(400, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ error: "At least one ROI required" }));
+        return;
+      }
+
+      const band = Math.max(1, Math.min(10, parseInt(body.band || "2", 10)));
+      const delogoFilters = rois.map((roi) => {
+        if (roi.isNormalized || (roi.x <= 1 && roi.width <= 1)) {
+          const xExpr = `in_w*${Math.max(0, Math.min(0.99, roi.x)).toFixed(4)}`;
+          const yExpr = `in_h*${Math.max(0, Math.min(0.99, roi.y)).toFixed(4)}`;
+          const wExpr = `in_w*${Math.max(0.01, Math.min(1, roi.width)).toFixed(4)}`;
+          const hExpr = `in_h*${Math.max(0.01, Math.min(1, roi.height)).toFixed(4)}`;
+          return `delogo=x=${xExpr}:y=${yExpr}:w=${wExpr}:h=${hExpr}:band=${band}:show=0`;
+        } else {
+          const x = Math.max(0, Math.round(roi.x));
+          const y = Math.max(0, Math.round(roi.y));
+          const w = Math.max(4, Math.round(roi.width));
+          const h = Math.max(4, Math.round(roi.height));
+          return `delogo=x=${x}:y=${y}:w=${w}:h=${h}:band=${band}:show=0`;
+        }
+      });
+
+      const hash = crypto.createHash("md5").update(JSON.stringify(rois) + band).digest("hex").slice(0, 8);
+      const outFileName = `delogo_${path.basename(fileId, path.extname(fileId))}_${hash}.mp4`;
+      const outputMp4 = path.join(CACHE_DIR, outFileName);
+
+      if (fs.existsSync(outputMp4)) {
+        res.writeHead(200, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({
+          success: true,
+          cached: true,
+          fileId: outFileName,
+          downloadUrl: `/file/${outFileName}`,
+        }));
+        return;
+      }
+
+      const ffmpegArgs = [
+        "-y",
+        "-i", sourceMp4,
+        "-vf", delogoFilters.join(","),
+        "-c:v", "libx264",
+        "-preset", "faster",
+        "-crf", "17",
+        "-pix_fmt", "yuv420p",
+        "-c:a", "copy",
+        "-movflags", "+faststart",
+        outputMp4,
+      ];
+
+      execFile(binaries.ffmpeg.path, ffmpegArgs, { cwd: CACHE_DIR, timeout: 180000 }, async (err) => {
+        if (err || !fs.existsSync(outputMp4)) {
+          res.writeHead(500, { "Content-Type": "application/json" });
+          res.end(JSON.stringify({ error: "FFmpeg delogo failed: " + (err ? err.message : "No output generated") }));
+        } else {
+          cleanCacheLRU();
+          res.writeHead(200, { "Content-Type": "application/json" });
+          res.end(JSON.stringify({
+            success: true,
+            fileId: outFileName,
+            downloadUrl: `/file/${outFileName}`,
+          }));
+        }
+      });
+      return;
+    }
+
     // POST /captions-hint - Pull creator YouTube captions as hints for proper nouns and spelling
     if (req.method === "POST" && pathname === "/captions-hint") {
       const body = await parseJsonBody(req);
@@ -1043,17 +1200,38 @@ const server = http.createServer(async (req, res) => {
     // DELETE /cleanup
     if (req.method === "DELETE" && pathname === "/cleanup") {
       const body = await parseJsonBody(req).catch(() => ({}));
-      if (body.fileId) {
+      const files = await fsp.readdir(CACHE_DIR);
+
+      if (body.fileName) {
+        // Delete a specific clip or export file
+        const safeName = path.basename(body.fileName).replace(/[^a-zA-Z0-9_.-]/g, "");
+        const targetPath = path.join(CACHE_DIR, safeName);
+        if (fs.existsSync(targetPath)) {
+          try { await fsp.unlink(targetPath); } catch {}
+        }
+      } else if (body.onlyExports) {
+        // Delete all exported clips and temp subtitle files, keeping source videos
+        for (const file of files) {
+          if (file.startsWith("export_") || file.startsWith("temp_")) {
+            try { await fsp.unlink(path.join(CACHE_DIR, file)); } catch {}
+          }
+        }
+      } else if (body.fileId) {
         const fileId = body.fileId.replace(/[^a-zA-Z0-9_-]/g, "");
-        const paths = [path.join(CACHE_DIR, `${fileId}.mp4`), path.join(CACHE_DIR, `${fileId}.wav`)];
-        for (const p of paths) {
-          try {
-            if (fs.existsSync(p)) await fsp.unlink(p);
-          } catch {}
+        // Delete source files and associated exports/subs
+        for (const file of files) {
+          if (
+            file === `${fileId}.mp4` ||
+            file === `${fileId}.wav` ||
+            file.startsWith(`export_${fileId}`) ||
+            file.startsWith(`temp_${fileId}`) ||
+            file.startsWith(`${fileId}_subs`)
+          ) {
+            try { await fsp.unlink(path.join(CACHE_DIR, file)); } catch {}
+          }
         }
       } else {
         // Clear all files in cache
-        const files = await fsp.readdir(CACHE_DIR);
         for (const file of files) {
           try {
             await fsp.unlink(path.join(CACHE_DIR, file));

@@ -5,6 +5,7 @@
  */
 
 import type { HinglishWordToken } from "../hinglish/postProcessor";
+import { isArtifactWord, cleanCaptionWord } from "../smart/audioCleanup";
 
 export interface SentenceUnit {
   index: number;
@@ -31,15 +32,26 @@ export interface SnappedBoundary {
 export function segmentIntoSentences(tokens: HinglishWordToken[]): SentenceUnit[] {
   if (!tokens || tokens.length === 0) return [];
 
+  // Filter artifact markers like >>, >>>, &gt;&gt;, [Music], etc.
+  const cleanTokens = tokens
+    .filter((t) => t && t.text && !isArtifactWord(t.text))
+    .map((t) => {
+      const cleaned = cleanCaptionWord(t.text);
+      return cleaned && !isArtifactWord(cleaned) ? { ...t, text: cleaned } : null;
+    })
+    .filter((t): t is HinglishWordToken => t !== null);
+
+  if (cleanTokens.length === 0) return [];
+
   const sentences: SentenceUnit[] = [];
   let currentTokens: HinglishWordToken[] = [];
 
-  for (let i = 0; i < tokens.length; i++) {
-    const token = tokens[i];
+  for (let i = 0; i < cleanTokens.length; i++) {
+    const token = cleanTokens[i];
     currentTokens.push(token);
 
-    const isLastToken = i === tokens.length - 1;
-    const nextToken = !isLastToken ? tokens[i + 1] : null;
+    const isLastToken = i === cleanTokens.length - 1;
+    const nextToken = !isLastToken ? cleanTokens[i + 1] : null;
 
     // Boundary conditions:
     // 1. Punctuation at end of word (. ? ! । |)
@@ -109,6 +121,29 @@ export function snapToSentenceBoundaries(
       }
     } else if (segDur > maxDuration) {
       break;
+    }
+  }
+
+  // Dangling conjunction check: avoid ending on "and", "but", "because", "lekin", etc.
+  const DANGLING_CONJUNCTIONS = new Set([
+    "and", "but", "because", "so", "or", "then", "which", "that",
+    "lekin", "kyunki", "par", "aur", "agar", "toh", "jaise", "ki",
+  ]);
+
+  const getLastWord = (text: string) => {
+    const parts = text.trim().split(/\s+/);
+    return parts[parts.length - 1]?.toLowerCase().replace(/[^a-z0-9]/g, "") || "";
+  };
+
+  if (endIdx < sentences.length - 1) {
+    const lastWord = getLastWord(sentences[endIdx].text);
+    if (DANGLING_CONJUNCTIONS.has(lastWord)) {
+      const extendedDur = sentences[endIdx + 1].end - sentences[startIdx].start;
+      if (extendedDur <= maxDuration) {
+        endIdx++;
+      } else if (endIdx > startIdx && sentences[endIdx - 1].end - sentences[startIdx].start >= minDuration) {
+        endIdx--;
+      }
     }
   }
 

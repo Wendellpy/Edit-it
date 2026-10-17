@@ -2,7 +2,17 @@ import { describe, it, expect } from 'vitest';
 import type { WordToken } from '@/lib/timestampRefiner';
 import { highlightKeywords, scoreToken } from '../keywordHighlighter';
 import { applySmartEmojis, getEmojiForWord } from '../emojiTagging';
-import { detectFillerWords, removeFillerWords, maskProfanity, censorCurseWord, findSilenceGaps } from '../audioCleanup';
+import {
+  detectFillerWords,
+  removeFillerWords,
+  maskProfanity,
+  censorCurseWord,
+  findSilenceGaps,
+  decodeHtmlEntities,
+  isArtifactWord,
+  cleanCaptionWord,
+  filterArtifactTokens,
+} from '../audioCleanup';
 import { applyViralMode, calculateWpm } from '../viralMode';
 
 describe('Smart Features Engine', () => {
@@ -99,6 +109,64 @@ describe('Smart Features Engine', () => {
       expect(gaps[0].start).toBe(1.0);
       expect(gaps[0].end).toBe(2.2);
       expect(gaps[0].duration).toBe(1.2);
+    });
+
+    describe('Caption Artifact & Chevron Sanitization', () => {
+      it('decodes HTML entities properly including case insensitivity', () => {
+        expect(decodeHtmlEntities('&gt;&gt;')).toBe('>>');
+        expect(decodeHtmlEntities('&GT;&GT;')).toBe('>>');
+        expect(decodeHtmlEntities('&lt;video&gt;')).toBe('<video>');
+        expect(decodeHtmlEntities('Tom &amp; Jerry')).toBe('Tom & Jerry');
+        expect(decodeHtmlEntities('&quot;viral&quot;')).toBe('"viral"');
+        expect(decodeHtmlEntities('&#39;hello&#39;')).toBe("'hello'");
+      });
+
+      it('accurately identifies speaker change and noise artifacts with isArtifactWord', () => {
+        expect(isArtifactWord('>>')).toBe(true);
+        expect(isArtifactWord('>>>')).toBe(true);
+        expect(isArtifactWord('&gt;&gt;')).toBe(true);
+        expect(isArtifactWord('&gt;&gt;&gt;')).toBe(true);
+        expect(isArtifactWord('> >')).toBe(true);
+        expect(isArtifactWord('>>-')).toBe(true);
+        expect(isArtifactWord('-->>')).toBe(true);
+        expect(isArtifactWord('[Music]')).toBe(true);
+        expect(isArtifactWord('[Applause]')).toBe(true);
+        expect(isArtifactWord('(music)')).toBe(true);
+        expect(isArtifactWord('[inaudible]')).toBe(true);
+        expect(isArtifactWord('[laughter]')).toBe(true);
+        expect(isArtifactWord('***')).toBe(true);
+        expect(isArtifactWord('---')).toBe(true);
+
+        expect(isArtifactWord('Hello')).toBe(false);
+        expect(isArtifactWord('Bhai')).toBe(false);
+        expect(isArtifactWord('100%')).toBe(false);
+        expect(isArtifactWord('viral')).toBe(false);
+      });
+
+      it('cleans artifact chevrons from words using cleanCaptionWord', () => {
+        expect(cleanCaptionWord('&gt;&gt;')).toBe('');
+        expect(cleanCaptionWord('>>')).toBe('');
+        expect(cleanCaptionWord('&gt;&gt;Welcome')).toBe('Welcome');
+        expect(cleanCaptionWord('>>Namaste')).toBe('Namaste');
+        expect(cleanCaptionWord('[Music]')).toBe('');
+        expect(cleanCaptionWord('[Applause]')).toBe('');
+        expect(cleanCaptionWord('Superb')).toBe('Superb');
+      });
+
+      it('filters artifact tokens and cleans leading chevrons across token sequences', () => {
+        const noisyTokens: WordToken[] = [
+          { id: '1', text: '&gt;&gt;', start: 0.0, end: 0.2, confidence: 0.5 },
+          { id: '2', text: '>>Welcome', start: 0.3, end: 0.8, confidence: 0.9 },
+          { id: '3', text: 'to', start: 0.85, end: 1.1, confidence: 0.95 },
+          { id: '4', text: '[Music]', start: 1.15, end: 1.8, confidence: 0.3 },
+          { id: '5', text: 'this', start: 1.85, end: 2.1, confidence: 0.99 },
+          { id: '6', text: 'video', start: 2.15, end: 2.5, confidence: 0.98 },
+          { id: '7', text: '>>>', start: 2.55, end: 2.8, confidence: 0.2 },
+        ];
+
+        const cleaned = filterArtifactTokens(noisyTokens);
+        expect(cleaned.map((t) => t.text)).toEqual(['Welcome', 'to', 'this', 'video']);
+      });
     });
   });
 

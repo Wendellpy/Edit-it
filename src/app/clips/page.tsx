@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { Navbar } from "@/components/Navbar";
+import { ConfirmModal } from "@/components/ConfirmModal";
 import {
   Scissors,
   CheckCircle2,
@@ -29,9 +30,18 @@ import {
   FileText,
   CheckCheck,
   Loader2,
+  Trash2,
 } from "lucide-react";
 import { localHelperClient } from "@/lib/clips/helperClient";
 import { opfsVideoStorage } from "@/lib/clips/opfsVideoStorage";
+import {
+  getUnifiedCacheStats,
+  freeClipCache,
+  clearExportedClips,
+  clearAllCache,
+  formatBytes,
+  type UnifiedCacheStats,
+} from "@/lib/clips/cacheManager";
 import type { HelperStatus, VideoProbeResult } from "@/lib/clips/types";
 import {
   ClipsTranscriptionPipeline,
@@ -84,9 +94,26 @@ export default function ClipsPage() {
   const [autoRunOnPaste, setAutoRunOnPaste] = useState(true);
   const [showToolDetails, setShowToolDetails] = useState(false);
   const [transcriptionTier, setTranscriptionTier] = useState<ModelTierId>("balanced");
+  const [downloadQuality, setDownloadQuality] = useState<"720p" | "1080p">("720p");
+
+  // Cache & Memory Management state
+  const [cacheStats, setCacheStats] = useState<UnifiedCacheStats | null>(null);
+  const [isClearingCache, setIsClearingCache] = useState(false);
+  const [cacheNotification, setCacheNotification] = useState<string | null>(null);
+  const [confirmDialog, setConfirmDialog] = useState<{
+    isOpen: boolean;
+    title: string;
+    description: string;
+    confirmText?: string;
+    cancelText?: string;
+    variant?: "danger" | "warning" | "info";
+    badge?: string;
+    itemDetails?: { label: string; value: string }[];
+    onConfirm: () => void | Promise<void>;
+  } | null>(null);
 
   // Clips Candidate Discovery state
-  const [selectedPreset, setSelectedPreset] = useState<ClipStylePreset>("balanced");
+  const [selectedPreset, setSelectedPreset] = useState<ClipStylePreset>("viral");
   const [discoveredClips, setDiscoveredClips] = useState<ClipCandidate[]>([]);
 
   // Phase 4: Selected Clip & 9:16 Reframe / Caption Styling state
@@ -464,9 +491,11 @@ export default function ClipsPage() {
         probeResult,
         tierId: transcriptionTier,
         language: "auto",
+        quality: downloadQuality,
         onProgress: setIngestProgress,
       });
       setIngestResult(result);
+      getUnifiedCacheStats().then(setCacheStats).catch(() => {});
 
       // Auto find top 6 clips
       const clips = findClipCandidates({
@@ -530,9 +559,11 @@ export default function ClipsPage() {
         probeResult: probed,
         tierId: transcriptionTier,
         language: "auto",
+        quality: downloadQuality,
         onProgress: setIngestProgress,
       });
       setIngestResult(result);
+      getUnifiedCacheStats().then(setCacheStats).catch(() => {});
 
       // Step 3: Discover & Rank Top Clips
       const clips = findClipCandidates({
@@ -580,14 +611,175 @@ export default function ClipsPage() {
   const checkStatus = useCallback(async () => {
     setIsCheckingHelper(true);
     try {
-      const status = await localHelperClient.checkStatus();
+      const [status, stats] = await Promise.all([
+        localHelperClient.checkStatus().catch(() => null),
+        getUnifiedCacheStats().catch(() => null),
+      ]);
       setHelperStatus(status);
+      if (stats) setCacheStats(stats);
     } catch {
       setHelperStatus(null);
     } finally {
       setIsCheckingHelper(false);
     }
   }, []);
+
+  const executeClearAllCache = async () => {
+    setIsClearingCache(true);
+    try {
+      const res = await clearAllCache();
+      setCacheStats(res.stats);
+      setExportResults([]);
+      setPreviewBlobUrl(null);
+      setCacheNotification("Freed all cache! Local storage and memory cleared.");
+      setTimeout(() => setCacheNotification(null), 4000);
+      await checkStatus();
+    } catch (err: unknown) {
+      setCacheNotification(`Failed to clear cache: ${(err as Error).message}`);
+    } finally {
+      setIsClearingCache(false);
+    }
+  };
+
+  const handleClearAllCache = () => {
+    setConfirmDialog({
+      isOpen: true,
+      title: "Clear All Cache & Storage?",
+      description:
+        "This will permanently delete all cached video downloads and rendered clips to free up local disk space and browser memory.",
+      confirmText: "Clear Everything",
+      variant: "danger",
+      badge: "Full Cache Flush",
+      itemDetails: [
+        {
+          label: "Total Cache Size",
+          value: cacheStats ? cacheStats.totalFormatted : "0 MB",
+        },
+        {
+          label: "Cached Files",
+          value: `${cacheStats ? cacheStats.helperFileCount + cacheStats.opfsFileCount : 0} files`,
+        },
+      ],
+      onConfirm: async () => {
+        setConfirmDialog(null);
+        await executeClearAllCache();
+      },
+    });
+  };
+
+  const executeClearExportedClips = async () => {
+    setIsClearingCache(true);
+    try {
+      const res = await clearExportedClips();
+      setCacheStats(res.stats);
+      setExportResults([]);
+      setCacheNotification("Freed exported clips! Downloaded source video kept for more clips.");
+      setTimeout(() => setCacheNotification(null), 4000);
+      await checkStatus();
+    } catch (err: unknown) {
+      setCacheNotification(`Failed to clear export cache: ${(err as Error).message}`);
+    } finally {
+      setIsClearingCache(false);
+    }
+  };
+
+  const handleClearExportedClips = () => {
+    setConfirmDialog({
+      isOpen: true,
+      title: "Clear Exported Clips?",
+      description:
+        "Remove all exported MP4 clips from local cache? The original source video will remain saved so you can generate and export more clips anytime.",
+      confirmText: "Clear Exported Clips",
+      variant: "warning",
+      badge: "Reclaim Space",
+      itemDetails: [
+        {
+          label: "Helper Cache",
+          value: cacheStats ? formatBytes(cacheStats.helperBytes) : "0 MB",
+        },
+      ],
+      onConfirm: async () => {
+        setConfirmDialog(null);
+        await executeClearExportedClips();
+      },
+    });
+  };
+
+  const executeDeleteSingleClipCache = async (clip: SingleClipExportResult) => {
+    try {
+      await freeClipCache({ clipFileName: clip.mp4FileName, fileId: clip.clipId });
+      setExportResults((prev) => prev.filter((r) => r.clipId !== clip.clipId));
+      const stats = await getUnifiedCacheStats();
+      setCacheStats(stats);
+      setCacheNotification(`Deleted "${clip.mp4FileName}" from cache & freed memory.`);
+      setTimeout(() => setCacheNotification(null), 3000);
+    } catch (err: unknown) {
+      setCacheNotification(`Failed to delete clip: ${(err as Error).message}`);
+    }
+  };
+
+  const handleDeleteSingleClipCache = (clip: SingleClipExportResult) => {
+    setConfirmDialog({
+      isOpen: true,
+      title: "Delete Exported Clip?",
+      description: `Delete "${clip.mp4FileName}" from cache? You can always re-export it from the discovered clip candidate anytime.`,
+      confirmText: "Delete Clip",
+      variant: "danger",
+      badge: "Free Storage",
+      itemDetails: [
+        { label: "File Name", value: clip.mp4FileName },
+        { label: "Engine & Duration", value: `${clip.engineUsed.toUpperCase()} • ${Math.round(clip.duration)}s` },
+      ],
+      onConfirm: async () => {
+        setConfirmDialog(null);
+        await executeDeleteSingleClipCache(clip);
+      },
+    });
+  };
+
+  const executeDeleteSourceVideo = async () => {
+    if (!ingestResult?.fileId) return;
+    try {
+      await freeClipCache({ fileId: ingestResult.fileId });
+      setPreviewBlobUrl(null);
+      setIngestResult(null);
+      setDiscoveredClips([]);
+      setSelectedClipId(null);
+      const stats = await getUnifiedCacheStats();
+      setCacheStats(stats);
+      setCacheNotification("Source video deleted from cache and disk space reclaimed.");
+      setTimeout(() => setCacheNotification(null), 3000);
+    } catch (err: unknown) {
+      setCacheNotification(`Failed to delete source video: ${(err as Error).message}`);
+    }
+  };
+
+  const handleDeleteSourceVideo = () => {
+    if (!ingestResult?.fileId) return;
+    setConfirmDialog({
+      isOpen: true,
+      title: "Delete Downloaded Source Video?",
+      description:
+        "Delete the downloaded source video from cache? You will need to re-download if you want to generate more clips from it later.",
+      confirmText: "Delete Source Video",
+      variant: "danger",
+      badge: "Free Source Cache",
+      itemDetails: [
+        {
+          label: "Video Title",
+          value: probeResult?.title || "Current Source Video",
+        },
+        {
+          label: "OPFS Storage",
+          value: cacheStats ? formatBytes(cacheStats.opfsBytes) : "Cached File",
+        },
+      ],
+      onConfirm: async () => {
+        setConfirmDialog(null);
+        await executeDeleteSourceVideo();
+      },
+    });
+  };
 
   useEffect(() => {
     checkStatus();
@@ -679,8 +871,25 @@ export default function ClipsPage() {
             </p>
           </div>
 
-          {/* Helper Connection Status Badge */}
-          <div className="flex items-center gap-2 self-start md:self-auto">
+          {/* Helper & Cache Memory Badges */}
+          <div className="flex flex-wrap items-center gap-2 self-start md:self-auto">
+            {/* Cache Storage Indicator & Quick Clear */}
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border-2 border-[var(--border-main)] text-xs font-bold bg-[var(--bg-card)] shadow-[2px_2px_0px_var(--border-main)]">
+              <HardDrive className="w-3.5 h-3.5 text-[#A3E635]" />
+              <span className="font-mono text-[11px]">
+                Cache: {cacheStats ? cacheStats.totalFormatted : "0 MB"}
+              </span>
+              <button
+                onClick={handleClearAllCache}
+                disabled={isClearingCache || !cacheStats || cacheStats.totalBytes === 0}
+                className="ml-1 px-2 py-0.5 rounded-full bg-red-500/15 text-red-600 dark:text-red-400 hover:bg-red-500/25 text-[10px] font-black transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1"
+                title="Free all cache memory (deletes downloaded videos and rendered clips)"
+              >
+                <Trash2 className="w-3 h-3" />
+                <span>Free Cache</span>
+              </button>
+            </div>
+
             <div
               className={`flex items-center gap-2 px-3.5 py-1.5 rounded-full border-2 border-[var(--border-main)] text-xs font-black shadow-[2px_2px_0px_var(--border-main)] ${
                 helperStatus?.ok
@@ -697,7 +906,7 @@ export default function ClipsPage() {
                 {isCheckingHelper && !helperStatus
                   ? "Checking Helper..."
                   : helperStatus?.ok
-                  ? "Helper Connected (127.0.0.1:4321)"
+                  ? "Helper Connected"
                   : "Helper Offline"}
               </span>
             </div>
@@ -712,6 +921,22 @@ export default function ClipsPage() {
             </button>
           </div>
         </div>
+
+        {/* Cache Notification Toast */}
+        {cacheNotification && (
+          <div className="p-3.5 rounded-xl bg-emerald-500/10 border-2 border-emerald-500/30 text-emerald-700 dark:text-emerald-400 text-xs font-bold flex items-center justify-between shadow-[2px_2px_0px_var(--border-main)]">
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 text-[#A3E635]" />
+              <span>{cacheNotification}</span>
+            </div>
+            <button
+              onClick={() => setCacheNotification(null)}
+              className="text-[11px] underline cursor-pointer hover:opacity-75"
+            >
+              Dismiss
+            </button>
+          </div>
+        )}
 
         {/* Offline Helper Guide or Dependency Checklist */}
         {!helperStatus?.ok ? (
@@ -788,16 +1013,31 @@ export default function ClipsPage() {
                 <Terminal className="w-4 h-4 text-[#A3E635]" />
                 <span>Helper Environment &amp; Tooling</span>
               </div>
-              <div className="flex items-center gap-3 text-xs text-[var(--text-muted)]">
-                <span className="flex items-center gap-1">
-                  <HardDrive className="w-3.5 h-3.5" />
-                  Cache: {(helperStatus.cache.totalBytes / (1024 * 1024)).toFixed(1)} MB /{" "}
-                  {(helperStatus.cache.maxBytes / (1024 * 1024 * 1024)).toFixed(0)} GB ({helperStatus.cache.fileCount} files)
+              <div className="flex flex-wrap items-center gap-2.5 text-xs text-[var(--text-muted)]">
+                <span className="flex items-center gap-1 font-mono">
+                  <HardDrive className="w-3.5 h-3.5 text-[#A3E635]" />
+                  Cache: {cacheStats ? cacheStats.totalFormatted : `${(helperStatus.cache.totalBytes / (1024 * 1024)).toFixed(1)} MB`}
                 </span>
+                <button
+                  onClick={handleClearExportedClips}
+                  disabled={isClearingCache}
+                  className="px-2 py-0.5 rounded bg-[var(--bg-card-elevated)] border border-[var(--border-main)] text-[10px] font-bold hover:bg-red-500/15 hover:text-red-600 transition-all cursor-pointer"
+                  title="Delete exported clips to reclaim disk space"
+                >
+                  Clear Exports
+                </button>
+                <button
+                  onClick={handleClearAllCache}
+                  disabled={isClearingCache}
+                  className="px-2 py-0.5 rounded bg-[var(--bg-card-elevated)] border border-[var(--border-main)] text-[10px] font-bold hover:bg-red-500/15 hover:text-red-600 transition-all cursor-pointer"
+                  title="Clear all cached source videos and clips"
+                >
+                  Clear All
+                </button>
                 {isHelperReady && (
                   <button
                     onClick={() => setShowToolDetails(false)}
-                    className="underline text-[11px] cursor-pointer hover:text-[var(--text-main)]"
+                    className="underline text-[11px] cursor-pointer hover:text-[var(--text-main)] ml-1"
                   >
                     Minimize
                   </button>
@@ -1025,6 +1265,40 @@ export default function ClipsPage() {
                   title="Whisper Tiny: Quickest preview speed for quick checks"
                 >
                   Fast (Whisper Tiny 39MB)
+                </button>
+              </div>
+            </div>
+
+            {/* Download Quality & Speed Optimization */}
+            <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-[var(--border-subtle)] text-xs">
+              <div className="flex items-center gap-2">
+                <Film className="w-4 h-4 text-[#A3E635]" />
+                <span className="font-bold text-[var(--text-main)]">Download Speed &amp; Quality:</span>
+              </div>
+              <div className="inline-flex rounded-xl p-1 bg-[var(--bg-canvas)] border-2 border-[var(--border-main)] gap-1 shadow-[2px_2px_0px_var(--border-main)]">
+                <button
+                  type="button"
+                  onClick={() => setDownloadQuality("720p")}
+                  className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                    downloadQuality === "720p"
+                      ? "bg-[#A3E635] text-[#142218] shadow-sm"
+                      : "text-[var(--text-muted)] hover:text-[var(--text-main)]"
+                  }`}
+                  title="720p: 60% less disk space & 2.5x faster download, optimized for quick Shorts"
+                >
+                  ⚡ 720p (Faster &amp; Low Disk)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDownloadQuality("1080p")}
+                  className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                    downloadQuality === "1080p"
+                      ? "bg-[#A3E635] text-[#142218] shadow-sm"
+                      : "text-[var(--text-muted)] hover:text-[var(--text-main)]"
+                  }`}
+                  title="1080p: Full high definition pristine source"
+                >
+                  1080p (Full High-Def)
                 </button>
               </div>
             </div>
@@ -1294,21 +1568,35 @@ export default function ClipsPage() {
                     </p>
                   </div>
 
-                  {/* Preset Pills */}
-                  <div className="flex items-center gap-1.5 p-1 rounded-full bg-[var(--bg-card)] border border-[var(--border-main)]">
-                    {(["balanced", "informative", "funny", "dramatic"] as ClipStylePreset[]).map((preset) => (
+                  <div className="flex flex-wrap items-center gap-2">
+                    {/* Preset Pills */}
+                    <div className="flex items-center gap-1.5 p-1 rounded-full bg-[var(--bg-card)] border border-[var(--border-main)]">
+                      {(["viral", "balanced", "informative", "funny", "dramatic"] as ClipStylePreset[]).map((preset) => (
+                        <button
+                          key={preset}
+                          onClick={() => handlePresetChange(preset)}
+                          className={`px-3 py-1 rounded-full text-[10px] font-black capitalize transition-all cursor-pointer flex items-center gap-1 ${
+                            selectedPreset === preset
+                              ? "bg-[#A3E635] text-[#142218] shadow-[1px_1px_0px_var(--border-main)]"
+                              : "text-[var(--text-muted)] hover:text-[var(--text-main)]"
+                          }`}
+                        >
+                          {preset === "viral" && <span>🔥</span>}
+                          <span>{preset === "viral" ? "Viral & High Energy" : preset}</span>
+                        </button>
+                      ))}
+                    </div>
+
+                    {ingestResult?.fileId && (
                       <button
-                        key={preset}
-                        onClick={() => handlePresetChange(preset)}
-                        className={`px-2.5 py-1 rounded-full text-[10px] font-bold capitalize transition-all cursor-pointer ${
-                          selectedPreset === preset
-                            ? "bg-[#A3E635] text-[#142218] shadow-[1px_1px_0px_var(--border-main)]"
-                            : "text-[var(--text-muted)] hover:text-[var(--text-main)]"
-                        }`}
+                        onClick={handleDeleteSourceVideo}
+                        className="px-2.5 py-1 rounded-full text-[10px] font-bold text-red-600 dark:text-red-400 border border-red-500/30 hover:bg-red-500/15 transition-all cursor-pointer flex items-center gap-1"
+                        title="Delete source video download from cache to free memory and disk space"
                       >
-                        {preset}
+                        <Trash2 className="w-3 h-3" />
+                        <span>Delete Source</span>
                       </button>
-                    ))}
+                    )}
                   </div>
                 </div>
 
@@ -1430,8 +1718,15 @@ export default function ClipsPage() {
                                     Clip #{clip.index}
                                   </span>
                                 </div>
-                                <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-[#A3E635]/20 text-[#142218] dark:text-[#A3E635] border border-[var(--border-main)] text-[11px] font-black">
-                                  <span>Potential: {clip.score}/100</span>
+                                <div className="flex items-center gap-1.5">
+                                  {clip.viralBreakdown?.retentionScore !== undefined && (
+                                    <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-orange-500/15 text-orange-600 dark:text-orange-400 border border-orange-500/30 text-[10px] font-black">
+                                      <span>🔥 {clip.viralBreakdown.retentionScore}% Viral</span>
+                                    </div>
+                                  )}
+                                  <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-[#A3E635]/20 text-[#142218] dark:text-[#A3E635] border border-[var(--border-main)] text-[11px] font-black">
+                                    <span>{clip.score}/100</span>
+                                  </div>
                                 </div>
                               </div>
 
@@ -1447,6 +1742,20 @@ export default function ClipsPage() {
                                 </span>
                                 <span className="font-bold text-[var(--text-main)]">{Math.round(clip.duration)}s</span>
                               </div>
+
+                              {/* High Energy Viral Highlights */}
+                              {clip.viralBreakdown?.viralBadges && clip.viralBreakdown.viralBadges.length > 0 && (
+                                <div className="flex flex-wrap gap-1">
+                                  {clip.viralBreakdown.viralBadges.map((badge) => (
+                                    <span
+                                      key={badge}
+                                      className="px-1.5 py-0.5 rounded text-[9px] font-extrabold bg-[#A3E635]/15 text-[#142218] dark:text-[#A3E635] border border-[#A3E635]/30 shadow-xs"
+                                    >
+                                      {badge}
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
 
                               {/* Phase 4: Recommended Caption Preset */}
                               <div className="p-2 rounded-lg bg-[var(--bg-card-elevated)] border border-[var(--border-subtle)] space-y-1">
@@ -1490,9 +1799,11 @@ export default function ClipsPage() {
                             </div>
 
                             <div className="pt-2 border-t border-[var(--border-subtle)] flex items-center justify-between">
-                              <span className="text-[10px] font-bold text-[var(--text-muted)]">
-                                Hook: <span className="capitalize text-[var(--text-main)]">{clip.hookType}</span>
-                              </span>
+                              <div className="flex items-center gap-2 text-[10px] font-bold text-[var(--text-muted)]">
+                                <span>Hook: <span className="capitalize text-[var(--text-main)]">{clip.hookType}</span></span>
+                                <span>•</span>
+                                <span className="text-[var(--text-main)]">⚡ {clip.signals.audio.energyScore}/100</span>
+                              </div>
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation();
@@ -2035,13 +2346,24 @@ export default function ClipsPage() {
                                 </div>
                               </div>
 
-                              <button
-                                onClick={handleSaveAllResults}
-                                className="px-4 py-2 rounded-xl bg-[#A3E635] text-[#142218] font-black text-xs shadow-[2px_2px_0px_var(--border-main)] hover:translate-x-0.5 hover:translate-y-0.5 transition-all flex items-center gap-2 cursor-pointer"
-                              >
-                                <HardDrive className="w-4 h-4" />
-                                <span>Save All to Disk</span>
-                              </button>
+                              <div className="flex flex-wrap items-center gap-2">
+                                <button
+                                  onClick={handleSaveAllResults}
+                                  className="px-4 py-2 rounded-xl bg-[#A3E635] text-[#142218] font-black text-xs shadow-[2px_2px_0px_var(--border-main)] hover:translate-x-0.5 hover:translate-y-0.5 transition-all flex items-center gap-2 cursor-pointer"
+                                >
+                                  <HardDrive className="w-4 h-4" />
+                                  <span>Save All to Disk</span>
+                                </button>
+                                <button
+                                  onClick={handleClearExportedClips}
+                                  disabled={isClearingCache}
+                                  className="px-3.5 py-2 rounded-xl bg-red-500/10 text-red-600 dark:text-red-400 border-2 border-red-500/30 font-bold text-xs shadow-[2px_2px_0px_var(--border-main)] hover:bg-red-500/20 transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                                  title="Delete rendered clip files from cache to reclaim storage (keeps source video)"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                  <span>Purge Exported Cache</span>
+                                </button>
+                              </div>
                             </div>
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -2061,7 +2383,7 @@ export default function ClipsPage() {
                                     {res.mp4FileName}
                                   </p>
 
-                                  <div className="flex items-center gap-2 pt-1 border-t border-[var(--border-subtle)]">
+                                  <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-[var(--border-subtle)]">
                                     <button
                                       onClick={() => handleDownloadSingleMp4(res)}
                                       className="px-2.5 py-1.5 rounded-lg bg-[#A3E635] text-[#142218] font-bold text-xs flex items-center gap-1.5 hover:shadow-xs transition-all cursor-pointer"
@@ -2101,6 +2423,15 @@ export default function ClipsPage() {
                                       <FileText className="w-3.5 h-3.5" />
                                       <span>VTT</span>
                                     </button>
+
+                                    <button
+                                      onClick={() => handleDeleteSingleClipCache(res)}
+                                      className="ml-auto px-2 py-1.5 rounded-lg bg-red-500/10 border border-red-500/30 text-red-600 dark:text-red-400 text-xs font-bold flex items-center gap-1 hover:bg-red-500/20 transition-all cursor-pointer"
+                                      title="Delete this clip from cache to free memory and disk space"
+                                    >
+                                      <Trash2 className="w-3.5 h-3.5" />
+                                      <span className="hidden sm:inline">Free Clip</span>
+                                    </button>
                                   </div>
                                 </div>
                               ))}
@@ -2120,6 +2451,22 @@ export default function ClipsPage() {
           )}
         </div>
       </main>
+
+      {/* Confirmation Dialog Modal */}
+      {confirmDialog && (
+        <ConfirmModal
+          isOpen={confirmDialog.isOpen}
+          onClose={() => setConfirmDialog(null)}
+          onConfirm={confirmDialog.onConfirm}
+          title={confirmDialog.title}
+          description={confirmDialog.description}
+          confirmText={confirmDialog.confirmText}
+          cancelText={confirmDialog.cancelText}
+          variant={confirmDialog.variant}
+          badge={confirmDialog.badge}
+          itemDetails={confirmDialog.itemDetails}
+        />
+      )}
     </div>
   );
 }

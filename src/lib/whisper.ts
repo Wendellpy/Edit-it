@@ -3,7 +3,7 @@ import type { WordToken } from "./timestampRefiner";
 import { refineWordTimestamps } from "./timestampRefiner";
 import { detectSpeechSegments } from "./vad";
 import { chunkAudio } from "./audioPipeline";
-import { censorCurseWord } from "./smart/audioCleanup";
+import { censorCurseWord, cleanCaptionWord, isArtifactWord } from "./smart/audioCleanup";
 
 export interface TranscriptionProgress {
   status: "init" | "loading_model" | "transcribing" | "refining" | "complete" | "error";
@@ -220,13 +220,14 @@ export class LocalWhisperPipeline {
               if (Array.isArray(seg.words) && seg.words.length > 0) {
                 seg.words.forEach((w: any, wIdx: number) => {
                   const rawWord = (w.word || w.text || "").trim();
-                  if (!rawWord) return;
+                  const cleaned = cleanCaptionWord(rawWord);
+                  if (!cleaned || isArtifactWord(cleaned)) return;
                   const [relStart, relEnd] = w.timestamp || [0, 0.1];
                   const wStart = chunk.startSecond + (typeof relStart === "number" ? relStart : 0);
                   const wEnd = chunk.startSecond + (typeof relEnd === "number" ? relEnd : wStart + 0.1);
                   chunkWords.push({
                     id: `tok_${i}_${sIdx}_${wIdx}_${Date.now()}`,
-                    text: censorCurseWord(rawWord),
+                    text: censorCurseWord(cleaned),
                     start: parseFloat(wStart.toFixed(3)),
                     end: parseFloat(Math.max(wStart + 0.08, wEnd).toFixed(3)),
                     confidence: 0.98,
@@ -245,13 +246,16 @@ export class LocalWhisperPipeline {
 
               // 2. Single-word segment: exactly snaps to Whisper segment
               if (segTokens.length === 1) {
-                chunkWords.push({
-                  id: `tok_${i}_${sIdx}_0_${Date.now()}`,
-                  text: censorCurseWord(segTokens[0]),
-                  start: parseFloat(sStart.toFixed(3)),
-                  end: parseFloat(Math.max(sStart + 0.08, sEnd).toFixed(3)),
-                  confidence: 0.96,
-                });
+                const cleaned = cleanCaptionWord(segTokens[0]);
+                if (cleaned && !isArtifactWord(cleaned)) {
+                  chunkWords.push({
+                    id: `tok_${i}_${sIdx}_0_${Date.now()}`,
+                    text: censorCurseWord(cleaned),
+                    start: parseFloat(sStart.toFixed(3)),
+                    end: parseFloat(Math.max(sStart + 0.08, sEnd).toFixed(3)),
+                    confidence: 0.96,
+                  });
+                }
                 return;
               }
 
@@ -270,13 +274,16 @@ export class LocalWhisperPipeline {
                 const wDur = (weights[tIdx] / totalWeight) * sDuration;
                 const wStart = parseFloat(accumulatedT.toFixed(3));
                 const wEnd = parseFloat((accumulatedT + wDur).toFixed(3));
-                chunkWords.push({
-                  id: `tok_${i}_${sIdx}_${tIdx}_${Date.now()}`,
-                  text: censorCurseWord(tok),
-                  start: wStart,
-                  end: Math.max(wStart + 0.08, wEnd),
-                  confidence: 0.95,
-                });
+                const cleaned = cleanCaptionWord(tok);
+                if (cleaned && !isArtifactWord(cleaned)) {
+                  chunkWords.push({
+                    id: `tok_${i}_${sIdx}_${tIdx}_${Date.now()}`,
+                    text: censorCurseWord(cleaned),
+                    start: wStart,
+                    end: Math.max(wStart + 0.08, wEnd),
+                    confidence: 0.95,
+                  });
+                }
                 accumulatedT += wDur;
               });
             });
@@ -297,13 +304,16 @@ export class LocalWhisperPipeline {
               const wDur = (weights[wIdx] / totalWeight) * chunkDuration;
               const wStart = parseFloat(accumulatedT.toFixed(3));
               const wEnd = parseFloat((accumulatedT + wDur).toFixed(3));
-              chunkWords.push({
-                id: `tok_${i}_${wIdx}_${Date.now()}`,
-                text: censorCurseWord(t),
-                start: wStart,
-                end: Math.max(wStart + 0.08, wEnd),
-                confidence: 0.94,
-              });
+              const cleaned = cleanCaptionWord(t);
+              if (cleaned && !isArtifactWord(cleaned)) {
+                chunkWords.push({
+                  id: `tok_${i}_${wIdx}_${Date.now()}`,
+                  text: censorCurseWord(cleaned),
+                  start: wStart,
+                  end: Math.max(wStart + 0.08, wEnd),
+                  confidence: 0.94,
+                });
+              }
               accumulatedT += wDur;
             });
           }

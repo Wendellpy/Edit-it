@@ -58,6 +58,8 @@ describe("Clip Finder Engine & Ranking", () => {
       expect(cand.duration).toBeLessThanOrEqual(90);
       expect(Array.isArray(cand.reasons)).toBe(true);
       expect(cand.reasons.length).toBeGreaterThan(0);
+      expect(cand.viralBreakdown).toBeDefined();
+      expect(cand.viralBreakdown?.retentionScore).toBeGreaterThan(0);
     }
   });
 
@@ -104,5 +106,52 @@ describe("Clip Finder Engine & Ranking", () => {
     // Dramatic preset should rank warning/mistake section highly
     const dramaticText = dramaticClips.map((c) => (c.headline + " " + c.firstSentence).toLowerCase()).join(" ");
     expect(dramaticText).toMatch(/(warning|mistake|changes)/);
+  });
+
+  it("ranks viral high-energy moments highest under 'viral' preset with rich badges", () => {
+    // 200s audio track with an explosive peak at 75s (during joke/story)
+    const rmsPeaks = new Float32Array(20000);
+    rmsPeaks.fill(0.08);
+    // Peak energy burst at 75s (bin 7500)
+    for (let b = 7400; b < 7600; b++) {
+      rmsPeaks[b] = 0.55;
+    }
+
+    const viralClips = findClipCandidates({
+      tokens: mockTokens,
+      durationSeconds: 200,
+      rmsPeaks,
+      preset: "viral",
+      constraints: { topN: 3 },
+    });
+
+    expect(viralClips.length).toBeGreaterThan(0);
+    const topClip = viralClips[0];
+    expect(topClip.score).toBeGreaterThanOrEqual(75);
+    expect(topClip.viralBreakdown).toBeDefined();
+    expect(topClip.viralBreakdown?.viralBadges).toBeDefined();
+    expect(topClip.viralBreakdown?.viralBadges.length).toBeGreaterThan(0);
+  });
+
+  it("discovers clips using audio peak-seeded hotspots even in long videos", () => {
+    // A long video where a massive reaction occurs at 130s
+    const rmsPeaks = new Float32Array(20000);
+    rmsPeaks.fill(0.06);
+    // Huge peak at 130s
+    for (let b = 12900; b < 13100; b++) {
+      rmsPeaks[b] = 0.65;
+    }
+
+    const candidates = findClipCandidates({
+      tokens: mockTokens,
+      durationSeconds: 200,
+      rmsPeaks,
+      preset: "viral",
+      constraints: { topN: 4 },
+    });
+
+    // One of the discovered candidates should span around 130s
+    const hasHotspotClip = candidates.some((c) => c.start <= 130 && c.end >= 130);
+    expect(hasHotspotClip).toBe(true);
   });
 });

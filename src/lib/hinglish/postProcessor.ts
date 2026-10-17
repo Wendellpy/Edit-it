@@ -5,7 +5,7 @@ import {
 } from "./transliterator";
 import { lookupUserDictionary } from "./dictionaryDb";
 import type { WordToken } from "../timestampRefiner";
-import { censorCurseWord } from "../smart/audioCleanup";
+import { censorCurseWord, cleanCaptionWord, isArtifactWord } from "../smart/audioCleanup";
 
 export interface HinglishWordToken extends WordToken {
   romanText: string;
@@ -24,7 +24,16 @@ export function normalizeTokenToHinglish(rawToken: string): {
   devanagari: string;
   isCodeMixedEnglish: boolean;
 } {
-  const trimmed = rawToken.trim();
+  const cleaned = cleanCaptionWord(rawToken);
+  if (!cleaned || isArtifactWord(cleaned)) {
+    return {
+      roman: "",
+      devanagari: "",
+      isCodeMixedEnglish: false,
+    };
+  }
+
+  const trimmed = cleaned;
 
   // 1. If token is in Latin script (e.g. "video", "upload", "template", "ready", "fuck")
   if (!isDevanagariWord(trimmed)) {
@@ -70,18 +79,21 @@ export function processTranscriptHinglish(
   tokens: WordToken[],
   scriptMode: CaptionScriptMode = "roman"
 ): HinglishWordToken[] {
-  return tokens.map((token) => {
-    const { roman, devanagari, isCodeMixedEnglish } = normalizeTokenToHinglish(token.text);
+  return tokens
+    .filter((token) => token && token.text && !isArtifactWord(token.text))
+    .map((token) => {
+      const { roman, devanagari, isCodeMixedEnglish } = normalizeTokenToHinglish(token.text);
 
-    return {
-      ...token,
-      romanText: roman,
-      devanagariText: devanagari,
-      isCodeMixedEnglish,
-      text: scriptMode === "roman" ? roman : devanagari,
-      script: scriptMode,
-    };
-  });
+      return {
+        ...token,
+        romanText: roman,
+        devanagariText: devanagari,
+        isCodeMixedEnglish,
+        text: scriptMode === "roman" ? roman : devanagari,
+        script: scriptMode,
+      };
+    })
+    .filter((t) => t.romanText && t.romanText.trim() !== "");
 }
 
 /**

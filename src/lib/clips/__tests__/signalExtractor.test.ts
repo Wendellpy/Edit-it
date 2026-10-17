@@ -18,7 +18,7 @@ describe("Signal Extractor (Audio & Hinglish Hooks)", () => {
     expect(signals.reasons.some((r) => r.includes("question opener"))).toBe(true);
   });
 
-  it("detects bold claim hook", () => {
+  it("detects bold claim hook and shock/disbelief patterns", () => {
     const tokens: HinglishWordToken[] = [
       { id: "1", text: "this", romanText: "this", devanagariText: "this", start: 0.1, end: 0.4, confidence: 0.99, isCodeMixedEnglish: true },
       { id: "2", text: "changes", romanText: "changes", devanagariText: "changes", start: 0.42, end: 0.8, confidence: 0.99, isCodeMixedEnglish: true },
@@ -28,6 +28,16 @@ describe("Signal Extractor (Audio & Hinglish Hooks)", () => {
     const signals = extractSignalsForSegment(tokens, 0, 2);
     expect(signals.text.hookType).toBe("bold_claim");
     expect(signals.text.hookScore).toBeGreaterThanOrEqual(90);
+
+    // Shock hook test
+    const shockTokens: HinglishWordToken[] = [
+      { id: "s1", text: "bro", romanText: "bro", devanagariText: "bro", start: 0.1, end: 0.4, confidence: 0.99, isCodeMixedEnglish: true },
+      { id: "s2", text: "listen", romanText: "listen", devanagariText: "listen", start: 0.42, end: 0.8, confidence: 0.99, isCodeMixedEnglish: true },
+      { id: "s3", text: "carefully", romanText: "carefully", devanagariText: "carefully", start: 0.82, end: 1.2, confidence: 0.99, isCodeMixedEnglish: true },
+    ];
+    const shockSignals = extractSignalsForSegment(shockTokens, 0, 2);
+    expect(shockSignals.text.hookType).toBe("bold_claim");
+    expect(shockSignals.reasons.some((r) => r.toLowerCase().includes("shock"))).toBe(true);
   });
 
   it("detects laughter / reaction burst in audio RMS peaks", () => {
@@ -46,6 +56,43 @@ describe("Signal Extractor (Audio & Hinglish Hooks)", () => {
     const signals = extractSignalsForSegment(tokens, 0, 2, rmsPeaks);
     expect(signals.audio.hasLaughterOrCheer).toBe(true);
     expect(signals.reasons.some((r) => r.includes("High energy audio burst"))).toBe(true);
+  });
+
+  it("detects audio energy crescendo and assigns climax badges", () => {
+    const tokens: HinglishWordToken[] = [
+      { id: "1", text: "story", start: 0, end: 1, confidence: 0.95, isCodeMixedEnglish: true, romanText: "story", devanagariText: "story" },
+      { id: "2", text: "climax", start: 1.1, end: 4, confidence: 0.95, isCodeMixedEnglish: true, romanText: "climax", devanagariText: "climax" },
+    ];
+
+    // 4 seconds = 400 bins
+    const rmsPeaks = new Float32Array(400);
+    // First half quiet (0.06), second half intense crescendo (0.28)
+    for (let i = 0; i < 200; i++) rmsPeaks[i] = 0.06;
+    for (let i = 200; i < 400; i++) rmsPeaks[i] = 0.28;
+
+    const signals = extractSignalsForSegment(tokens, 0, 4, rmsPeaks);
+    expect(signals.audio.energyCrescendoScore).toBeGreaterThanOrEqual(1.25);
+    expect(signals.reasons.some((r) => r.toLowerCase().includes("crescendo"))).toBe(true);
+    expect(signals.viralBreakdown?.energyCrescendo).toBe(true);
+    expect(signals.viralBreakdown?.viralBadges.some((b) => b.includes("Crescendo"))).toBe(true);
+  });
+
+  it("detects punchline and payoff resolution in closing words", () => {
+    const tokens: HinglishWordToken[] = [
+      { id: "1", text: "we", start: 0.1, end: 0.5, confidence: 0.95, isCodeMixedEnglish: true, romanText: "we", devanagariText: "we" },
+      { id: "2", text: "tested", start: 0.6, end: 1.0, confidence: 0.95, isCodeMixedEnglish: true, romanText: "tested", devanagariText: "tested" },
+      { id: "3", text: "and", start: 1.1, end: 1.4, confidence: 0.95, isCodeMixedEnglish: true, romanText: "and", devanagariText: "and" },
+      { id: "4", text: "that", start: 1.5, end: 1.8, confidence: 0.95, isCodeMixedEnglish: true, romanText: "that", devanagariText: "that" },
+      { id: "5", text: "is", start: 1.9, end: 2.2, confidence: 0.95, isCodeMixedEnglish: true, romanText: "is", devanagariText: "is" },
+      { id: "6", text: "why", start: 2.3, end: 2.6, confidence: 0.95, isCodeMixedEnglish: true, romanText: "why", devanagariText: "why" },
+      { id: "7", text: "it", start: 2.7, end: 3.0, confidence: 0.95, isCodeMixedEnglish: true, romanText: "it", devanagariText: "it" },
+      { id: "8", text: "works.", start: 3.1, end: 3.5, confidence: 0.95, isCodeMixedEnglish: true, romanText: "works.", devanagariText: "works." },
+    ];
+
+    const signals = extractSignalsForSegment(tokens, 0, 4);
+    expect(signals.text.hasPayoff).toBe(true);
+    expect(signals.viralBreakdown?.hasPayoff).toBe(true);
+    expect(signals.reasons.some((r) => r.toLowerCase().includes("payoff"))).toBe(true);
   });
 
   it("calculates filler word ratio accurately", () => {

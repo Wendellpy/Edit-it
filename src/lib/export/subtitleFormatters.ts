@@ -1,5 +1,6 @@
 import type { WordToken } from '@/lib/timestampRefiner';
 import type { CaptionTemplate } from '@/lib/templates/schema';
+import { isArtifactWord, cleanCaptionWord } from '@/lib/smart/audioCleanup';
 
 export interface SubtitleCue {
   id: number;
@@ -20,12 +21,23 @@ export function groupWordsIntoCues(
 ): SubtitleCue[] {
   if (!words || words.length === 0) return [];
 
+  // Filter out any speaker chevrons (>>, >>>, &gt;&gt;) or non-speech cues ([Music], [Applause])
+  const sanitizedWords = words
+    .filter((w) => w && w.text && !isArtifactWord(w.text))
+    .map((w) => {
+      const cleaned = cleanCaptionWord(w.text);
+      return cleaned && !isArtifactWord(cleaned) ? { ...w, text: cleaned } : null;
+    })
+    .filter((w): w is WordToken => w !== null);
+
+  if (sanitizedWords.length === 0) return [];
+
   const cues: SubtitleCue[] = [];
   let currentGroup: WordToken[] = [];
   let cueIndex = 1;
 
-  for (let i = 0; i < words.length; i++) {
-    const word = words[i];
+  for (let i = 0; i < sanitizedWords.length; i++) {
+    const word = sanitizedWords[i];
     const prevWord = currentGroup[currentGroup.length - 1];
 
     const groupDuration = currentGroup.length > 0 

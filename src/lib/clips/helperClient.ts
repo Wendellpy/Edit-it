@@ -163,6 +163,28 @@ class HelperClient {
   }
 
   /**
+   * Fast hardware watermark removal via companion helper FFmpeg delogo filter.
+   */
+  async removeWatermarkFfmpeg(params: {
+    fileId: string;
+    rois: Array<{ x: number; y: number; width: number; height: number; isNormalized?: boolean }>;
+    band?: number;
+  }): Promise<{ success: boolean; fileId: string; downloadUrl: string; cached?: boolean }> {
+    const res = await this.fetchWithAuth(`${HELPER_ORIGIN}/remove-watermark-ffmpeg`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(params),
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ error: "FFmpeg delogo request failed" }));
+      throw new Error(err.error || `HTTP ${res.status}`);
+    }
+
+    return res.json();
+  }
+
+  /**
    * Subscribes to Server-Sent Events from the helper for real-time progress.
    */
   subscribeToProgress(onEvent: (event: DownloadProgressEvent) => void): () => void {
@@ -214,14 +236,58 @@ class HelperClient {
   }
 
   /**
-   * Cleans managed cache files.
+   * Cleans managed cache files on companion helper.
+   * Can clear all files, files for a specific video, only exported clips, or a specific file.
    */
-  async cleanupCache(fileId?: string): Promise<void> {
-    await this.fetchWithAuth(`${HELPER_ORIGIN}/cleanup`, {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ fileId }),
-    });
+  async cleanupCache(
+    options?: string | { fileId?: string; fileName?: string; onlyExports?: boolean }
+  ): Promise<{ success: boolean; cache?: { totalBytes: number; maxBytes: number; fileCount: number } }> {
+    const payload = typeof options === "string" ? { fileId: options } : options || {};
+    try {
+      const res = await this.fetchWithAuth(`${HELPER_ORIGIN}/cleanup`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) {
+        return { success: false };
+      }
+      return res.json().catch(() => ({ success: true }));
+    } catch {
+      return { success: false };
+    }
+  }
+
+  /**
+   * Deletes a specific clip or export file from companion helper cache.
+   */
+  async deleteFile(fileNameOrId: string): Promise<{ success: boolean }> {
+    const cleanName = fileNameOrId.replace(/^\/file\//, "").split("?")[0];
+    try {
+      const res = await this.fetchWithAuth(`${HELPER_ORIGIN}/file/${encodeURIComponent(cleanName)}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) {
+        return this.cleanupCache({ fileName: cleanName });
+      }
+      return res.json().catch(() => ({ success: true }));
+    } catch {
+      return this.cleanupCache({ fileName: cleanName });
+    }
+  }
+
+  /**
+   * Fetches latest cache statistics from companion helper.
+   */
+  async getCacheStats(): Promise<{ totalBytes: number; maxBytes: number; fileCount: number } | null> {
+    try {
+      const res = await this.fetchWithAuth(`${HELPER_ORIGIN}/cache`, { method: "GET" });
+      if (!res.ok) return null;
+      const data = await res.json();
+      return data.cache || null;
+    } catch {
+      return null;
+    }
   }
 
   private async fetchWithAuth(input: string, init: RequestInit = {}): Promise<Response> {

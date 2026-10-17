@@ -209,3 +209,97 @@ export function findSilenceGaps(
 
   return gaps;
 }
+
+/**
+ * Decodes HTML entities commonly found in subtitle files (e.g. &gt; &lt; &amp; &#39; &quot;)
+ */
+export function decodeHtmlEntities(text: string): string {
+  if (!text || typeof text !== 'string') return '';
+  return text
+    .replace(/&gt;/gi, '>')
+    .replace(/&lt;/gi, '<')
+    .replace(/&amp;/gi, '&')
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;/gi, "'")
+    .replace(/&apos;/gi, "'")
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&#(\d+);/g, (_, dec) => {
+      try {
+        return String.fromCharCode(parseInt(dec, 10));
+      } catch {
+        return '';
+      }
+    });
+}
+
+/**
+ * Checks if a word token is an artifact/noise marker:
+ * - Speaker change indicators: ">>", ">>>", ">", "&gt;&gt;", "&gt;&gt;&gt;", "> >"
+ * - Closed-caption audio descriptions: "[Music]", "[Applause]", "[Laughter]", "[Inaudible]", "(music)", "(applause)"
+ * - Blank or symbol-only artifacts
+ */
+export function isArtifactWord(rawWord: string): boolean {
+  if (!rawWord || typeof rawWord !== 'string') return true;
+  const decoded = decodeHtmlEntities(rawWord).trim();
+  if (!decoded) return true;
+
+  // Speaker change markers e.g. ">>", ">>>", ">", ">>>>>", "> >", ">>-", "-->>"
+  if (/[>]/.test(decoded) && /^[\s>\-_.*~]+$/.test(decoded)) return true;
+
+  // HTML entity speaker markers that weren't decoded e.g. "&gt;&gt;", "&gt; &gt;"
+  if (/&gt;/i.test(decoded) && /^[\s&;gt\-_.*~]+$/i.test(decoded)) return true;
+
+  // Non-verbal bracketed sound cues e.g. "[Music]", "[Applause]", "(Laughter)", "[inaudible]", "[silence]"
+  if (/^[\[(][a-zA-Z0-9\s_.,:/-]+[\])]$/.test(decoded)) return true;
+  if (/^[\[(]?(music|applause|laughter|inaudible|chuckle|cheering|gasp|sigh|sighs|groan|screaming|snicker|bell|applause|sound)[\])]?$/i.test(decoded)) return true;
+
+  // Repetitive punctuation / noise artifacts like "***", "---", "..."
+  if (/^[*_~=\-–—.]+$/.test(decoded)) return true;
+
+  return false;
+}
+
+/**
+ * Cleans a caption word token:
+ * - Decodes HTML entities (e.g. &gt;&gt; -> >>)
+ * - Strips leading/trailing speaker change chevrons (e.g. ">>Hello" -> "Hello")
+ * - Trims whitespace
+ */
+export function cleanCaptionWord(rawWord: string): string {
+  if (!rawWord || typeof rawWord !== 'string') return '';
+  let cleaned = decodeHtmlEntities(rawWord).trim();
+
+  // Strip leading speaker change arrows e.g. ">>Hello" -> "Hello", "&gt;&gt;Hello" -> "Hello"
+  cleaned = cleaned.replace(/^[>\s]+/, '').replace(/[<\s]+$/, '').trim();
+
+  // If the word itself was an artifact marker or is now empty, return empty
+  if (isArtifactWord(cleaned)) {
+    return '';
+  }
+
+  return cleaned;
+}
+
+/**
+ * Filters an array of WordTokens, removing all noise artifacts, speaker markers,
+ * and empty tokens.
+ */
+export function filterArtifactTokens<T extends { text: string }>(tokens: T[]): T[] {
+  if (!tokens || !Array.isArray(tokens)) return [];
+  const result: T[] = [];
+
+  for (const tok of tokens) {
+    if (!tok || typeof tok.text !== 'string') continue;
+    if (isArtifactWord(tok.text)) continue;
+
+    const cleanedText = cleanCaptionWord(tok.text);
+    if (!cleanedText) continue;
+
+    result.push({
+      ...tok,
+      text: cleanedText,
+    });
+  }
+
+  return result;
+}

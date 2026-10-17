@@ -2,6 +2,7 @@ import type { CaptionTemplate } from "../templates/schema";
 import type { WordToken } from "../timestampRefiner";
 import type { SubjectMetrics } from "../segmentation/types";
 import { computeSubjectAwareLayout, type AdjustedTextLayout } from "./subjectAwareLayout";
+import { isArtifactWord, cleanCaptionWord } from "../smart/audioCleanup";
 
 export interface RenderCaptionFrameOptions {
   ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D;
@@ -36,12 +37,27 @@ export interface CaptionCue {
 export function buildCaptionCues(tokens: WordToken[], maxWords: number): CaptionCue[] {
   if (!tokens || tokens.length === 0) return [];
 
+  // Filter out any artifact words (e.g. ">>", "&gt;&gt;", "[Music]")
+  const validTokens: WordToken[] = [];
+  for (const t of tokens) {
+    if (!t || !t.text) continue;
+    if (isArtifactWord(t.text)) continue;
+    const clean = cleanCaptionWord(t.text);
+    if (!clean) continue;
+    validTokens.push({
+      ...t,
+      text: clean,
+    });
+  }
+
+  if (validTokens.length === 0) return [];
+
   const cues: CaptionCue[] = [];
   let currentWords: WordToken[] = [];
 
-  for (let i = 0; i < tokens.length; i++) {
-    const token = tokens[i];
-    const next = tokens[i + 1];
+  for (let i = 0; i < validTokens.length; i++) {
+    const token = validTokens[i];
+    const next = validTokens[i + 1];
 
     currentWords.push(token);
 

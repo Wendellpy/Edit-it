@@ -29,6 +29,7 @@ import {
   type ExportFitMode,
 } from "../export/webcodecsExport";
 import type { CaptionTemplate } from "../templates/schema";
+import { isArtifactWord, cleanCaptionWord } from "../smart/audioCleanup";
 
 export interface SingleClipExportOptions {
   clip: ClipCandidate;
@@ -114,19 +115,28 @@ export function normalizeTokensForClip(
   if (!tokens || tokens.length === 0) return [];
 
   // Filter tokens strictly within or overlapping the clip interval
-  const windowTokens = tokens.filter(
-    (t) => t.end >= clipStart - 0.1 && t.start <= clipEnd + 0.1
-  );
-
-  return windowTokens.map((t) => {
-    const rawStart = Math.max(0, t.start - clipStart);
-    const rawEnd = Math.max(rawStart + 0.05, t.end - clipStart);
-    return {
-      ...t,
-      start: Math.round(rawStart * 1000) / 1000,
-      end: Math.round(rawEnd * 1000) / 1000,
-    };
+  // and exclude non-speech artifacts like >>, >>>, &gt;&gt;, [Music], etc.
+  const windowTokens = tokens.filter((t) => {
+    if (!t || !t.text) return false;
+    if (isArtifactWord(t.text)) return false;
+    return t.end >= clipStart - 0.1 && t.start <= clipEnd + 0.1;
   });
+
+  return windowTokens
+    .map((t) => {
+      const cleaned = cleanCaptionWord(t.text);
+      if (!cleaned || isArtifactWord(cleaned)) return null;
+
+      const rawStart = Math.max(0, t.start - clipStart);
+      const rawEnd = Math.max(rawStart + 0.05, t.end - clipStart);
+      return {
+        ...t,
+        text: cleaned,
+        start: Math.round(rawStart * 1000) / 1000,
+        end: Math.round(rawEnd * 1000) / 1000,
+      };
+    })
+    .filter((t): t is HinglishWordToken => t !== null);
 }
 
 /**

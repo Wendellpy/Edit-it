@@ -150,13 +150,27 @@ export class OpfsVideoStorage {
   /**
    * Removes a specific video from OPFS.
    */
-  async removeVideo(fileId: string): Promise<void> {
+  async removeVideo(fileId: string): Promise<boolean> {
     const dir = await this.ensureDir();
-    if (!dir) return;
+    if (!dir) return false;
     const cleanId = fileId.replace(/[^a-zA-Z0-9_-]/g, "");
+    let removed = false;
     try {
       await dir.removeEntry(`${cleanId}.mp4`);
+      removed = true;
     } catch {}
+    try {
+      await dir.removeEntry(fileId);
+      removed = true;
+    } catch {}
+    return removed;
+  }
+
+  /**
+   * Alias for removeVideo
+   */
+  async deleteVideo(fileId: string): Promise<boolean> {
+    return this.removeVideo(fileId);
   }
 
   /**

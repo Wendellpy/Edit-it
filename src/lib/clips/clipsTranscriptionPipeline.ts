@@ -11,7 +11,7 @@ import { extractAndResampleAudio } from "../audioPipeline";
 import { LocalWhisperPipeline, type TranscriptionProgress } from "../whisper";
 import type { WordToken } from "../timestampRefiner";
 import { processTranscriptHinglish, type HinglishWordToken } from "../hinglish/postProcessor";
-import { censorCurseWord } from "../smart/audioCleanup";
+import { censorCurseWord, cleanCaptionWord, isArtifactWord } from "../smart/audioCleanup";
 import type { ModelTierId } from "../modelManager";
 import type { VideoProbeResult } from "./types";
 
@@ -29,6 +29,7 @@ export interface ClipsIngestionOptions {
   preferWebGPU?: boolean;
   onProgress?: (progress: PipelineStageProgress) => void;
   probeResult?: VideoProbeResult;
+  quality?: "4k" | "1440p" | "1080p" | "720p" | "source";
 }
 
 export interface ClipsIngestionResult {
@@ -55,11 +56,20 @@ export class ClipsTranscriptionPipeline {
       preferWebGPU = true,
       onProgress,
       probeResult: initialProbe,
+      quality = "1080p",
     } = options;
 
     const report = (stage: PipelineStageProgress["stage"], percent: number, message: string, detail?: string) => {
       onProgress?.({ stage, percent, message, detail });
     };
+
+    // Parallel fast-path: Query YouTube captions hint concurrently (1-2s, runs while download starts)
+    const captionsHintPromise = localHelperClient.getCaptionsHint(url).catch(() => ({
+      success: false,
+      text: "",
+      properNouns: [] as string[],
+      timedWords: [] as Array<{ text: string; start: number; end: number }>,
+    }));
 
     // 1. Probe video if not provided
     let probe = initialProbe;
@@ -72,11 +82,11 @@ export class ClipsTranscriptionPipeline {
     const durationSeconds = probe.duration || 0;
 
     // 2. Initiate Download via Local Helper
-    report("downloading", 10, "Requesting video from local companion helper...");
+    report("downloading", 10, `Requesting ${quality} video from local companion helper...`);
 
     const dlResponse = await localHelperClient.startDownload({
       url,
-      quality: "1080p",
+      quality,
     });
 
     const fileId = dlResponse.fileId || probe.id;
@@ -132,12 +142,7 @@ export class ClipsTranscriptionPipeline {
 
     const [audioResult, captionsHint] = await Promise.all([
       this.extractAudioForFile(fileId),
-      localHelperClient.getCaptionsHint(url).catch(() => ({
-        success: false,
-        text: "",
-        properNouns: [] as string[],
-        timedWords: [] as Array<{ text: string; start: number; end: number }>,
-      })),
+      captionsHintPromise,
     ]);
 
     // 5. High-Precision Acoustic Word Timestamps (YouTube ground-truth or local Whisper ASR)
@@ -147,7 +152,14 @@ export class ClipsTranscriptionPipeline {
 
     if (captionsHint?.timedWords && captionsHint.timedWords.length > 5) {
       report("transcribing", 80, `Using ${captionsHint.timedWords.length} frame-accurate word timestamps from YouTube audio...`);
-      wordsTokens = captionsHint.timedWords.map((tw, idx) => ({
+      const validTimedWords = captionsHint.timedWords
+        .map((tw) => ({
+          ...tw,
+          text: cleanCaptionWord(tw.text),
+        }))
+        .filter((tw) => tw.text && !isArtifactWord(tw.text));
+
+      wordsTokens = validTimedWords.map((tw, idx) => ({
         id: `yt_tok_${idx}_${Date.now()}`,
         text: censorCurseWord(tw.text),
         start: tw.start,

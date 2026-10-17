@@ -6,7 +6,7 @@
 export interface HelperBinaryStatus {
   available: boolean;
   version: string | null;
-  path: string | null;
+  path?: string | null;
   installCommand?: string;
   error?: string;
 }
@@ -14,7 +14,7 @@ export interface HelperBinaryStatus {
 export interface HelperStatus {
   ok: boolean;
   version: string;
-  token: string;
+  token?: string;
   binaries: {
     ytdlp: HelperBinaryStatus;
     ffmpeg: HelperBinaryStatus;
