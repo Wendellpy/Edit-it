@@ -385,11 +385,11 @@ export function CreatorTemplatePreview() {
                       {selectedTemplate.previewWords.keyword || "only"}
                     </span>
                     <span
-                      className={`absolute -left-1 top-4 sm:top-5 text-[#FF0022] text-4xl sm:text-5xl font-medium tracking-normal -rotate-6 drop-shadow-xl transition-transform ${
-                        animatingWord ? "scale-110 -rotate-3" : "scale-100 -rotate-6"
+                      className={`absolute -left-1 top-8 sm:top-10 text-[#FF0022] text-4xl sm:text-5xl font-medium tracking-normal -rotate-7 drop-shadow-xl transition-transform ${
+                        animatingWord ? "scale-108 -rotate-5" : "scale-100 -rotate-7"
                       }`}
                       style={{
-                        fontFamily: "'Birthstone Bounce', 'Alex Brush', 'Great Vibes', cursive, sans-serif",
+                        fontFamily: "'SignPainter', 'SignPainter-HouseScript', 'SignPainter House Script', 'Satisfy', cursive, sans-serif",
                         textShadow: "0 3px 10px rgba(0,0,0,0.95)",
                         WebkitTextStroke: "1px rgba(0,0,0,0.85)",
                       }}

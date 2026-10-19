@@ -6,7 +6,11 @@
 
 import type { NormalizedROI, PixelROI, InpaintOptions } from "./types";
 import { generateWatermarkMask } from "./logoMasker";
-import { resolveGeminiWatermarkConfig, refineGeminiPosition } from "./geminiAlphaMaps";
+import {
+  resolveGeminiWatermarkConfig,
+  refineGeminiPosition,
+  estimateGeminiAlphaGain,
+} from "./geminiAlphaMaps";
 import { reverseAlphaBlend } from "./reverseAlphaBlend";
 
 /**
@@ -175,19 +179,31 @@ export function inpaintImageData(
       targetY = refined.y;
     }
 
+    // Dynamically estimate watermark alpha gain to prevent dark-scene underflow/black diamond artifacts
+    const effectiveGain = estimateGeminiAlphaGain(
+      imageData,
+      targetX,
+      targetY,
+      targetSize,
+      config.alphaMap,
+      config.alphaGain
+    );
+
     reverseAlphaBlend(
       imageData,
       config.alphaMap,
       { x: targetX, y: targetY, width: targetSize, height: targetSize },
-      { alphaGain: config.alphaGain }
+      { alphaGain: effectiveGain }
     );
 
     // Post-pass: eliminate video compression / DCT ringing around diamond perimeter
+    // Snapshot the patch region to prevent directional feedback/skew during filtering
     const mapLen = targetSize;
+    const patchCopy = new Uint8ClampedArray(data);
     for (let r = 0; r < mapLen; r++) {
       for (let c = 0; c < mapLen; c++) {
         const aVal = config.alphaMap[r * mapLen + c];
-        if (aVal > 0.02 && aVal < 0.48) {
+        if (aVal > 0.004 && aVal < 0.49) {
           const cy = targetY + r;
           const cx = targetX + c;
           if (cy >= 0 && cy < imgH && cx >= 0 && cx < imgW) {
@@ -200,9 +216,9 @@ export function inpaintImageData(
                 const nx = cx + dx;
                 if (ny >= 0 && ny < imgH && nx >= 0 && nx < imgW) {
                   const idx = (ny * imgW + nx) * 4;
-                  nbrsR.push(data[idx]);
-                  nbrsG.push(data[idx + 1]);
-                  nbrsB.push(data[idx + 2]);
+                  nbrsR.push(patchCopy[idx]);
+                  nbrsG.push(patchCopy[idx + 1]);
+                  nbrsB.push(patchCopy[idx + 2]);
                 }
               }
             }
@@ -223,6 +239,21 @@ export function inpaintImageData(
 
   // Generate logo shape mask if shape mask is requested (default true)
   let mask: Uint8Array | null = explicitMask ?? null;
+  // If explicitMask was provided but has virtually 0 coverage (all zero or nearly empty), discard it
+  if (mask) {
+    let nonZero = 0;
+    const len = mask.length;
+    for (let k = 0; k < len; k++) {
+      if (mask[k] > 10) {
+        nonZero++;
+        if (nonZero >= 4) break;
+      }
+    }
+    if (nonZero < 4) {
+      mask = null;
+    }
+  }
+
   if (!mask && options.useShapeMask !== false) {
     const maskResult = generateWatermarkMask(
       imageData,

@@ -268,7 +268,7 @@ export function generateAss(
   const rawFont = template.typography?.primaryFont || 'Arial';
   const cleanFont = rawFont.split(',')[0].replace(/['"]/g, '').trim() || 'Arial';
   const rawSecondaryFont = template.typography?.secondaryFont || '';
-  const cleanSecondaryFont = rawSecondaryFont.split(',')[0].replace(/['"]/g, '').trim() || 'Birthstone Bounce';
+  const cleanSecondaryFont = rawSecondaryFont.split(',')[0].replace(/['"]/g, '').trim() || 'SignPainter';
 
   // Apply typography transform (MrBeast is UPPERCASE)
   const textTransform = template.typography?.textTransform || 'none';

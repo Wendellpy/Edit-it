@@ -3,6 +3,7 @@ import {
   getEmbeddedAlphaMap,
   interpolateAlphaMap,
   resolveGeminiWatermarkConfig,
+  estimateGeminiAlphaGain,
 } from "../geminiAlphaMaps";
 import { reverseAlphaBlend } from "../reverseAlphaBlend";
 import { inpaintImageData } from "../inpainter";
@@ -109,5 +110,108 @@ describe("Reverse Alpha Blending Engine (Gemini / Veo Ground Truth)", () => {
 
     // Pixels outside watermark should remain 60
     expect(data[(1100 * imgW + 550) * 4]).toBe(60);
+  });
+
+  it("dynamically estimates alpha gain for both standard (1.00) and weak/extended (0.60) watermarks", () => {
+    const size = 48;
+    const alphaMap = getEmbeddedAlphaMap(48)!;
+    const imgW = 100;
+    const imgH = 100;
+    const x = 20;
+    const y = 20;
+
+    // Test with gain = 0.60 on a dark background (value = 10)
+    const dataDark = new Uint8ClampedArray(imgW * imgH * 4).fill(10);
+    for (let r = 0; r < size; r++) {
+      for (let c = 0; c < size; c++) {
+        const a = alphaMap[r * size + c] * 0.60;
+        const idx = ((y + r) * imgW + (x + c)) * 4;
+        const val = Math.round(10 * (1 - a) + 255 * a);
+        dataDark[idx] = val;
+        dataDark[idx + 1] = val;
+        dataDark[idx + 2] = val;
+        dataDark[idx + 3] = 255;
+      }
+    }
+
+    const estimatedWeak = estimateGeminiAlphaGain(
+      { width: imgW, height: imgH, data: dataDark } as ImageData,
+      x,
+      y,
+      size,
+      alphaMap
+    );
+    expect(estimatedWeak).toBeCloseTo(0.60, 1);
+
+    // Test with gain = 1.00 on a midtone background (value = 60)
+    const dataMid = new Uint8ClampedArray(imgW * imgH * 4).fill(60);
+    for (let r = 0; r < size; r++) {
+      for (let c = 0; c < size; c++) {
+        const a = alphaMap[r * size + c] * 1.00;
+        const idx = ((y + r) * imgW + (x + c)) * 4;
+        const val = Math.round(60 * (1 - a) + 255 * a);
+        dataMid[idx] = val;
+        dataMid[idx + 1] = val;
+        dataMid[idx + 2] = val;
+        dataMid[idx + 3] = 255;
+      }
+    }
+
+    const estimatedStandard = estimateGeminiAlphaGain(
+      { width: imgW, height: imgH, data: dataMid } as ImageData,
+      x,
+      y,
+      size,
+      alphaMap
+    );
+    expect(estimatedStandard).toBeCloseTo(1.00, 1);
+  });
+
+  it("prevents pitch-black diamond underflow artifacts on dark night scenes (t >= 10s)", () => {
+    const size = 48;
+    const alphaMap = getEmbeddedAlphaMap(48)!;
+    const imgW = 100;
+    const imgH = 100;
+    const x = 20;
+    const y = 20;
+
+    // Simulate dark night video scene with background luminance ~10
+    const data = new Uint8ClampedArray(imgW * imgH * 4).fill(10);
+    // Composite watermark with 0.60 gain (Veo dark/extended mode)
+    for (let r = 0; r < size; r++) {
+      for (let c = 0; c < size; c++) {
+        const a = alphaMap[r * size + c] * 0.60;
+        const idx = ((y + r) * imgW + (x + c)) * 4;
+        const val = Math.round(10 * (1 - a) + 255 * a);
+        data[idx] = val;
+        data[idx + 1] = val;
+        data[idx + 2] = val;
+        data[idx + 3] = 255;
+      }
+    }
+
+    const imgData = { width: imgW, height: imgH, data } as ImageData;
+    inpaintImageData(
+      imgData,
+      { x, y, width: size, height: size },
+      { platformId: "gemini" }
+    );
+
+    // Verify zero pixels became pure (0,0,0) black diamond hole
+    let pureBlackCount = 0;
+    for (let r = 0; r < size; r++) {
+      for (let c = 0; c < size; c++) {
+        const idx = ((y + r) * imgW + (x + c)) * 4;
+        if (data[idx] === 0 && data[idx + 1] === 0 && data[idx + 2] === 0) {
+          pureBlackCount++;
+        }
+      }
+    }
+
+    expect(pureBlackCount).toBe(0);
+    // Core of diamond should be restored close to ambient background (10)
+    const centerIdx = ((y + 24) * imgW + (x + 24)) * 4;
+    expect(data[centerIdx]).toBeGreaterThanOrEqual(8);
+    expect(data[centerIdx]).toBeLessThanOrEqual(14);
   });
 });

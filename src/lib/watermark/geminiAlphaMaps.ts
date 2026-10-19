@@ -308,3 +308,79 @@ export function refineGeminiPosition(
   return { x: baseX, y: baseY, confidence: Math.max(0, bestNcc) };
 }
 
+/**
+ * Dynamically estimates the effective watermark alpha gain for the current frame
+ * by measuring the watermark core luminance delta against surrounding ambient background.
+ * 
+ * Google Gemini / Veo watermarks vary in compositing opacity (e.g. ~1.00 for standard
+ * generations, ~0.60 for extended clips / dark scenes). Dynamic estimation prevents
+ * severe underflow clipping (pitch-black diamond cutout) and over-subtraction.
+ */
+export function estimateGeminiAlphaGain(
+  imageData: ImageData,
+  x: number,
+  y: number,
+  size: number,
+  alphaMap: Float32Array,
+  fallbackGain: number = 1.02
+): number {
+  const { width: imgW, height: imgH, data } = imageData;
+  if (size <= 0 || alphaMap.length !== size * size) return fallbackGain;
+
+  // 1. Calculate ambient background from surrounding border ring (3-4px perimeter)
+  let bgR = 0, bgG = 0, bgB = 0, bgCount = 0;
+  for (let dy = -4; dy < size + 4; dy++) {
+    for (let dx = -4; dx < size + 4; dx++) {
+      if (dx >= 0 && dx < size && dy >= 0 && dy < size) continue;
+      const px = x + dx;
+      const py = y + dy;
+      if (px < 0 || px >= imgW || py < 0 || py >= imgH) continue;
+      const idx = (py * imgW + px) * 4;
+      bgR += data[idx];
+      bgG += data[idx + 1];
+      bgB += data[idx + 2];
+      bgCount++;
+    }
+  }
+
+  if (bgCount === 0) return fallbackGain;
+  const ambR = bgR / bgCount;
+  const ambG = bgG / bgCount;
+  const ambB = bgB / bgCount;
+  const ambientLum = 0.299 * ambR + 0.587 * ambG + 0.114 * ambB;
+
+  // If ambient background is extremely bright (> 245), delta is compressed and regression is unreliable
+  if (ambientLum > 245) return fallbackGain;
+
+  // 2. Least-squares regression over watermark core pixels (alpha >= 0.20)
+  let num = 0;
+  let den = 0;
+  for (let r = 0; r < size; r++) {
+    for (let c = 0; c < size; c++) {
+      const rawA = alphaMap[r * size + c];
+      if (rawA < 0.20) continue;
+      const curY = y + r;
+      const curX = x + c;
+      if (curY < 0 || curY >= imgH || curX < 0 || curX >= imgW) continue;
+
+      const idx = (curY * imgW + curX) * 4;
+      const pLum = 0.299 * data[idx] + 0.587 * data[idx + 1] + 0.114 * data[idx + 2];
+      const expDelta = rawA * (255 - ambientLum);
+      const actDelta = pLum - ambientLum;
+      num += actDelta * expDelta;
+      den += expDelta * expDelta;
+    }
+  }
+
+  if (den <= 0) return fallbackGain;
+  const rawGain = num / den;
+
+  // Clamp within reasonable physical bounds for Gemini / Veo watermarks [0.35, 1.25]
+  if (rawGain >= 0.35 && rawGain <= 1.25) {
+    return rawGain;
+  }
+
+  return fallbackGain;
+}
+
+

@@ -101,6 +101,7 @@ export function ExportModal({ isOpen, onClose, videoElement }: ExportModalProps)
   // Live Canvas Preview Ref during hardware encoding
   const livePreviewCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const frameCountRef = useRef<number>(0);
+  const lastPreviewTimeRef = useRef<number>(0);
   const abortControllerRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
@@ -180,12 +181,12 @@ export function ExportModal({ isOpen, onClose, videoElement }: ExportModalProps)
         layerOrder,
         onProgress: (p) => setProgress(p),
         onFrameRendered: (canvasSource) => {
-          frameCountRef.current++;
-          if (frameCountRef.current % 4 !== 0) return;
+          const now = performance.now();
+          if (now - lastPreviewTimeRef.current < 90) return;
+          lastPreviewTimeRef.current = now;
           if (livePreviewCanvasRef.current) {
             const previewCtx = livePreviewCanvasRef.current.getContext("2d");
             if (previewCtx) {
-              previewCtx.clearRect(0, 0, livePreviewCanvasRef.current.width, livePreviewCanvasRef.current.height);
               previewCtx.drawImage(
                 canvasSource as CanvasImageSource,
                 0,

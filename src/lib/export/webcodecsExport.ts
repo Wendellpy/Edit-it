@@ -814,6 +814,8 @@ export async function exportVideoWithWebCodecs(options: ExportJobOptions): Promi
   if (!ctx) {
     throw new Error('Unable to create 2D canvas context for export');
   }
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
 
   // Pre-cached mask frame lookup and consistent video hash
   const videoKey =
@@ -829,6 +831,7 @@ export async function exportVideoWithWebCodecs(options: ExportJobOptions): Promi
   // Frame Rendering Loop
   const startTime = performance.now();
   const frameDurationUs = Math.round(1_000_000 / fps);
+  let lastProgressTime = 0;
 
   videoEl.pause();
 
@@ -865,8 +868,8 @@ export async function exportVideoWithWebCodecs(options: ExportJobOptions): Promi
       await seekVideoToTimestamp(videoEl, absoluteVideoTime);
 
       // Composite: 1. Video background with framing mode and high quality smoothing
-      ctx.clearRect(0, 0, width, height);
       if (options.cropTrajectory) {
+        ctx.clearRect(0, 0, width, height);
         const crop = getCropWindowAtTime(options.cropTrajectory, absoluteVideoTime);
         applyReframedCrop(ctx, videoEl, crop, width, height);
       } else {
@@ -931,26 +934,45 @@ export async function exportVideoWithWebCodecs(options: ExportJobOptions): Promi
       encoder.encode(videoFrame, { keyFrame: isKeyframe });
       videoFrame.close();
 
-      // Backpressure: only pause if hardware encoder buffer is actually saturated
-      while (encoder.encodeQueueSize > 24) {
-        await new Promise((r) => setTimeout(r, 1));
+      // Backpressure: pause if hardware encoder buffer is saturated, resuming immediately on dequeue
+      if (encoder.encodeQueueSize > 16) {
+        await new Promise<void>((resolve) => {
+          let resolved = false;
+          const finish = () => {
+            if (resolved) return;
+            resolved = true;
+            encoder.ondequeue = null;
+            resolve();
+          };
+          encoder.ondequeue = () => {
+            if (encoder.encodeQueueSize <= 6) {
+              finish();
+            }
+          };
+          setTimeout(finish, 12);
+        });
       }
 
-      // Progress updates
-      const elapsedSec = (performance.now() - startTime) / 1000;
-      const currentEncodingFps = frameIndex > 0 ? Math.round((frameIndex / elapsedSec) * 10) / 10 : 0;
-      const remainingFrames = totalFrames - frameIndex;
-      const timeRemainingSec = currentEncodingFps > 0 ? Math.round(remainingFrames / currentEncodingFps) : 0;
-      const percent = Math.min(96, Math.round(((frameIndex + 1) / totalFrames) * 94));
+      // Progress updates: throttle to ~13 FPS (every 75ms) to prevent React re-render thrashing
+      const now = performance.now();
+      const isLastFrame = frameIndex === totalFrames - 1;
+      if (isLastFrame || now - lastProgressTime >= 75) {
+        lastProgressTime = now;
+        const elapsedSec = (now - startTime) / 1000;
+        const currentEncodingFps = frameIndex > 0 ? Math.round((frameIndex / elapsedSec) * 10) / 10 : 0;
+        const remainingFrames = totalFrames - frameIndex;
+        const timeRemainingSec = currentEncodingFps > 0 ? Math.round(remainingFrames / currentEncodingFps) : 0;
+        const percent = Math.min(96, Math.round(((frameIndex + 1) / totalFrames) * 94));
 
-      onProgress?.({
-        phase: 'rendering',
-        percent,
-        currentFrame: frameIndex + 1,
-        totalFrames,
-        fps: currentEncodingFps,
-        timeRemainingSec,
-      });
+        onProgress?.({
+          phase: 'rendering',
+          percent,
+          currentFrame: frameIndex + 1,
+          totalFrames,
+          fps: currentEncodingFps,
+          timeRemainingSec,
+        });
+      }
     }
 
     // Finalize VideoEncoder
@@ -997,6 +1019,7 @@ export async function exportVideoWithWebCodecs(options: ExportJobOptions): Promi
 /**
  * Seeks HTMLVideoElement to exact time with 100% guarantee that the decoder
  * presents the target frame without premature resolution or stalled duplicate frames.
+ * Resolves directly on the browser's native 'seeked' event without waiting for compositor v-sync.
  */
 function seekVideoToTimestamp(video: HTMLVideoElement, time: number): Promise<void> {
   return new Promise((resolve) => {
@@ -1015,32 +1038,22 @@ function seekVideoToTimestamp(video: HTMLVideoElement, time: number): Promise<vo
     }
 
     let isDone = false;
-    let timer: any = null;
+    let timer: ReturnType<typeof setTimeout> | null = null;
 
     const onDone = () => {
       if (isDone) return;
       isDone = true;
-      video.removeEventListener('seeked', onSeeked);
+      video.removeEventListener('seeked', onDone);
       video.removeEventListener('error', onDone);
       if (timer) clearTimeout(timer);
       resolve();
     };
 
-    const onSeeked = () => {
-      if ('requestVideoFrameCallback' in video && typeof (video as any).requestVideoFrameCallback === 'function') {
-        try {
-          (video as any).requestVideoFrameCallback(() => onDone());
-          return;
-        } catch {}
-      }
-      onDone();
-    };
-
-    video.addEventListener('seeked', onSeeked, { once: true });
+    video.addEventListener('seeked', onDone, { once: true });
     video.addEventListener('error', onDone, { once: true });
 
-    // 500ms safety timeout: ensures browser decoder has adequate time to fetch keyframe without premature dropping
-    timer = setTimeout(onDone, 500);
+    // Safety timeout: 2500ms ensures browser decoder has adequate time for GOP decoding past 10s
+    timer = setTimeout(onDone, 2500);
 
     try {
       video.currentTime = targetTime;

@@ -103,7 +103,7 @@ export function generateWatermarkMask(
       let isGlitch = false;
       if (presetConfig?.chromaticGlitch) {
         const cyanMagentaDiff = Math.abs((g + b) / 2 - r);
-        if (cyanMagentaDiff > 35) isGlitch = true;
+        if (cyanMagentaDiff > 40 && luma > 150 && (b > 130 || r > 130)) isGlitch = true;
       }
 
       const mIdx = row * clampedW + col;
@@ -113,7 +113,7 @@ export function generateWatermarkMask(
       if (priorWeight > 0.45 && (luma > bgMeanLuma + 10 || isEdge)) {
         mask[mIdx] = 255;
         logoPixelCount++;
-      } else if (priorWeight > 0.18 && (isEdge || luma > minLumaThreshold || luma > bgMeanLuma + 8)) {
+      } else if (priorWeight > 0.18 && (isEdge || luma > minLumaThreshold || (luma > bgMeanLuma + 12 && isGlitch))) {
         mask[mIdx] = 230;
         logoPixelCount++;
       } else if (shapePrior) {
@@ -163,11 +163,19 @@ export function generateWatermarkMask(
     }
   }
 
-  const coverageRatio = logoPixelCount / (clampedW * clampedH);
+  let coverageRatio = logoPixelCount / (clampedW * clampedH);
 
-  // If the mask is completely empty (no edges or bright pixels found), fall back to whole box
+  // If the mask is completely empty (no edges or bright pixels found):
+  // For platforms with floating/moving watermarks (e.g. TikTok / Reels dual corners),
+  // do NOT smear clean corners if no watermark is present on this frame!
   if (logoPixelCount < 4 || coverageRatio < 0.005) {
-    dilatedMask.fill(255);
+    if (platformId === "tiktok") {
+      dilatedMask.fill(0);
+      coverageRatio = 0;
+    } else {
+      dilatedMask.fill(255);
+      coverageRatio = 1.0;
+    }
   }
 
   return {

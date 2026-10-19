@@ -342,7 +342,7 @@ export const CAPTION_PRESETS: CaptionTemplate[] = [
     badge: "EDITORIAL",
     typography: {
       primaryFont: "Montserrat, sans-serif",
-      secondaryFont: "'Birthstone Bounce', 'Alex Brush', 'Great Vibes', cursive, sans-serif",
+      secondaryFont: "'SignPainter', 'SignPainter-HouseScript', 'SignPainter House Script', 'Satisfy', cursive, sans-serif",
       primaryWeight: "900",
       textTransform: "lowercase",
       fontSizeBasePercent: 0.088,

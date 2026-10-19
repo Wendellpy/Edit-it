@@ -4,6 +4,7 @@ import {
   getAspectRatioCategory,
   getDynamicRoisForPreset,
   autoDetectMediaWatermark,
+  scanCornerWatermarks,
 } from "../detector";
 
 describe("AI Watermark & Aspect Ratio Detector", () => {
@@ -134,5 +135,52 @@ describe("AI Watermark & Aspect Ratio Detector", () => {
       expect(res.aspectRatioCategory).toBe("landscape");
       expect(res.explanation).toContain("16:9 Landscape");
     });
+
+    it("auto-detects top-left watermark and assigns dual-corner TikTok ROIs", () => {
+      // Mock Canvas 2D context
+      const width = 1000;
+      const height = 1000;
+      const tlW = 380;
+      const tlH = 160;
+      const data = new Uint8ClampedArray(tlW * tlH * 4);
+
+      // Create alternating high contrast vertical stripes in Top-Left region
+      for (let y = 10; y < tlH - 10; y++) {
+        for (let x = 10; x < tlW - 10; x++) {
+          const idx = (y * tlW + x) * 4;
+          const isBright = Math.floor(x / 4) % 2 === 0;
+          const val = isBright ? 240 : 20;
+          data[idx] = val;
+          data[idx + 1] = val;
+          data[idx + 2] = val;
+          data[idx + 3] = 255;
+        }
+      }
+
+      const mockCtx = {
+        getImageData: (x: number, y: number, w: number, h: number) => {
+          if (x === 0 && y === 0) {
+            return { width: w, height: h, data } as ImageData;
+          }
+          // Empty dark region elsewhere
+          return { width: w, height: h, data: new Uint8ClampedArray(w * h * 4) } as ImageData;
+        },
+      } as unknown as CanvasRenderingContext2D;
+
+      const scanRes = scanCornerWatermarks(mockCtx, width, height);
+      expect(scanRes.detected).toBe(true);
+      expect(scanRes.corner).toBe("tl");
+
+      const autoRes = autoDetectMediaWatermark({
+        filename: "unknown_clip.mp4",
+        width,
+        height,
+        ctx: mockCtx,
+      });
+
+      expect(autoRes.presetId).toBe("tiktok");
+      expect(autoRes.rois.length).toBe(2);
+    });
   });
 });
+

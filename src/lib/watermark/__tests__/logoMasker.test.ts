@@ -189,5 +189,57 @@ describe("AI Logo Dataset, Correlation & Shape Masker", () => {
     expect(learnedProfile.presetId).toBeDefined();
     expect(learnedProfile.platformName).toBeDefined();
   });
+
+  it("leaves empty corner mask clean (0) on tiktok preset to protect innocent video during alternating bounces", () => {
+    const w = 40;
+    const h = 20;
+    const data = new Uint8ClampedArray(w * h * 4);
+    // Innocent background (e.g. green video scene) with NO watermark
+    for (let i = 0; i < data.length; i += 4) {
+      data[i] = 40;
+      data[i + 1] = 120;
+      data[i + 2] = 50;
+      data[i + 3] = 255;
+    }
+
+    const fakeImgData = { width: w, height: h, data } as unknown as ImageData;
+    const result = generateWatermarkMask(fakeImgData, { x: 0, y: 0, width: w, height: h }, "tiktok");
+
+    // All pixels in the mask should be 0 because no watermark was in this corner
+    expect(result.mask.every((val) => val === 0)).toBe(true);
+    expect(result.coverageRatio).toBe(0);
+  });
+
+  it("inpaintImageData discards empty explicitMask (all zeros) and falls back to dynamic per-frame generation", () => {
+    const w = 40;
+    const h = 20;
+    const data = new Uint8ClampedArray(w * h * 4);
+    // Background
+    for (let i = 0; i < data.length; i += 4) {
+      data[i] = 20;
+      data[i + 1] = 30;
+      data[i + 2] = 40;
+      data[i + 3] = 255;
+    }
+    // Watermark mark
+    for (let y = 5; y < 15; y++) {
+      for (let x = 10; x < 25; x++) {
+        const idx = (y * w + x) * 4;
+        data[idx] = 250;
+        data[idx + 1] = 250;
+        data[idx + 2] = 250;
+      }
+    }
+
+    const imgData = { width: w, height: h, data } as unknown as ImageData;
+    const allZeroMask = new Uint8Array(w * h).fill(0);
+
+    // Pass allZeroMask as explicitMask - inpaintImageData should discard it and inpaint the watermark
+    inpaintImageData(imgData, { x: 0, y: 0, width: w, height: h }, { platformId: "kling", useShapeMask: true }, allZeroMask);
+
+    const testIdx = (10 * w + 15) * 4;
+    // Watermark at center (250, 250, 250) should have been inpainted
+    expect(imgData.data[testIdx]).toBeLessThan(200);
+  });
 });
 

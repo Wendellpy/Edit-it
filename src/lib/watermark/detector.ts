@@ -167,43 +167,39 @@ export function getDynamicRoisForPreset(
 /**
  * Scans candidate corner zones on a canvas for high-contrast watermark text/logos.
  */
-export function scanCornerWatermarks(
+function analyzeCornerBox(
   ctx: CanvasRenderingContext2D,
   width: number,
-  height: number
+  height: number,
+  corner: "br" | "tl"
 ): {
   detected: boolean;
-  corner: "br" | "bl" | "tr" | "tl" | null;
+  corner: "br" | "tl";
   candidateRoi: NormalizedROI | null;
   confidence: number;
   edgeScore: number;
   platformHint?: WatermarkPresetId;
   correlationScore?: number;
-} {
-  if (width < 32 || height < 32) {
-    return { detected: false, corner: null, candidateRoi: null, confidence: 0, edgeScore: 0 };
-  }
-
-  // We primarily inspect the Bottom-Right corner (standard for 95% of AI watermarks)
-  const brX = Math.floor(width * 0.68);
-  const brY = Math.floor(height * 0.84);
-  const brW = width - brX;
-  const brH = height - brY;
+} | null {
+  const regX = corner === "br" ? Math.floor(width * 0.68) : 0;
+  const regY = corner === "br" ? Math.floor(height * 0.84) : 0;
+  const regW = corner === "br" ? width - regX : Math.floor(width * 0.38);
+  const regH = corner === "br" ? height - regY : Math.floor(height * 0.16);
 
   try {
-    const imgData = ctx.getImageData(brX, brY, brW, brH);
+    const imgData = ctx.getImageData(regX, regY, regW, regH);
     const data = imgData.data;
 
     let edgeCount = 0;
-    let minX = brW, maxX = 0, minY = brH, maxY = 0;
+    let minX = regW, maxX = 0, minY = regH, maxY = 0;
     let highContrastPixels = 0;
 
     // Scan horizontal gradients to detect text / glyph edges
-    for (let y = 1; y < brH - 1; y++) {
-      for (let x = 1; x < brW - 1; x++) {
-        const idx = (y * brW + x) * 4;
-        const leftIdx = (y * brW + (x - 1)) * 4;
-        const rightIdx = (y * brW + (x + 1)) * 4;
+    for (let y = 1; y < regH - 1; y++) {
+      for (let x = 1; x < regW - 1; x++) {
+        const idx = (y * regW + x) * 4;
+        const leftIdx = (y * regW + (x - 1)) * 4;
+        const rightIdx = (y * regW + (x + 1)) * 4;
 
         const lum = 0.299 * data[idx] + 0.587 * data[idx + 1] + 0.114 * data[idx + 2];
         const lumL = 0.299 * data[leftIdx] + 0.587 * data[leftIdx + 1] + 0.114 * data[leftIdx + 2];
@@ -223,22 +219,21 @@ export function scanCornerWatermarks(
       }
     }
 
-    const totalPixels = brW * brH;
+    const totalPixels = regW * regH;
     const edgeDensity = edgeCount / totalPixels;
 
     // If a cluster of distinct edges and high contrast is found
     if (highContrastPixels >= 25 && edgeDensity > 0.015 && maxX > minX && maxY > minY) {
-      // Add padding around detected bounding box
       const padX = 8;
       const padY = 6;
-      const tightX = Math.max(0, brX + minX - padX);
-      const tightY = Math.max(0, brY + minY - padY);
+      const tightX = Math.max(0, regX + minX - padX);
+      const tightY = Math.max(0, regY + minY - padY);
       const tightW = Math.min(width - tightX, (maxX - minX) + padX * 2);
       const tightH = Math.min(height - tightY, (maxY - minY) + padY * 2);
 
       const candidateRoi: NormalizedROI = clampNormalizedROI({
-        id: "auto_detected_br",
-        name: "Auto-Detected Watermark",
+        id: `auto_detected_${corner}`,
+        name: `Auto-Detected Watermark (${corner.toUpperCase()})`,
         x: tightX / width,
         y: tightY / height,
         width: Math.max(0.12, tightW / width),
@@ -251,13 +246,13 @@ export function scanCornerWatermarks(
         const sampleY = Math.floor(minY + (py / 15) * Math.max(1, maxY - minY));
         for (let px = 0; px < 16; px++) {
           const sampleX = Math.floor(minX + (px / 15) * Math.max(1, maxX - minX));
-          const idx = (sampleY * brW + sampleX) * 4;
+          const idx = (sampleY * regW + sampleX) * 4;
           const lum = 0.299 * data[idx] + 0.587 * data[idx + 1] + 0.114 * data[idx + 2];
           patch16[py * 16 + px] = lum > 145 ? 1 : 0;
         }
       }
 
-      let bestMatchedPlatform: WatermarkPresetId = "kling";
+      let bestMatchedPlatform: WatermarkPresetId = corner === "tl" ? "tiktok" : "kling";
       let highestCorrelation = -1;
 
       for (const presetKey of Object.keys(AI_WATERMARK_DATASET) as WatermarkPresetId[]) {
@@ -272,16 +267,50 @@ export function scanCornerWatermarks(
 
       return {
         detected: true,
-        corner: "br",
+        corner,
         candidateRoi,
         confidence: Math.min(0.98, Math.max(0.65, 0.65 + edgeDensity * 10 + highestCorrelation * 0.2)),
         edgeScore: edgeDensity,
-        platformHint: highestCorrelation > 0.35 ? bestMatchedPlatform : undefined,
+        platformHint: highestCorrelation > 0.35 ? bestMatchedPlatform : (corner === "tl" ? "tiktok" : undefined),
         correlationScore: highestCorrelation,
       };
     }
   } catch {
-    // Canvas security or context error
+    // Canvas context error
+  }
+  return null;
+}
+
+/**
+ * Scans candidate corner zones on a canvas for high-contrast watermark text/logos.
+ */
+export function scanCornerWatermarks(
+  ctx: CanvasRenderingContext2D,
+  width: number,
+  height: number
+): {
+  detected: boolean;
+  corner: "br" | "bl" | "tr" | "tl" | null;
+  candidateRoi: NormalizedROI | null;
+  confidence: number;
+  edgeScore: number;
+  platformHint?: WatermarkPresetId;
+  correlationScore?: number;
+} {
+  if (width < 32 || height < 32) {
+    return { detected: false, corner: null, candidateRoi: null, confidence: 0, edgeScore: 0 };
+  }
+
+  // Inspect Bottom-Right first (standard for 90% of AI watermarks)
+  const brResult = analyzeCornerBox(ctx, width, height, "br");
+  if (brResult && brResult.detected) {
+    return brResult;
+  }
+
+  // Inspect Top-Left (common for TikTok / Reels floating watermark bounces)
+  const tlResult = analyzeCornerBox(ctx, width, height, "tl");
+  if (tlResult && tlResult.detected) {
+    return tlResult;
   }
 
   return { detected: false, corner: null, candidateRoi: null, confidence: 0, edgeScore: 0 };
@@ -346,9 +375,12 @@ export function autoDetectMediaWatermark(params: {
 
     const scan = scanCornerWatermarks(ctx, width, height);
     if (scan.detected && scan.candidateRoi) {
-      const recognizedPresetId = scan.platformHint || "kling";
+      const recognizedPresetId = scan.platformHint || (scan.corner === "tl" ? "tiktok" : "kling");
       const preset = WATERMARK_PRESETS[recognizedPresetId];
       const matchPct = Math.round(scan.confidence * 100);
+      const rois = recognizedPresetId === "tiktok"
+        ? getDynamicRoisForPreset("tiktok", width, height)
+        : [scan.candidateRoi];
 
       return {
         presetId: recognizedPresetId,
@@ -357,10 +389,10 @@ export function autoDetectMediaWatermark(params: {
         detectionSource: "visual_scan",
         aspectRatioCategory: category,
         aspectRatioLabel,
-        rois: [scan.candidateRoi],
+        rois,
         explanation: scan.platformHint
           ? `Matched ${preset.name} logo shape from visual template correlation (${matchPct}% confidence) • Adapted for ${aspectRatioLabel}.`
-          : `Detected watermark cluster in bottom-right corner (${matchPct}% confidence) • Adapted for ${aspectRatioLabel}.`,
+          : `Detected watermark cluster in ${scan.corner === "tl" ? "top-left" : "bottom-right"} corner (${matchPct}% confidence) • Adapted for ${aspectRatioLabel}.`,
       };
     }
   }

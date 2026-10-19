@@ -50,6 +50,7 @@ import {
   autoDetectMediaWatermark,
   getAspectRatioCategory,
   getDynamicRoisForPreset,
+  scanCornerWatermarks,
 } from "@/lib/watermark/detector";
 import {
   processWatermarkVideo,
@@ -320,11 +321,40 @@ export default function WatermarkRemoverPage() {
       if (isVideo) {
         try {
           const sampleFrames = await sampleVideoFrames(file, 8);
-          if (sampleFrames.length >= 3 && detResult.rois.length > 0) {
-            const pxRoi = denormalizeROI(detResult.rois[0], width, height);
-            const { maskResult } = learnWatermarkFromClips(sampleFrames, pxRoi, detResult.presetId);
-            learnedShapeDesc = `${Math.round((1 - maskResult.coverageRatio) * 100)}% background preserved`;
-            setLearnedLogos(getAllLearnedLogoProfiles());
+          if (sampleFrames.length >= 3) {
+            // Check if watermark appears in top-left or alternates corners across time (e.g. past 10 seconds)
+            const testCanvas = document.createElement("canvas");
+            testCanvas.width = width;
+            testCanvas.height = height;
+            const testCtx = testCanvas.getContext("2d");
+            if (testCtx && detResult.presetId !== "tiktok") {
+              testCtx.putImageData(sampleFrames[0], 0, 0);
+              const earlyScan = scanCornerWatermarks(testCtx, width, height);
+              testCtx.putImageData(sampleFrames[sampleFrames.length - 1], 0, 0);
+              const lateScan = scanCornerWatermarks(testCtx, width, height);
+
+              // If watermark moved between TL and BR or was detected in TL, equip dual-corner TikTok preset
+              if (
+                earlyScan.corner === "tl" ||
+                lateScan.corner === "tl" ||
+                (earlyScan.detected && lateScan.detected && earlyScan.corner !== lateScan.corner)
+              ) {
+                detResult.presetId = "tiktok";
+                detResult.platformName = "TikTok / Reels (Dynamic Watermark)";
+                detResult.rois = getDynamicRoisForPreset("tiktok", width, height);
+                setSelectedPreset("tiktok");
+                setRois(detResult.rois);
+              }
+            }
+
+            if (detResult.rois.length > 0) {
+              const pxRoi = denormalizeROI(detResult.rois[0], width, height);
+              const { maskResult } = learnWatermarkFromClips(sampleFrames, pxRoi, detResult.presetId);
+              if (maskResult.coverageRatio >= 0.015 && maskResult.coverageRatio <= 0.70) {
+                learnedShapeDesc = `${Math.round((1 - maskResult.coverageRatio) * 100)}% background preserved`;
+                setLearnedLogos(getAllLearnedLogoProfiles());
+              }
+            }
           }
         } catch (e) {
           console.warn("Temporal learning pre-pass skipped:", e);

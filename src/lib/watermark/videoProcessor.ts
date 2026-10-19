@@ -91,11 +91,7 @@ export async function sampleVideoFrames(
 
     for (let s = 0; s < count; s++) {
       const targetTime = ((s + 0.5) / count) * duration;
-      videoEl.currentTime = targetTime;
-      await new Promise<void>((resolve) => {
-        videoEl.addEventListener("seeked", () => resolve(), { once: true });
-        setTimeout(resolve, 80);
-      });
+      await seekVideoAccurate(videoEl, targetTime);
       ctx.drawImage(videoEl, 0, 0, width, height);
       frames.push(ctx.getImageData(0, 0, width, height));
     }
@@ -255,8 +251,28 @@ export async function seekVideoAccurate(video: HTMLVideoElement, targetTime: num
   const maxDur = isFinite(video.duration) && video.duration > 0 ? video.duration : 10000;
   const clampedTarget = Math.min(Math.max(0, targetTime), Math.max(0, maxDur - 0.001));
 
+  // If already at target timestamp and not currently seeking, resolve immediately
   if (!video.seeking && Math.abs(video.currentTime - clampedTarget) < 0.002) {
     return;
+  }
+
+  // If a previous seek is still in-flight, wait for it to complete to prevent cascading cancellation
+  if (video.seeking) {
+    await new Promise<void>((resolveWait) => {
+      let waitTimer: ReturnType<typeof setTimeout> | null = null;
+      const onPrevDone = () => {
+        if (waitTimer) clearTimeout(waitTimer);
+        video.removeEventListener("seeked", onPrevDone);
+        video.removeEventListener("error", onPrevDone);
+        resolveWait();
+      };
+      video.addEventListener("seeked", onPrevDone, { once: true });
+      video.addEventListener("error", onPrevDone, { once: true });
+      waitTimer = setTimeout(onPrevDone, 2000);
+    });
+    if (Math.abs(video.currentTime - clampedTarget) < 0.002) {
+      return;
+    }
   }
 
   return new Promise<void>((resolve) => {
@@ -266,27 +282,43 @@ export async function seekVideoAccurate(video: HTMLVideoElement, targetTime: num
     const onDone = () => {
       if (isDone) return;
       isDone = true;
-      video.removeEventListener("seeked", onSeeked);
+      video.removeEventListener("seeked", onDone);
       video.removeEventListener("error", onDone);
       if (timer) clearTimeout(timer);
-      resolve();
-    };
 
-    const onSeeked = () => {
+      // Verify frame presentation to avoid rendering a blank or stale buffer
       if ("requestVideoFrameCallback" in video && typeof (video as any).requestVideoFrameCallback === "function") {
+        let rvfcDone = false;
+        const rvfcFallback = setTimeout(() => {
+          if (!rvfcDone) {
+            rvfcDone = true;
+            resolve();
+          }
+        }, 120);
         try {
-          (video as any).requestVideoFrameCallback(() => onDone());
-          return;
-        } catch {}
+          (video as any).requestVideoFrameCallback(() => {
+            if (!rvfcDone) {
+              rvfcDone = true;
+              clearTimeout(rvfcFallback);
+              resolve();
+            }
+          });
+        } catch {
+          clearTimeout(rvfcFallback);
+          resolve();
+        }
+      } else {
+        resolve();
       }
-      onDone();
     };
 
-    video.addEventListener("seeked", onSeeked, { once: true });
+    video.addEventListener("seeked", onDone, { once: true });
     video.addEventListener("error", onDone, { once: true });
 
-    // 400ms safety timeout: ensures slow frames have enough decoding time and are not skipped
-    timer = setTimeout(onDone, 400);
+    // Robust safety timeout: 2500ms ensures HD/4K videos with multi-second keyframe intervals
+    // (especially past the 10-second initial buffer mark) have ample time to demux and decode
+    // without stalling or producing duplicate/stale frames.
+    timer = setTimeout(onDone, 2500);
 
     try {
       video.currentTime = clampedTarget;
@@ -374,11 +406,8 @@ export async function processWatermarkVideo({
         const sampleCount = Math.min(8, Math.max(3, Math.floor(duration * 2)));
         const sampleFrames: ImageData[] = [];
         for (let s = 0; s < sampleCount; s++) {
-          videoEl.currentTime = ((s + 0.5) / sampleCount) * duration;
-          await new Promise<void>((r) => {
-            videoEl.addEventListener("seeked", () => r(), { once: true });
-            setTimeout(r, 60);
-          });
+          const sampleTime = ((s + 0.5) / sampleCount) * duration;
+          await seekVideoAccurate(videoEl, sampleTime);
           ctx.drawImage(videoEl, 0, 0, width, height);
           sampleFrames.push(ctx.getImageData(0, 0, width, height));
         }
@@ -387,7 +416,13 @@ export async function processWatermarkVideo({
           explicitMasks = rois.map((roi) => {
             const pxRoi = denormalizeROI(roi, width, height);
             const res = extractTemporalWatermarkMask(sampleFrames, pxRoi);
-            return res.mask;
+            // Only adopt static temporal mask if a genuine watermark pattern was extracted (>=1.5% coverage).
+            // If coverage is nearly 0 (e.g. watermark moves/alternates corners after 10s), return null
+            // to allow per-frame dynamic mask generation to remove the watermark cleanly.
+            if (res.coverageRatio >= 0.015 && res.coverageRatio <= 0.70) {
+              return res.mask;
+            }
+            return null;
           });
         }
       } catch (err) {

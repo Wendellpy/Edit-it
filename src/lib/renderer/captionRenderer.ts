@@ -367,13 +367,15 @@ export function renderWinnerCaptions(opts: RenderWinnerCaptionsOptions): void {
   const comp = decomposeWinnerCue(currentChunk);
 
   const primaryFamily = template.typography.primaryFont || "Montserrat, sans-serif";
-  const secondaryFamily = template.typography.secondaryFont || "'Birthstone Bounce', 'Alex Brush', 'Great Vibes', cursive, sans-serif";
+  const secondaryFamily =
+    template.typography.secondaryFont ||
+    "'SignPainter', 'SignPainter-HouseScript', 'SignPainter House Script', 'Satisfy', cursive, sans-serif";
   const baseScale = template.typography.fontSizeBasePercent || 0.088;
   const anchorFontSize = Math.round(
     canvasHeight * (isPortraitMobile ? baseScale * 1.05 : isWidescreen ? baseScale * 0.95 : baseScale)
   );
-  const minorFontSize = Math.round(anchorFontSize * 0.38);
-  const scriptFontSize = Math.round(anchorFontSize * 1.15);
+  const minorFontSize = Math.round(anchorFontSize * 0.36);
+  let scriptFontSize = Math.round(anchorFontSize * 0.65);
 
   const fmt = (str: string) => {
     if (!str) return "";
@@ -410,9 +412,15 @@ export function renderWinnerCaptions(opts: RenderWinnerCaptionsOptions): void {
   let scriptText = "";
   let scriptW = 0;
   if (comp.scriptToken) {
-    ctx.font = `500 ${scriptFontSize}px ${secondaryFamily}`;
+    ctx.font = `normal ${scriptFontSize}px ${secondaryFamily}`;
     scriptText = toScriptTitle(comp.scriptToken.text);
     scriptW = ctx.measureText(scriptText).width;
+    const maxScriptW = Math.min(canvasWidth * 0.74, Math.max(anchorW * 1.25, canvasWidth * 0.42));
+    if (scriptW > maxScriptW) {
+      scriptFontSize = Math.round(scriptFontSize * (maxScriptW / scriptW));
+      ctx.font = `normal ${scriptFontSize}px ${secondaryFamily}`;
+      scriptW = ctx.measureText(scriptText).width;
+    }
   }
 
   // 2. Position Anchor (Left-anchored editorial lockup)
@@ -422,9 +430,9 @@ export function renderWinnerCaptions(opts: RenderWinnerCaptionsOptions): void {
   let anchorX = Math.round(canvasWidth * 0.10);
   const totalExtent = Math.max(
     anchorW + (sideW ? sideW + minorFontSize * 0.4 : 0),
-    anchorW * 0.12 + scriptW,
+    anchorW * 0.3 + scriptW,
     topW,
-    bottomW
+    bottomW + anchorW * 0.5
   );
   const maxAllowedX = canvasWidth - safeMarginX - totalExtent;
   if (anchorX > maxAllowedX) {
@@ -447,7 +455,10 @@ export function renderWinnerCaptions(opts: RenderWinnerCaptionsOptions): void {
     } = {}
   ) => {
     if (!text) return;
-    const isActive = effectiveTime >= token.start && effectiveTime <= token.end;
+    // Cumulative word-by-word reveal: don't render future unspoken words during playback
+    if (effectiveTime !== undefined && effectiveTime >= 0 && effectiveTime < token.start) {
+      return;
+    }
 
     ctx.save();
     ctx.font = font;
@@ -458,17 +469,28 @@ export function renderWinnerCaptions(opts: RenderWinnerCaptionsOptions): void {
     const wordCenterX = x + wordW / 2;
     const wordCenterY = y;
 
-    // Entrance pop kinetics
-    const wordElapsed = Math.max(0, effectiveTime - token.start);
+    // Snappy viral entrance pop kinetics (damped harmonic spring + fast opacity ramp)
+    const wordElapsed =
+      effectiveTime !== undefined && token.start !== undefined
+        ? Math.max(0, effectiveTime - token.start)
+        : 999;
     let scale = 1.0;
-    if (isActive) {
-      const popDuration = 0.22;
-      if (wordElapsed < popDuration) {
-        const t = wordElapsed / popDuration;
-        scale = 1.0 + 0.16 * Math.sin(t * Math.PI * 1.6) * Math.exp(-t * 3.5);
-      }
+    let alpha = 1.0;
+    const popDuration = 0.20;
+
+    if (
+      effectiveTime !== undefined &&
+      token.start !== undefined &&
+      effectiveTime >= token.start &&
+      wordElapsed < popDuration
+    ) {
+      const progress = wordElapsed / popDuration;
+      alpha = Math.min(1.0, wordElapsed / 0.065);
+      const spring = Math.sin(progress * Math.PI) * (1.0 - progress * 0.75);
+      scale = 0.88 + 0.12 * progress + 0.16 * spring;
     }
 
+    ctx.globalAlpha = alpha;
     ctx.translate(wordCenterX, wordCenterY);
     if (options.tiltDeg) {
       ctx.rotate((options.tiltDeg * Math.PI) / 180);
@@ -478,8 +500,8 @@ export function renderWinnerCaptions(opts: RenderWinnerCaptionsOptions): void {
 
     // Deep soft drop shadow
     if (options.isScript) {
-      ctx.shadowColor = isActive ? "rgba(255, 0, 34, 0.70)" : "rgba(0, 0, 0, 0.95)";
-      ctx.shadowBlur = isActive ? 16 : 12;
+      ctx.shadowColor = "rgba(0, 0, 0, 0.95)";
+      ctx.shadowBlur = 12;
       ctx.shadowOffsetY = Math.max(2, Math.round(minorFontSize * 0.16));
       ctx.shadowOffsetX = Math.max(1, Math.round(minorFontSize * 0.08));
     } else {
@@ -529,16 +551,17 @@ export function renderWinnerCaptions(opts: RenderWinnerCaptionsOptions): void {
   // Render Top Satellites
   const renderTopSatellites = () => {
     if (comp.topTokens.length === 0) return;
-    const topY = anchorY - anchorFontSize * 0.50;
+    const topY = anchorY - anchorFontSize * 0.62;
     let currX = anchorX;
     ctx.font = `900 ${minorFontSize}px ${primaryFamily}`;
-    const spaceW = Math.round(minorFontSize * 0.28);
+    const spaceW = Math.round(minorFontSize * 0.45);
     for (const t of comp.topTokens) {
       const wText = fmt(t.text);
       drawWord(t, wText, `900 ${minorFontSize}px ${primaryFamily}`, "#FFFFFF", currX, topY, {
         strokeColor: "#000000",
         strokeWidth: Math.max(1, Math.round(canvasHeight * 0.002)),
       });
+      ctx.font = `900 ${minorFontSize}px ${primaryFamily}`;
       currX += ctx.measureText(wText).width + spaceW;
     }
   };
@@ -548,53 +571,104 @@ export function renderWinnerCaptions(opts: RenderWinnerCaptionsOptions): void {
     // 1. Side Satellites (e.g. "me" beside "let")
     if (comp.sideTokens.length > 0) {
       let sideX = anchorX + anchorW + minorFontSize * 0.35;
-      const sideY = anchorY + anchorFontSize * 0.04;
+      const sideY = anchorY + anchorFontSize * 0.08;
       ctx.font = `900 ${minorFontSize}px ${primaryFamily}`;
-      const spaceW = Math.round(minorFontSize * 0.28);
+      const spaceW = Math.round(minorFontSize * 0.45);
       for (const t of comp.sideTokens) {
         const wText = fmt(t.text);
         drawWord(t, wText, `900 ${minorFontSize}px ${primaryFamily}`, "#FFFFFF", sideX, sideY, {
           strokeColor: "#000000",
           strokeWidth: Math.max(1, Math.round(canvasHeight * 0.002)),
         });
+        ctx.font = `900 ${minorFontSize}px ${primaryFamily}`;
         sideX += ctx.measureText(wText).width + spaceW;
       }
     }
 
-    // 2. Script Calligraphy Overlay (Sweeps across the anchor word with -6deg slant)
+    // Separate bottom tokens into pre-script (e.g. "that" before "Very") and post-script (e.g. "clear")
+    const scriptIdx = comp.scriptToken ? currentChunk.indexOf(comp.scriptToken) : -1;
+    const bottomPreTokens = comp.bottomTokens.filter(
+      (t) => scriptIdx !== -1 && currentChunk.indexOf(t) < scriptIdx
+    );
+    const bottomPostTokens = comp.bottomTokens.filter(
+      (t) => scriptIdx === -1 || currentChunk.indexOf(t) > scriptIdx
+    );
+
+    // 2. Script Calligraphy Overlay Placement:
+    // Sits along the bottom baseline of the anchor word so the white punch word
+    // remains completely visible, unobstructed, and legible (matching video clip exactly).
+    let scriptX = anchorX - anchorW * 0.03;
+    let scriptY = anchorY + anchorFontSize * 0.54;
+
+    if (comp.sideTokens.length > 0) {
+      scriptX = anchorX + anchorW * 0.28;
+      scriptY = anchorY + anchorFontSize * 0.48;
+    } else if (bottomPreTokens.length > 0) {
+      scriptX = anchorX + anchorW * 0.28;
+      scriptY = anchorY + anchorFontSize * 0.28;
+    }
+
+    // 3. Render Bottom Satellites (Clean breathing room below script baseline)
+    if (comp.bottomTokens.length > 0) {
+      const bottomY = anchorY + anchorFontSize * 1.15;
+      const spaceW = Math.round(minorFontSize * 0.45);
+
+      let preX = anchorX;
+      let preEnd = anchorX;
+      for (const t of bottomPreTokens) {
+        const wText = fmt(t.text);
+        drawWord(t, wText, `900 ${minorFontSize}px ${primaryFamily}`, "#FFFFFF", preX, bottomY, {
+          strokeColor: "#000000",
+          strokeWidth: Math.max(1, Math.round(canvasHeight * 0.002)),
+        });
+        ctx.font = `900 ${minorFontSize}px ${primaryFamily}`;
+        preX += ctx.measureText(wText).width + spaceW;
+      }
+      preEnd = preX;
+
+      if (comp.sideTokens.length > 0 && bottomPostTokens.length === 1) {
+        const wText = fmt(bottomPostTokens[0].text);
+        drawWord(bottomPostTokens[0], wText, `900 ${minorFontSize}px ${primaryFamily}`, "#FFFFFF", anchorX, bottomY, {
+          strokeColor: "#000000",
+          strokeWidth: Math.max(1, Math.round(canvasHeight * 0.002)),
+        });
+      } else if (bottomPostTokens.length > 0) {
+        let postX = anchorX;
+        if (bottomPreTokens.length > 0) {
+          postX = Math.max(preEnd + spaceW * 2, anchorX + anchorW * 0.58);
+        } else if (comp.bottomTokens.length <= 2) {
+          postX = anchorX + Math.max(anchorW * 0.52, scriptFontSize * 0.65);
+        } else {
+          postX = anchorX;
+        }
+        for (const t of bottomPostTokens) {
+          const wText = fmt(t.text);
+          drawWord(t, wText, `900 ${minorFontSize}px ${primaryFamily}`, "#FFFFFF", postX, bottomY, {
+            strokeColor: "#000000",
+            strokeWidth: Math.max(1, Math.round(canvasHeight * 0.002)),
+          });
+          ctx.font = `900 ${minorFontSize}px ${primaryFamily}`;
+          postX += ctx.measureText(wText).width + spaceW;
+        }
+      }
+    }
+
+    // 4. Render Script Word
     if (comp.scriptToken && scriptText) {
-      const scriptX = anchorX - anchorW * 0.02;
-      const scriptY = anchorY + anchorFontSize * 0.16;
       drawWord(
         comp.scriptToken,
         scriptText,
-        `500 ${scriptFontSize}px ${secondaryFamily}`,
+        `normal ${scriptFontSize}px ${secondaryFamily}`,
         template.colors.secondaryText || "#FF0022",
         scriptX,
         scriptY,
         {
           isScript: true,
-          tiltDeg: -6.0,
-          strokeColor: "rgba(0, 0, 0, 0.88)",
+          tiltDeg: -7.5,
+          strokeColor: "rgba(0, 0, 0, 0.90)",
           strokeWidth: Math.max(1.8, Math.round(canvasHeight * 0.003)),
         }
       );
-    }
-
-    // 3. Bottom Satellites (e.g. "is failure" or "that clear")
-    if (comp.bottomTokens.length > 0) {
-      const bottomY = anchorY + anchorFontSize * 0.54;
-      let currX = anchorX + (comp.scriptToken ? Math.min(anchorW * 0.15, scriptW * 0.2) : 0);
-      ctx.font = `900 ${minorFontSize}px ${primaryFamily}`;
-      const spaceW = Math.round(minorFontSize * 0.28);
-      for (const t of comp.bottomTokens) {
-        const wText = fmt(t.text);
-        drawWord(t, wText, `900 ${minorFontSize}px ${primaryFamily}`, "#FFFFFF", currX, bottomY, {
-          strokeColor: "#000000",
-          strokeWidth: Math.max(1, Math.round(canvasHeight * 0.002)),
-        });
-        currX += ctx.measureText(wText).width + spaceW;
-      }
     }
   };
 
@@ -899,13 +973,15 @@ export function renderCaptionFrame(options: RenderCaptionFrameOptions): void {
   // 1. Group chunk into lines adaptively based on aspect ratio
   const wordsPerLine = isSingleWordMode
     ? 1
+    : template.id === "winner"
+    ? 2
     : isPortraitMobile
     ? Math.min(template.layout.maxWordsPerLine || 2, 2)
     : isWidescreen
     ? Math.max(template.layout.maxWordsPerLine || 3, 4)
     : template.layout.maxWordsPerLine || 2;
   const maxLines = isSingleWordMode ? 1 : template.layout.maxLines || 2;
-  const maxWords = wordsPerLine * maxLines;
+  const maxWords = template.id === "winner" ? 4 : wordsPerLine * maxLines;
 
   // 2. Build stable cue cards
   const cues = buildCaptionCues(tokens, maxWords);

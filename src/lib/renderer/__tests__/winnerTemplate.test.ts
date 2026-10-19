@@ -29,7 +29,7 @@ describe("Winner Caption Style Specification & Rendering Suite", () => {
 
     // Typographic hierarchy: Huge Montserrat 900 bold punch + Cursive handwriting script
     expect(tmpl.typography.primaryFont).toContain("Montserrat");
-    expect(tmpl.typography.secondaryFont).toContain("Birthstone Bounce");
+    expect(tmpl.typography.secondaryFont).toContain("SignPainter");
     expect(tmpl.typography.primaryWeight).toBe("900");
     expect(tmpl.typography.textTransform).toBe("lowercase");
     expect(tmpl.typography.fontSizeBasePercent).toBeGreaterThanOrEqual(0.08);
@@ -197,7 +197,7 @@ describe("Winner Caption Style Specification & Rendering Suite", () => {
       };
     }
 
-    it("MUST render dual-font hierarchy: 900 Montserrat anchor + Birthstone Bounce cursive script overlay", () => {
+    it("MUST render dual-font hierarchy: 900 Montserrat anchor + SignPainter cursive script overlay", () => {
       const ctx = createMockCtx();
       const tmpl = getTemplateById("winner");
       const tokens: WordToken[] = [
@@ -219,11 +219,11 @@ describe("Winner Caption Style Specification & Rendering Suite", () => {
         (f) => f.includes("900") && f.includes("Montserrat")
       );
       const hasScript = ctx.fontsSet.some(
-        (f) => f.includes("Birthstone Bounce") || f.includes("Alex Brush") || f.includes("Great Vibes")
+        (f) => f.includes("SignPainter") || f.includes("Satisfy") || f.includes("Birthstone Bounce")
       );
 
       expect(hasMontserratBold, "Winner must use Montserrat 900 for punch anchor word").toBe(true);
-      expect(hasScript, "Winner must use Birthstone Bounce / cursive script for accent calligraphy").toBe(true);
+      expect(hasScript, "Winner must use SignPainter / cursive script for accent calligraphy").toBe(true);
 
       expect(ctx.filledTexts).toContain("only");
       expect(ctx.filledTexts).toContain("Consequence");
@@ -273,7 +273,7 @@ describe("Winner Caption Style Specification & Rendering Suite", () => {
       const ass = generateAss(tokens, tmpl, 1080, 1920, 3);
       expect(ass).toContain("[Script Info]");
       expect(ass).toContain("Montserrat");
-      expect(ass).toContain("\\fnBirthstone Bounce");
+      expect(ass).toContain("\\fnSignPainter");
       expect(ass).toContain("&H002200FF&"); // ASS representation of #FF0022
     });
   });
